@@ -85,8 +85,8 @@ export default function LoginPage() {
 
         <div className="relative z-10 animate-in fade-in slide-in-from-top-8 duration-1000">
           <Link href="/" className="inline-flex items-center gap-3 group">
-            <div className="w-12 h-12 bg-gradient-to-tr from-emerald-500 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-900/20 group-hover:shadow-emerald-500/40 transition-all duration-500 border border-white/10 group-hover:scale-105">
-              <Layers className="w-6 h-6 text-black" />
+            <div className="w-12 h-12 bg-zinc-900/50 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-900/10 group-hover:shadow-emerald-500/20 transition-all duration-500 border border-white/10 group-hover:scale-105 overflow-hidden p-2">
+              <img src="/scraping.png" alt="Logo" className="w-full h-full object-contain" />
             </div>
             <span className="font-heading font-black text-2xl tracking-tight text-white">ExtrairLeads</span>
           </Link>
@@ -119,8 +119,8 @@ export default function LoginPage() {
         {/* Mobile Header */}
         <div className="lg:hidden w-full max-w-[340px] mb-8 flex flex-col items-center gap-4 relative z-10 animate-in fade-in slide-in-from-top-4 duration-700">
           <Link href="/" className="inline-flex items-center justify-center">
-            <div className="w-12 h-12 bg-gradient-to-tr from-emerald-500 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-900/20 border border-white/10">
-              <Layers className="w-6 h-6 text-black" />
+            <div className="w-12 h-12 bg-zinc-900/50 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-900/10 border border-white/10 overflow-hidden p-2">
+              <img src="/scraping.png" alt="Logo" className="w-full h-full object-contain" />
             </div>
           </Link>
           <span className="font-heading font-black text-xl tracking-tight text-white">ExtrairLeads</span>

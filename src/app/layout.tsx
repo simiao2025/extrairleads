@@ -16,6 +16,9 @@ const outfit = Outfit({
 export const metadata: Metadata = {
   title: "ExtrairLeads | Dashboard Neural",
   description: "Motor neural de prospecção ativa.",
+  icons: {
+    icon: "/scraping.png",
+  },
 };
 
 export default function RootLayout({
