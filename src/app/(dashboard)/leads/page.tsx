@@ -3,20 +3,26 @@ import { db } from "@/db";
 import { leads } from "@/db/schema";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Users } from "lucide-react";
-import { asc } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { LeadsClient } from "./client";
+import { auth } from "@/lib/auth";
 
 interface PageProps {
   searchParams: Promise<{ page?: string; search?: string; status?: string }>;
 }
 
 export default async function LeadsPage({ searchParams }: PageProps) {
+  const session = await auth();
+  const userId = session?.user?.id ? parseInt(session.user.id, 10) : null;
+
   const params = await searchParams;
   const page = Math.max(1, parseInt(params.page || "1", 10));
   const search = params.search || "";
   const status = params.status || "";
 
-  const allLeads = await db.select().from(leads).orderBy(asc(leads.createdAt));
+  const allLeads = userId
+    ? await db.select().from(leads).where(eq(leads.userId, userId)).orderBy(asc(leads.createdAt))
+    : [];
 
   const filteredLeads = allLeads.filter((lead) => {
     const matchSearch = !search ||

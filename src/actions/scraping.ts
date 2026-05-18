@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 import { qualifyLeadsAction } from "./outreach";
 import { startOutreachAction } from "./outreach";
+import { auth } from "@/lib/auth";
 
 export async function searchLeadsAction({
   niche,
@@ -13,6 +14,12 @@ export async function searchLeadsAction({
   state,
   onlyScrape = false
 }: { niche: string; city: string; state: string; onlyScrape?: boolean }) {
+  const session = await auth();
+  const userId = session?.user?.id ? parseInt(session.user.id, 10) : null;
+  if (!userId) {
+    return { success: false, error: "Usuário não autenticado." };
+  }
+
   const apiKey = process.env.SERPAPI_KEY;
   if (!apiKey) return { success: false, error: "SerpApi Key ausente." };
 
@@ -30,6 +37,7 @@ export async function searchLeadsAction({
         if (existing) continue;
       }
       leadsToInsert.push({
+        userId,
         name: result.title, phone, website: result.website || null, niche, city, state, status: "raw" as const,
         metadata: { rating: result.rating, reviews: result.reviews, address: result.address },
       });
