@@ -83,6 +83,20 @@ export default function LoginPage() {
         <div className="absolute top-[-20%] left-[-10%] w-[70%] h-[70%] bg-emerald-500/10 rounded-full blur-[120px] pointer-events-none z-0"></div>
         <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-blue-600/10 rounded-full blur-[100px] pointer-events-none z-0"></div>
 
+        {/* ── Robô Humanoide SDR Neural (Blending Premium) ── */}
+        <div className="absolute bottom-0 right-[-15%] w-[85%] h-[80%] max-w-[580px] max-h-[580px] pointer-events-none z-0 select-none opacity-85 animate-in fade-in slide-in-from-right-16 duration-[1500ms] delay-500 fill-mode-both">
+          <div className="w-full h-full relative">
+            {/* Máscaras de Gradiente para suavizar bordas da imagem */}
+            <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/40 to-transparent z-10"></div>
+            <div className="absolute inset-0 bg-gradient-to-r from-[#050505] via-[#050505]/20 to-transparent z-10"></div>
+            <img 
+              src="/robot.png" 
+              alt="Robô SDR Neural" 
+              className="w-full h-full object-contain object-right-bottom filter drop-shadow-[0_0_20px_rgba(16,185,129,0.15)]" 
+            />
+          </div>
+        </div>
+
         <div className="relative z-10 animate-in fade-in slide-in-from-top-8 duration-1000">
           <Link href="/" className="inline-flex items-center gap-3 group">
             <div className="w-14 h-14 bg-transparent flex items-center justify-center transition-all duration-500 group-hover:scale-110 overflow-hidden">
