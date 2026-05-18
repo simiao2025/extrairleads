@@ -83,16 +83,16 @@ export default function LoginPage() {
         <div className="absolute top-[-20%] left-[-10%] w-[70%] h-[70%] bg-emerald-500/10 rounded-full blur-[120px] pointer-events-none z-0"></div>
         <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-blue-600/10 rounded-full blur-[100px] pointer-events-none z-0"></div>
 
-        {/* ── Robô Humanoide SDR Neural (Blending Premium) ── */}
-        <div className="absolute bottom-0 right-[-15%] w-[85%] h-[80%] max-w-[580px] max-h-[580px] pointer-events-none z-0 select-none opacity-85 animate-in fade-in slide-in-from-right-16 duration-[1500ms] delay-500 fill-mode-both">
+        {/* ── Robô Humanoide SDR Neural (Background Full-Bleed Premium) ── */}
+        <div className="absolute inset-0 w-full h-full pointer-events-none z-0 select-none opacity-60 animate-in fade-in duration-[1500ms] delay-300 fill-mode-both">
           <div className="w-full h-full relative">
-            {/* Máscaras de Gradiente para suavizar bordas da imagem */}
-            <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/40 to-transparent z-10"></div>
+            {/* Máscaras de Gradiente para mesclar o robô no fundo preto perfeitamente */}
+            <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/40 to-[#050505]/80 z-10"></div>
             <div className="absolute inset-0 bg-gradient-to-r from-[#050505] via-[#050505]/20 to-transparent z-10"></div>
             <img 
               src="/robot.png" 
               alt="Robô SDR Neural" 
-              className="w-full h-full object-contain object-right-bottom filter drop-shadow-[0_0_20px_rgba(16,185,129,0.15)]" 
+              className="w-full h-full object-cover object-center filter saturate-[1.1] brightness-[0.85] drop-shadow-[0_0_20px_rgba(16,185,129,0.15)]" 
             />
           </div>
         </div>
