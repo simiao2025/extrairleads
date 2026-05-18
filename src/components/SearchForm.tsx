@@ -42,7 +42,7 @@ export default function SearchForm() {
 
   return (
     <Card className="w-full max-w-4xl mx-auto border-zinc-800 bg-zinc-950/50 backdrop-blur-xl">
-      <CardHeader className="flex flex-row items-center justify-between">
+      <CardHeader className="flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between">
         <div>
           <CardTitle className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">
             Capturar Novos Leads
@@ -52,7 +52,7 @@ export default function SearchForm() {
           </CardDescription>
         </div>
 
-        <div className="flex items-center space-x-2 bg-zinc-900/50 p-3 rounded-xl border border-zinc-800">
+        <div className="flex items-center justify-between sm:justify-start space-x-2 bg-zinc-900/50 p-3 rounded-xl border border-zinc-800 self-stretch sm:self-auto">
           <Label htmlFor="mode" className="text-xs font-bold text-zinc-400 uppercase tracking-tighter">
             {onlyScrape ? "Apenas Extração" : "Extração + IA"}
           </Label>

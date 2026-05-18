@@ -205,7 +205,7 @@ export function LeadsTable({ leads, onRefresh }: LeadsTableProps) {
 
   return (
     <>
-      <div className="rounded-xl border border-zinc-800/50 overflow-hidden">
+      <div className="rounded-xl border border-zinc-800/50 w-full overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow className="border-zinc-800/50 hover:bg-zinc-900/50">
