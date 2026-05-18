@@ -3,9 +3,17 @@
 import { db } from "@/db";
 import { campaignConfigs } from "@/db/schema";
 import { revalidatePath } from "next/cache";
+import { eq } from "drizzle-orm";
+import { auth } from "@/lib/auth";
 
 export async function getAiConfig() {
-  const [config] = await db.select().from(campaignConfigs);
+  const session = await auth();
+  const userId = session?.user?.id ? parseInt(session.user.id, 10) : null;
+
+  const [config] = userId
+    ? await db.select().from(campaignConfigs).where(eq(campaignConfigs.userId, userId))
+    : [];
+
   return config || {
     agent1Prompt: `Você é um Analista de Inteligência de Mercado sênior. 
 Sua missão é avaliar o potencial de conversão de leads locais para soluções de tecnologia e automação.
@@ -42,17 +50,22 @@ EXEMPLO DE ESTRUTURA (Adapte conforme o nicho):
 }
 
 export async function saveAiConfigAction(formData: FormData) {
+  const session = await auth();
+  const userId = session?.user?.id ? parseInt(session.user.id, 10) : null;
+  if (!userId) throw new Error("Usuário não autenticado.");
+
   const agent1Prompt = formData.get("agent1Prompt") as string;
   const agent2Prompt = formData.get("agent2Prompt") as string;
   const weeklyLimit = parseInt(formData.get("weeklyLimit") as string);
   const autoOutreach = formData.get("autoOutreach") === "on" ? "true" : "false";
 
-  const existing = await db.select().from(campaignConfigs);
+  const existing = await db.select().from(campaignConfigs).where(eq(campaignConfigs.userId, userId));
 
   if (existing.length > 0) {
-    await db.update(campaignConfigs).set({ agent1Prompt, agent2Prompt, weeklyLimit, autoOutreach });
+    await db.update(campaignConfigs).set({ agent1Prompt, agent2Prompt, weeklyLimit, autoOutreach }).where(eq(campaignConfigs.userId, userId));
   } else {
     await db.insert(campaignConfigs).values({ 
+      userId,
       name: "Configuração Padrão",
       agent1Prompt, 
       agent2Prompt, 

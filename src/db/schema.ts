@@ -71,6 +71,7 @@ export const leads = pgTable("leads", {
 
 export const campaignConfigs = pgTable("campaign_configs", {
   id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   searchKeyword: text("search_keyword"),
   targetCity: text("target_city"),

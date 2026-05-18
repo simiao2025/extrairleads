@@ -4,7 +4,8 @@ import { db } from "@/db";
 import { leads, campaignConfigs, outreachLogs } from "@/db/schema";
 import { revalidatePath } from "next/cache";
 import OpenAI from "openai";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
+import { auth } from "@/lib/auth";
 
 const groq = new OpenAI({
   apiKey: process.env.GROQ_API_KEY,
@@ -12,12 +13,16 @@ const groq = new OpenAI({
 });
 
 export async function qualifyLeadsAction(leadIds: number[]) {
-  const [config] = await db.select().from(campaignConfigs);
-  const prompt = config?.agent1Prompt || "Qualifique o lead.";
-
   for (const id of leadIds) {
     const [lead] = await db.select().from(leads).where(eq(leads.id, id));
     if (!lead) continue;
+
+    // Load config specific to the lead's owner (userId)
+    const [config] = lead.userId
+      ? await db.select().from(campaignConfigs).where(eq(campaignConfigs.userId, lead.userId))
+      : [];
+    const prompt = config?.agent1Prompt || "Qualifique o lead.";
+
     try {
       const completion = await groq.chat.completions.create({
         messages: [{ role: "system", content: prompt + " Retorne JSON: {score: number, analysis: string}" }, { role: "user", content: JSON.stringify(lead) }],
@@ -31,7 +36,11 @@ export async function qualifyLeadsAction(leadIds: number[]) {
 }
 
 export async function qualifyPendingLeadsAction() {
-  const rawLeads = await db.select().from(leads).where(eq(leads.status, "raw"));
+  const session = await auth();
+  const userId = session?.user?.id ? parseInt(session.user.id, 10) : null;
+  if (!userId) return { success: false, error: "Usuário não autenticado." };
+
+  const rawLeads = await db.select().from(leads).where(and(eq(leads.status, "raw"), eq(leads.userId, userId)));
   if (rawLeads.length === 0) return { success: true, count: 0, message: "Nenhum lead pendente de análise." };
 
   await qualifyLeadsAction(rawLeads.map(l => l.id));
@@ -40,13 +49,21 @@ export async function qualifyPendingLeadsAction() {
 }
 
 export async function startOutreachAction() {
-  const [config] = await db.select().from(campaignConfigs);
+  const session = await auth();
+  const userId = session?.user?.id ? parseInt(session.user.id, 10) : null;
+  if (!userId) return { success: false, error: "Usuário não autenticado." };
+
+  const [config] = await db.select().from(campaignConfigs).where(eq(campaignConfigs.userId, userId));
   const evolutionUrl = process.env.EVOLUTION_API_URL;
   const evolutionKey = process.env.EVOLUTION_API_KEY;
   const instance = process.env.EVOLUTION_INSTANCE;
   if (!evolutionUrl || !evolutionKey || !instance) return { success: false, error: "Erro Config" };
 
-  const qualifiedLeads = await db.select().from(leads).where(eq(leads.status, "qualified")).limit(config?.weeklyLimit || 5);
+  const qualifiedLeads = await db
+    .select()
+    .from(leads)
+    .where(and(eq(leads.status, "qualified"), eq(leads.userId, userId)))
+    .limit(config?.weeklyLimit || 5);
 
   for (const lead of qualifiedLeads) {
     if (!lead.phone) continue;
