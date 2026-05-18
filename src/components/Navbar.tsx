@@ -41,8 +41,8 @@ export default function Navbar({ user }: NavbarProps) {
       <nav className="sticky top-0 z-50 w-full backdrop-blur-2xl bg-background/60 border-b border-white/[0.06]">
         <div className="max-w-7xl mx-auto px-4 md:px-8 h-14 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3 group">
-            <div className="w-9 h-9 bg-zinc-900/50 rounded-lg flex items-center justify-center shadow-lg shadow-emerald-900/10 group-hover:shadow-emerald-500/20 transition-all duration-500 group-hover:scale-105 border border-white/10 overflow-hidden p-1.5">
-              <img src="/scraping.png" alt="Logo" className="w-full h-full object-contain" />
+            <div className="w-11 h-11 bg-transparent flex items-center justify-center transition-all duration-500 group-hover:scale-110 overflow-hidden">
+              <img src="/scraping.png" alt="Logo" className="w-full h-full object-contain filter drop-shadow-[0_0_6px_rgba(16,185,129,0.3)]" />
             </div>
             <span className="text-lg font-black tracking-tight text-white">
               ExtrairLeads
@@ -142,8 +142,8 @@ export default function Navbar({ user }: NavbarProps) {
                     onClick={() => setIsMobileMenuOpen(false)}
                     className="flex items-center gap-2"
                   >
-                    <div className="w-8 h-8 bg-zinc-900/50 rounded-lg flex items-center justify-center border border-white/10 overflow-hidden p-1.5">
-                      <img src="/scraping.png" alt="Logo" className="w-full h-full object-contain" />
+                    <div className="w-10 h-10 bg-transparent flex items-center justify-center overflow-hidden">
+                      <img src="/scraping.png" alt="Logo" className="w-full h-full object-contain filter drop-shadow-[0_0_6px_rgba(16,185,129,0.3)]" />
                     </div>
                     <span className="text-md font-black tracking-tight text-white">
                       ExtrairLeads

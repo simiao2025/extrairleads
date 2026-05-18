@@ -85,8 +85,8 @@ export default function LoginPage() {
 
         <div className="relative z-10 animate-in fade-in slide-in-from-top-8 duration-1000">
           <Link href="/" className="inline-flex items-center gap-3 group">
-            <div className="w-12 h-12 bg-zinc-900/50 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-900/10 group-hover:shadow-emerald-500/20 transition-all duration-500 border border-white/10 group-hover:scale-105 overflow-hidden p-2">
-              <img src="/scraping.png" alt="Logo" className="w-full h-full object-contain" />
+            <div className="w-14 h-14 bg-transparent flex items-center justify-center transition-all duration-500 group-hover:scale-110 overflow-hidden">
+              <img src="/scraping.png" alt="Logo" className="w-full h-full object-contain filter drop-shadow-[0_0_8px_rgba(16,185,129,0.3)]" />
             </div>
             <span className="font-heading font-black text-2xl tracking-tight text-white">ExtrairLeads</span>
           </Link>
@@ -119,8 +119,8 @@ export default function LoginPage() {
         {/* Mobile Header */}
         <div className="lg:hidden w-full max-w-[340px] mb-8 flex flex-col items-center gap-4 relative z-10 animate-in fade-in slide-in-from-top-4 duration-700">
           <Link href="/" className="inline-flex items-center justify-center">
-            <div className="w-12 h-12 bg-zinc-900/50 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-900/10 border border-white/10 overflow-hidden p-2">
-              <img src="/scraping.png" alt="Logo" className="w-full h-full object-contain" />
+            <div className="w-14 h-14 bg-transparent flex items-center justify-center overflow-hidden">
+              <img src="/scraping.png" alt="Logo" className="w-full h-full object-contain filter drop-shadow-[0_0_8px_rgba(16,185,129,0.3)]" />
             </div>
           </Link>
           <span className="font-heading font-black text-xl tracking-tight text-white">ExtrairLeads</span>
