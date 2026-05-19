@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Layers, Lock, Mail, ArrowRight, User } from "lucide-react";
+import { Lock, Mail, ArrowRight, User, CheckCircle2, AlertTriangle } from "lucide-react";
 import Link from "next/link";
-import { registerAction } from "@/actions/auth";
+import { registerAction, checkEmailVerifiedAction } from "@/app/actions";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -17,6 +17,22 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
+  // Capturar parâmetros da URL de redirecionamento de confirmação de e-mail
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const successParam = params.get("success");
+    const errorParam = params.get("error");
+
+    if (successParam === "email_verified") {
+      setSuccess("Sua conta foi ativada com sucesso! Faça login abaixo para começar.");
+    }
+    if (errorParam === "token_expired") {
+      setError("O link de ativação expirou. Faça o registro novamente.");
+    } else if (errorParam === "token_invalid") {
+      setError("O link de ativação é inválido ou já foi utilizado.");
+    }
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -25,6 +41,14 @@ export default function LoginPage() {
 
     try {
       if (isLogin) {
+        // ── Pre-check para e-mail verificado ──
+        const check = await checkEmailVerifiedAction(form.email);
+        if (check.success && !check.verified) {
+          setError("Sua conta ainda não foi ativada. Verifique a caixa de entrada do seu e-mail para confirmar seu cadastro.");
+          setLoading(false);
+          return;
+        }
+
         // ── Login ──
         const result = await signIn("credentials", {
           email: form.email,
@@ -33,7 +57,7 @@ export default function LoginPage() {
         });
 
         if (result?.error) {
-          setError("Email ou senha incorretos.");
+          setError("E-mail ou senha incorretos.");
         } else {
           router.push("/");
           router.refresh();
@@ -47,24 +71,11 @@ export default function LoginPage() {
           return;
         }
 
-        // Auto-login após registro bem-sucedido
-        const loginResult = await signIn("credentials", {
-          email: form.email,
-          password: form.password,
-          redirect: false,
-        });
-
-        if (loginResult?.error) {
-          // Conta criada mas falhou o auto-login — direciona para login manual
-          setSuccess("Conta criada com sucesso! Faça login.");
-          setIsLogin(true);
-          setForm({ name: "", email: form.email, password: "" });
-        } else {
-          router.push("/");
-          router.refresh();
-        }
+        setSuccess("Conta criada com sucesso! Enviamos um link de ativação segura para o seu e-mail. Por favor, confirme seu cadastro para liberar o login.");
+        setIsLogin(true);
+        setForm({ name: "", email: form.email, password: "" });
       }
-    } catch {
+    } catch (err) {
       setError(isLogin ? "Erro ao fazer login. Tente novamente." : "Erro ao criar conta. Tente novamente.");
     } finally {
       setLoading(false);
@@ -87,28 +98,27 @@ export default function LoginPage() {
         <div className="absolute inset-0 w-full h-full pointer-events-none z-0 select-none opacity-60 animate-in fade-in duration-[1500ms] delay-300 fill-mode-both">
           <div className="w-full h-full relative">
             {/* Máscaras de Gradiente para mesclar o robô no fundo preto perfeitamente */}
-            <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/40 to-[#050505]/80 z-10"></div>
-            <div className="absolute inset-0 bg-gradient-to-r from-[#050505] via-[#050505]/20 to-transparent z-10"></div>
+            <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/50 to-[#050505]/90 z-10"></div>
+            <div className="absolute inset-0 bg-gradient-to-r from-[#050505] via-[#050505]/30 to-transparent z-10"></div>
             <img 
               src="/robot.png" 
               alt="Robô SDR Neural" 
-              className="w-full h-full object-cover object-center filter saturate-[1.1] brightness-[0.85] drop-shadow-[0_0_20px_rgba(16,185,129,0.15)]" 
+              className="w-full h-full object-cover object-center filter brightness-[0.8]" 
             />
           </div>
         </div>
 
         <div className="relative z-10 animate-in fade-in slide-in-from-top-8 duration-1000">
           <Link href="/" className="inline-flex items-center gap-3 group">
-            <div className="w-14 h-14 bg-transparent flex items-center justify-center transition-all duration-500 group-hover:scale-110 overflow-hidden">
-              <img src="/scraping.png" alt="Logo" className="w-full h-full object-contain filter drop-shadow-[0_0_8px_rgba(16,185,129,0.3)]" />
+            <div className="w-14 h-14 bg-transparent flex items-center justify-center transition-all duration-500 group-hover:scale-105 overflow-hidden">
+              <img src="/scraping.png" alt="Logo" className="w-full h-full object-contain" />
             </div>
             <span className="font-heading font-black text-2xl tracking-tight text-white">ExtrairLeads</span>
           </Link>
         </div>
 
         <div className="relative z-10 space-y-6 max-w-xl animate-in fade-in slide-in-from-bottom-12 duration-1000 delay-300 fill-mode-both">
-          <span className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-[11px] font-bold tracking-widest text-emerald-400 uppercase backdrop-blur-md">
-            <span className="pulse-dot" />
+          <span className="inline-flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-900/40 px-3 py-1 text-[11px] font-bold tracking-widest text-zinc-400 uppercase backdrop-blur-md">
             Acesso Restrito
           </span>
           <h1 className="font-heading text-5xl font-black leading-[1.1] tracking-tight text-white">
@@ -134,7 +144,7 @@ export default function LoginPage() {
         <div className="lg:hidden w-full max-w-[340px] mb-8 flex flex-col items-center gap-4 relative z-10 animate-in fade-in slide-in-from-top-4 duration-700">
           <Link href="/" className="inline-flex items-center justify-center">
             <div className="w-14 h-14 bg-transparent flex items-center justify-center overflow-hidden">
-              <img src="/scraping.png" alt="Logo" className="w-full h-full object-contain filter drop-shadow-[0_0_8px_rgba(16,185,129,0.3)]" />
+              <img src="/scraping.png" alt="Logo" className="w-full h-full object-contain" />
             </div>
           </Link>
           <span className="font-heading font-black text-xl tracking-tight text-white">ExtrairLeads</span>
@@ -160,12 +170,12 @@ export default function LoginPage() {
                   Nome Completo
                 </label>
                 <div className="relative group">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within:text-emerald-500 transition-colors" />
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within:text-white transition-colors" />
                   <Input
                     placeholder="Seu nome"
                     value={form.name}
                     onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    className="pl-10 h-11 bg-zinc-950/50 border-white/10 focus-visible:ring-emerald-500/50 focus-visible:border-emerald-500/50 transition-all shadow-inner"
+                    className="pl-10 h-11 bg-zinc-900/30 border-zinc-800 text-white focus-visible:ring-zinc-700 focus-visible:border-zinc-700 transition-all shadow-inner"
                     required={!isLogin}
                   />
                 </div>
@@ -177,13 +187,13 @@ export default function LoginPage() {
                 Email Corporativo
               </label>
               <div className="relative group">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within:text-emerald-500 transition-colors" />
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within:text-white transition-colors" />
                 <Input
                   type="email"
                   placeholder="voce@empresa.com"
                   value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  className="pl-10 h-11 bg-zinc-950/50 border-white/10 focus-visible:ring-emerald-500/50 focus-visible:border-emerald-500/50 transition-all shadow-inner"
+                  className="pl-10 h-11 bg-zinc-900/30 border-zinc-800 text-white focus-visible:ring-zinc-700 focus-visible:border-zinc-700 transition-all shadow-inner"
                   required
                 />
               </div>
@@ -195,19 +205,19 @@ export default function LoginPage() {
                   Senha
                 </label>
                 {isLogin && (
-                  <button type="button" className="text-[11px] font-medium text-emerald-400 hover:text-emerald-300">
+                  <button type="button" className="text-[11px] font-medium text-zinc-400 hover:text-white">
                     Esqueceu a senha?
                   </button>
                 )}
               </div>
               <div className="relative group">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within:text-emerald-500 transition-colors" />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within:text-white transition-colors" />
                 <Input
                   type="password"
                   placeholder="••••••••"
                   value={form.password}
                   onChange={(e) => setForm({ ...form, password: e.target.value })}
-                  className="pl-10 h-11 bg-zinc-950/50 border-white/10 focus-visible:ring-emerald-500/50 focus-visible:border-emerald-500/50 transition-all shadow-inner"
+                  className="pl-10 h-11 bg-zinc-900/30 border-zinc-800 text-white focus-visible:ring-zinc-700 focus-visible:border-zinc-700 transition-all shadow-inner"
                   required
                   minLength={6}
                 />
@@ -215,16 +225,18 @@ export default function LoginPage() {
             </div>
 
             {error && (
-              <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg animate-in fade-in slide-in-from-top-2">
-                <p className="text-red-400 text-xs font-medium text-center">
+              <div className="p-3 bg-red-500/5 border border-red-500/10 rounded-xl flex items-start gap-2.5 animate-in fade-in slide-in-from-top-2">
+                <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                <p className="text-red-400 text-xs font-medium leading-relaxed">
                   {error}
                 </p>
               </div>
             )}
 
             {success && (
-              <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg animate-in fade-in slide-in-from-top-2">
-                <p className="text-emerald-400 text-xs font-medium text-center">
+              <div className="p-3 bg-emerald-500/5 border border-emerald-500/10 rounded-xl flex items-start gap-2.5 animate-in fade-in slide-in-from-top-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                <p className="text-emerald-400 text-xs font-medium leading-relaxed">
                   {success}
                 </p>
               </div>
@@ -233,7 +245,7 @@ export default function LoginPage() {
             <Button
               type="submit"
               disabled={loading}
-              className="w-full h-11 mt-2 bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-sm shadow-[0_0_20px_rgba(16,185,129,0.2)] hover:shadow-[0_0_30px_rgba(16,185,129,0.4)] transition-all duration-300"
+              className="w-full h-11 mt-2 bg-white hover:bg-zinc-200 text-black font-bold text-sm rounded-xl transition-all duration-200 cursor-pointer"
             >
               {loading ? (
                 isLogin ? "Autenticando..." : "Criando conta..."
@@ -254,7 +266,7 @@ export default function LoginPage() {
                 setError("");
                 setSuccess("");
               }}
-              className="text-[13px] text-zinc-400 hover:text-white transition-colors font-medium"
+              className="text-[13px] text-zinc-400 hover:text-white transition-colors font-medium cursor-pointer"
             >
               {isLogin
                 ? "Ainda não tem acesso? Solicite uma conta"

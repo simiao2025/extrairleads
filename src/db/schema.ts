@@ -16,6 +16,16 @@ export const users = pgTable("users", {
   password: text("password"),
   emailVerified: timestamp("email_verified"),
   image: text("image"),
+  cpfCnpj: text("cpf_cnpj"),
+  phone: text("phone"),
+  address: text("address"),
+  city: text("city"),
+  uf: text("uf"),
+  cep: text("cep"),
+  onboardingStatus: text("onboarding_status").default("COMPLETED"), // 'PENDING_INFO' | 'PENDING_PASSWORD' | 'COMPLETED'
+  isTemporaryPassword: integer("is_temporary_password").default(0), // 0 = false, 1 = true
+  whatsappInstanceName: text("whatsapp_instance_name"),
+  whatsappInstanceToken: text("whatsapp_instance_token"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

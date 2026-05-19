@@ -13,7 +13,17 @@ export {
 
 export { searchLeadsAction } from "@/actions/scraping";
 
-export { registerAction } from "@/actions/auth";
+export { registerAction, checkEmailVerifiedAction } from "@/actions/auth";
+
+export {
+  saveOnboardingInfoAction,
+  changeOnboardingPasswordAction,
+} from "@/actions/onboarding";
+
+export {
+  checkWhatsAppConnectionAction,
+  getWhatsAppQrCodeAction,
+} from "@/actions/whatsapp";
 
 export {
   getAppointmentsAction,

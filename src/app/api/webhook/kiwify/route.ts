@@ -1,0 +1,120 @@
+import { NextResponse } from "next/server";
+import { db } from "@/db";
+import { users } from "@/db/schema";
+import { eq } from "drizzle-orm";
+import bcrypt from "bcryptjs";
+import crypto from "crypto";
+
+async function sendOnboardingEmail(email: string, name: string, tempPassword: string) {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    console.log("=========================================");
+    console.log(`[ONBOARDING MOCK] E-mail de Boas-vindas para: ${email}`);
+    console.log(`Nome: ${name}`);
+    console.log(`Senha Temporária: ${tempPassword}`);
+    console.log(`Link: https://extrairleads.brasilonthebox.shop/login?email=${encodeURIComponent(email)}&temp=${tempPassword}`);
+    console.log("=========================================");
+    return;
+  }
+
+  try {
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: "ExtrairLeads Onboarding <onboarding@resend.dev>",
+        to: email,
+        subject: "Seu acesso ao ExtrairLeads está liberado!",
+        html: `
+          <div style="font-family: sans-serif; background-color: #050505; color: #ffffff; padding: 40px; border-radius: 12px; max-width: 600px; margin: 0 auto; border: 1px solid #1f1f1f;">
+            <div style="text-align: center; margin-bottom: 30px;">
+              <h1 style="color: #10b981; font-size: 28px; font-weight: 800; margin: 0;">ExtrairLeads</h1>
+              <p style="color: #a1a1aa; font-size: 14px; margin-top: 5px;">O motor neural de prospecção B2B</p>
+            </div>
+            
+            <p style="font-size: 16px; line-height: 1.6; color: #e4e4e7;">Olá, <strong>${name}</strong>!</p>
+            <p style="font-size: 16px; line-height: 1.6; color: #e4e4e7;">Seu pagamento foi confirmado com sucesso e sua conta foi gerada no sistema. Veja abaixo os seus dados de acesso temporário:</p>
+            
+            <div style="background-color: #121214; padding: 20px; border-radius: 8px; margin: 25px 0; border: 1px solid #27272a; text-align: center;">
+              <p style="margin: 0; color: #a1a1aa; font-size: 14px;">E-mail cadastrado:</p>
+              <p style="margin: 5px 0 15px 0; color: #ffffff; font-size: 18px; font-weight: bold;">${email}</p>
+              <p style="margin: 0; color: #a1a1aa; font-size: 14px;">Senha Temporária:</p>
+              <p style="margin: 5px 0 0 0; color: #10b981; font-size: 20px; font-weight: bold; letter-spacing: 2px;">${tempPassword}</p>
+            </div>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="https://extrairleads.brasilonthebox.shop/login?email=${encodeURIComponent(email)}&temp=${tempPassword}" 
+                 style="background-color: #10b981; color: #000000; padding: 14px 28px; font-weight: bold; border-radius: 8px; text-decoration: none; display: inline-block; font-size: 16px;">
+                Concluir Primeiro Acesso
+              </a>
+            </div>
+            
+            <p style="font-size: 14px; line-height: 1.6; color: #71717a; margin-top: 40px; border-top: 1px solid #1f1f1f; padding-top: 20px; text-align: center;">
+              Ao clicar no link e fazer o login com a sua senha temporária, você será redirecionado para preencher seus dados de contato e atualizar a sua senha de segurança.
+            </p>
+          </div>
+        `,
+      }),
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error("Erro ao enviar e-mail via Resend API:", errText);
+    }
+  } catch (error) {
+    console.error("Exceção ao enviar e-mail via Resend:", error);
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const body = await request.json();
+    console.log("Webhook Kiwify Recebido:", JSON.stringify(body));
+
+    const { order_status, customer } = body;
+
+    // Apenas processa se o status for aprovado (Kiwify envia "approved" ou similar)
+    if (order_status === "approved" && customer?.email) {
+      const name = customer.name || "Cliente ExtrairLeads";
+      const email = customer.email.toLowerCase().trim();
+      const cpfCnpj = (customer.cpf_cnpj || customer.CPF || customer.CNPJ || "").toString().replace(/\D/g, "");
+
+      // Verifica se o usuário já existe
+      const [existingUser] = await db
+        .select()
+        .from(users)
+        .where(eq(users.email, email));
+
+      if (!existingUser) {
+        // Gera senha temporária de 12 caracteres hexadecimais
+        const tempPassword = crypto.randomBytes(6).toString("hex");
+        const hashedPassword = await bcrypt.hash(tempPassword, 10);
+
+        // Salva usuário no banco de dados com status de onboarding PENDING_INFO
+        await db.insert(users).values({
+          email,
+          name,
+          password: hashedPassword,
+          cpfCnpj,
+          onboardingStatus: "PENDING_INFO",
+          isTemporaryPassword: 1,
+        });
+
+        // Envia o e-mail de boas-vindas com o link de login
+        await sendOnboardingEmail(email, name, tempPassword);
+
+        return NextResponse.json({ success: true, message: "Usuário criado com sucesso e e-mail enviado." });
+      } else {
+        return NextResponse.json({ success: true, message: "Usuário com este e-mail já existe." });
+      }
+    }
+
+    return NextResponse.json({ success: true, message: "Ignorado - status do pedido não aprovado ou e-mail ausente." });
+  } catch (error: any) {
+    console.error("Erro no Webhook Kiwify:", error);
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  }
+}

@@ -1,0 +1,202 @@
+"use server";
+
+import { db } from "@/db";
+import { users } from "@/db/schema";
+import { eq } from "drizzle-orm";
+import { auth } from "@/lib/auth";
+
+const GLOBAL_KEY = process.env.EVOLUTION_GLOBAL_API_KEY || "abcslirm2026";
+
+// Auxiliar para obter dados do usuário logado
+async function getCurrentUser() {
+  const session = await auth();
+  if (!session?.user?.email) return null;
+
+  const [user] = await db
+    .select()
+    .from(users)
+    .where(eq(users.email, session.user.email));
+  return user;
+}
+
+export async function checkWhatsAppConnectionAction() {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return { success: false, error: "Usuário não autenticado." };
+    }
+
+    const instanceName = user.whatsappInstanceName || user.cpfCnpj?.toString().replace(/\D/g, "");
+    if (!instanceName) {
+      return { success: false, error: "Instância de WhatsApp não configurada no cadastro." };
+    }
+
+    const evolutionUrl = process.env.EVOLUTION_API_URL;
+    if (!evolutionUrl) {
+      return { success: false, error: "Serviço de WhatsApp temporariamente fora de serviço (URL não configurada)." };
+    }
+
+    console.log(`[Evolution Go] Checando status da instância via /instance/all: ${instanceName}`);
+    
+    // Consulta a lista de instâncias na API global do Evolution Go v3
+    const response = await fetch(`${evolutionUrl}/instance/all`, {
+      method: "GET",
+      headers: {
+        "apikey": GLOBAL_KEY,
+      },
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error("Evolution Go - Erro ao buscar lista de instâncias:", errText);
+      return { success: false, error: "Erro ao ler status no servidor." };
+    }
+
+    const resJson = await response.json();
+    const instancesList = resJson?.data || [];
+    const foundInstance = instancesList.find((inst: any) => inst.name === instanceName);
+
+    if (!foundInstance) {
+      // Instância não existe no Evolution Go v3. Vamos tentar recriá-la na hora!
+      console.log(`[Evolution Go] Instância ${instanceName} não encontrada. Recriando...`);
+      const token = user.whatsappInstanceToken || Math.random().toString(36).substring(2) + Date.now().toString(36);
+      
+      const createRes = await fetch(`${evolutionUrl}/instance/create`, {
+        method: "POST",
+        headers: {
+          "apikey": GLOBAL_KEY,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          instanceName: instanceName,
+          name: instanceName,
+          token: token,
+          qrcode: true,
+          integration: "WHATSAPP-BAILEYS",
+        }),
+      });
+
+      if (createRes.ok) {
+        // Atualiza os dados de WhatsApp no banco
+        await db
+          .update(users)
+          .set({
+            whatsappInstanceName: instanceName,
+            whatsappInstanceToken: token,
+          })
+          .where(eq(users.id, user.id));
+
+        console.log(`[Evolution Go] Instância ${instanceName} recriada com sucesso.`);
+      }
+
+      return { success: true, connected: false, state: "DISCONNECTED" };
+    }
+
+    // Se a instância existe, garantimos que o token local esteja em sincronia com o token da API do Evolution Go
+    const serverToken = foundInstance.token;
+    if (user.whatsappInstanceToken !== serverToken || user.whatsappInstanceName !== instanceName) {
+      console.log(`[Evolution Go] Sincronizando dados locais da instância ${instanceName} com o servidor...`);
+      await db
+        .update(users)
+        .set({
+          whatsappInstanceName: instanceName,
+          whatsappInstanceToken: serverToken,
+        })
+        .where(eq(users.id, user.id));
+    }
+
+    const connected = foundInstance.connected === true;
+    const state = connected ? "CONNECTED" : "DISCONNECTED";
+
+    return { 
+      success: true, 
+      connected, 
+      state,
+      instanceName,
+    };
+  } catch (error: any) {
+    console.error("Exceção em checkWhatsAppConnectionAction:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function getWhatsAppQrCodeAction() {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return { success: false, error: "Usuário não autenticado." };
+    }
+
+    const instanceName = user.whatsappInstanceName;
+    if (!instanceName) {
+      return { success: false, error: "Nenhuma instância ativa configurada." };
+    }
+
+    const evolutionUrl = process.env.EVOLUTION_API_URL;
+    if (!evolutionUrl) {
+      return { success: false, error: "URL do Evolution Go não configurada." };
+    }
+
+    console.log(`[Evolution Go] Solicitando QR Code para: ${instanceName}`);
+    
+    // Primeiro buscamos a lista de instâncias para garantir que temos o token correto
+    const listRes = await fetch(`${evolutionUrl}/instance/all`, {
+      method: "GET",
+      headers: {
+        "apikey": GLOBAL_KEY,
+      },
+    });
+
+    let token = user.whatsappInstanceToken;
+    if (listRes.ok) {
+      const listData = await listRes.json();
+      const found = listData?.data?.find((inst: any) => inst.name === instanceName);
+      if (found) {
+        token = found.token;
+        // Atualiza no banco se estiver diferente
+        if (user.whatsappInstanceToken !== token) {
+          await db
+            .update(users)
+            .set({ whatsappInstanceToken: token })
+            .where(eq(users.id, user.id));
+        }
+      }
+    }
+
+    if (!token) {
+      return { success: false, error: "Token da instância não encontrado no servidor." };
+    }
+
+    // Obtém o QR Code de conexão chamando a rota correta do Evolution Go v3 com cabeçalhos apropriados
+    const response = await fetch(`${evolutionUrl}/instance/qr`, {
+      method: "GET",
+      headers: {
+        "apikey": token,
+        "instance": instanceName,
+      },
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error("Evolution Go - Erro ao buscar QR Code:", errText);
+      return { success: false, error: "Não foi possível gerar o QR Code no servidor." };
+    }
+
+    const resJson = await response.json();
+    
+    // O Evolution Go v3 retorna o QR code no campo resJson.data.Qrcode
+    const qrImage = resJson?.data?.Qrcode || resJson?.base64 || resJson?.qrcode?.base64 || resJson?.code || null;
+    if (!qrImage) {
+      return { success: false, error: "Nenhum código QR retornado do servidor." };
+    }
+
+    return { 
+      success: true, 
+      qrCode: qrImage,
+      instanceName,
+    };
+  } catch (error: any) {
+    console.error("Exceção em getWhatsAppQrCodeAction:", error);
+    return { success: false, error: error.message };
+  }
+}

@@ -31,7 +31,7 @@ describe("Leads Actions", () => {
   describe("deleteLeadAction", () => {
     it("should return error for non-existent lead", async () => {
       const { db } = await import("@/db");
-      vi.mocked(db.select).mockResolvedValue([]);
+      (db.select as any).mockResolvedValue([]);
 
       const result = await deleteLeadAction(999);
       expect(result.success).toBe(false);
@@ -42,7 +42,7 @@ describe("Leads Actions", () => {
   describe("updateLeadAction", () => {
     it("should validate lead data", async () => {
       const { db } = await import("@/db");
-      vi.mocked(db.select).mockResolvedValue([
+      (db.select as any).mockResolvedValue([
         {
           id: 1,
           name: "Test Lead",

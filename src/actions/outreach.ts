@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/db";
-import { leads, campaignConfigs, outreachLogs } from "@/db/schema";
+import { leads, campaignConfigs, outreachLogs, users } from "@/db/schema";
 import { revalidatePath } from "next/cache";
 import OpenAI from "openai";
 import { eq, and } from "drizzle-orm";
@@ -53,11 +53,19 @@ export async function startOutreachAction() {
   const userId = session?.user?.id ? parseInt(session.user.id, 10) : null;
   if (!userId) return { success: false, error: "Usuário não autenticado." };
 
+  const [dbUser] = await db.select().from(users).where(eq(users.id, userId));
   const [config] = await db.select().from(campaignConfigs).where(eq(campaignConfigs.userId, userId));
+  
   const evolutionUrl = process.env.EVOLUTION_API_URL;
-  const evolutionKey = process.env.EVOLUTION_API_KEY;
-  const instance = process.env.EVOLUTION_INSTANCE;
-  if (!evolutionUrl || !evolutionKey || !instance) return { success: false, error: "Erro Config" };
+  const instanceName = dbUser?.whatsappInstanceName;
+  const instanceToken = dbUser?.whatsappInstanceToken;
+
+  if (!evolutionUrl || !instanceName || !instanceToken) {
+    return { 
+      success: false, 
+      error: "WhatsApp não configurado. Vá em Configurações para emparelhar seu WhatsApp primeiro." 
+    };
+  }
 
   const qualifiedLeads = await db
     .select()
@@ -80,10 +88,24 @@ Análise Técnica: ${lead.aiAnalysis}` }
         model: "llama-3.3-70b-versatile",
       });
       const message = completion.choices[0].message.content;
-      await fetch(`${evolutionUrl}/message/sendText/${instance}`, {
-        method: "POST", headers: { "Content-Type": "application/json", "apikey": evolutionKey },
+      
+      console.log(`[Outreach] Enviando mensagem via Evolution Go para lead ${lead.name} (${lead.phone}) usando instância ${instanceName}`);
+      
+      const response = await fetch(`${evolutionUrl}/message/sendText/${instanceName}`, {
+        method: "POST", 
+        headers: { 
+          "Content-Type": "application/json", 
+          "apikey": instanceToken // Token individual da instância
+        },
         body: JSON.stringify({ number: lead.phone, text: message, delay: 1200, linkPreview: true }),
       });
+
+      if (!response.ok) {
+        const errTxt = await response.text();
+        console.error(`Erro ao enviar mensagem para ${lead.phone}:`, errTxt);
+        continue;
+      }
+
       await db.update(leads).set({ status: "contacted" }).where(eq(leads.id, lead.id));
       await db.insert(outreachLogs).values({ leadId: lead.id, status: "sent" });
     } catch (e) { console.error(e); }

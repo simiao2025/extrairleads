@@ -26,6 +26,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           return null;
         }
 
+        // Impede login se o e-mail não estiver verificado
+        if (!user.emailVerified) {
+          throw new Error("unverified_email");
+        }
+
         const isValid = await bcrypt.compare(password, user.password);
         if (!isValid) {
           return null;
