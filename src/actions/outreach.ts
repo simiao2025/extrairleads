@@ -23,14 +23,50 @@ export async function qualifyLeadsAction(leadIds: number[]) {
       : [];
     const prompt = config?.agent1Prompt || "Qualifique o lead.";
 
+    // Mapear metadados adicionais para preencher o prompt de qualificação
+    const meta = (lead.metadata || {}) as any;
+    const reviewsArr = Array.isArray(meta.reviews) ? meta.reviews : [];
+    const reviewsText = reviewsArr
+      .map((r: any) => `- Nota ${r.rating}: "${r.snippet || r.text || ""}" (${r.date || "recente"})`)
+      .join("\n");
+
+    const formattedPrompt = prompt
+      .replace(/{nome}/g, lead.name || "")
+      .replace(/{categoria}/g, lead.niche || meta.category || "")
+      .replace(/{categorias_adicionais}/g, Array.isArray(meta.additionalCategories) ? meta.additionalCategories.join(", ") : "")
+      .replace(/{endereco}/g, meta.address || "")
+      .replace(/{cidade}/g, lead.city || "")
+      .replace(/{bairro}/g, meta.suburb || meta.neighborhood || "")
+      .replace(/{site}/g, lead.website || "null")
+      .replace(/{redes}/g, Array.isArray(meta.socialMedia) ? meta.socialMedia.join(", ") : "Nenhuma")
+      .replace(/{fotos}/g, meta.photosCount || "0")
+      .replace(/{nota}/g, String(meta.rating || ""))
+      .replace(/{total_avaliacoes}/g, String(meta.reviewsCount || "0"))
+      .replace(/{texto, nota, data}/g, reviewsText || "Nenhuma avaliação recente")
+      .replace(/{horario}/g, meta.operatingHours || "Não especificado")
+      .replace(/{faixa_preco}/g, meta.priceRange || "Não especificado")
+      .replace(/{atributos}/g, Array.isArray(meta.attributes) ? meta.attributes.join(", ") : "Nenhum")
+      .replace(/{data_criacao_perfil}/g, meta.profileAge || "Não especificado");
+
     try {
       const completion = await groq.chat.completions.create({
-        messages: [{ role: "system", content: prompt + " Retorne JSON: {score: number, analysis: string}" }, { role: "user", content: JSON.stringify(lead) }],
+        messages: [
+          { role: "system", content: formattedPrompt },
+          { role: "user", content: `Analise as informações do seguinte lead: ${JSON.stringify(lead)}` }
+        ],
         model: "llama-3.3-70b-versatile",
         response_format: { type: "json_object" },
       });
       const result = JSON.parse(completion.choices[0].message.content || "{}");
-      await db.update(leads).set({ aiScore: result.score, aiAnalysis: result.analysis, status: result.score >= 7 ? "qualified" : "discarded" }).where(eq(leads.id, id));
+      await db
+        .update(leads)
+        .set({ 
+          aiScore: result.score, 
+          aiAnalysis: result.analysis, 
+          status: result.score >= 7 ? "qualified" : "discarded",
+          updatedAt: new Date()
+        })
+        .where(eq(leads.id, id));
     } catch (e) { console.error(e); }
   }
 }

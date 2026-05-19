@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, timestamp, jsonb, pgEnum, index } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, timestamp, jsonb, pgEnum, index, customType } from "drizzle-orm/pg-core";
 
 export const kanbanStageEnum = pgEnum("kanban_stage", [
   "raw",
@@ -118,3 +118,20 @@ export const outreachLogs = pgTable("outreach_logs", {
   status: text("status"), // e.g., 'sent', 'failed'
   sentAt: timestamp("sent_at").defaultNow(),
 });
+
+// Tipo personalizado para pgvector (dimensão 1536 para OpenAI text-embedding-3-small)
+const vector1536 = customType<{ data: number[] }>({
+  dataType() {
+    return "vector(1536)";
+  },
+});
+
+export const knowledgeBase = pgTable("knowledge_base", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  content: text("content").notNull(),
+  embedding: vector1536("embedding"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+

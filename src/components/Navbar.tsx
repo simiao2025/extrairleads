@@ -15,7 +15,8 @@ import {
   X,
   CheckCircle,
   AlertCircle,
-  RefreshCw
+  RefreshCw,
+  BookOpen
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { signOut } from "next-auth/react";
@@ -57,6 +58,7 @@ export default function Navbar({ user }: NavbarProps) {
   const links = [
     { name: "Dashboard", href: "/", icon: LayoutGrid },
     { name: "Leads", href: "/leads", icon: Target },
+    { name: "Base RAG", href: "/knowledge", icon: BookOpen },
     { name: "Campanhas", href: "/campaigns", icon: Workflow },
     { name: "Agendamentos", href: "/appointments", icon: CalendarDays },
     { name: "Agentes IA", href: "/agents", icon: Sparkles },
