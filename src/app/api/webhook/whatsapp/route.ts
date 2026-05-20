@@ -163,6 +163,15 @@ export async function POST(req: NextRequest) {
 
     const systemPrompt = `${config?.agent2Prompt || "Você é um SDR focado em abordagens."}
 
+DADOS E ANÁLISE PRÉVIA DO LEAD (Use isso para orientar sua abordagem e citar as dores/forças exatas mapeadas pelo Analista):
+- Empresa/Contato: ${lead.name}
+- Segmento/Nicho: ${lead.niche || "Não informado"}
+- Cidade: ${lead.city || "Não informada"}
+- Site: ${lead.website || "Não informado"}
+- Nota da IA (Score): ${lead.aiScore || "Sem nota"}
+- Dossiê Mapeado (Pontos Fortes, Dores e Estratégia Recomendada):
+${lead.aiAnalysis || "Nenhuma análise prévia disponível."}
+
 DIRETRIZES DE AUTONOMIA (FERRAMENTAS):
 - Você possui total autonomia para CADASTRAR/ATUALIZAR dados da empresa/contato chamando a ferramenta 'update_lead_info'. Chame-a assim que descobrir o nome da empresa, ramo, cidade ou site.
 - Você possui autonomia para FECHAR AGENDAMENTOS chamando a ferramenta 'create_appointment'. Chame-a quando o lead concordar com uma data e hora para conversarmos.

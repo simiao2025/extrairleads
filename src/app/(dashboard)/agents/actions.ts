@@ -98,7 +98,7 @@ Retorne APENAS JSON válido, sem markdown, sem explicações externas:
   "gatilhos_detectados": ["lista", "de", "palavras-chave", "das", "reviews"],
   "canal_recomendado": "WHATSAPP" | "LIGACAO" | "EMAIL" | "VISITA_PRESENCIAL",
   "abordagem_sugerida": "1 frase de abertura personalizada para o primeiro contato",
-  "analysis": "Análise estratégica em 2-3 frases: contexto do negócio, dor identificada e oportunidade."
+  "analysis": "Dossiê estratégico de qualificação em formato de texto estruturado. Deve obrigatoriamente incluir: 1. PONTOS POSITIVOS (pontos fortes do lead, boa reputação, fotos, etc.); 2. PONTOS NEGATIVOS (dores críticas encontradas, falta de site, demora em WhatsApp/plantão, etc.); 3. DIRETRIZ E GANCHO PARA O SDR (instruções exatas de abordagem comercial personalizadas para este negócio)."
 }
 `,
     agent2Prompt: `Você é um SDR (Sales Development Representative) especialista em abordagens consultivas via WhatsApp.

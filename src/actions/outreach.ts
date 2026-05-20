@@ -67,7 +67,7 @@ export async function qualifyLeadsAction(leadIds: number[]) {
         .set({ 
           aiScore: parsedScore, 
           aiAnalysis: result.analysis, 
-          status: isQualified ? "qualified" : "discarded",
+          status: "qualified",
           updatedAt: new Date()
         })
         .where(eq(leads.id, id));
