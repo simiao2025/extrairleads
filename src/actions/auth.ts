@@ -3,8 +3,15 @@
 import { db } from "@/db";
 import { users, verificationTokens } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import bcrypt from "bcryptjs";
+import argon2 from "@node-rs/argon2";
 import crypto from "crypto";
+import { z } from "zod";
+
+const registerSchema = z.object({
+  name: z.string().trim().min(2, "Nome muito curto.").regex(/^[A-Za-zÀ-ÖØ-öø-ÿ\s]+$/, "Nome inválido."),
+  email: z.string().trim().toLowerCase().email("Email inválido."),
+  password: z.string().min(8, "A senha deve ter pelo menos 8 caracteres."),
+});
 
 interface RegisterResult {
   success: boolean;
@@ -12,65 +19,69 @@ interface RegisterResult {
   message?: string;
 }
 
+// Em memória: Rate limiting muito básico por IP/sessão não é ideal em server action puro sem o request,
+// então vamos focar na sanitização estrita e Zero Enumeration por enquanto.
+// Para rate limit real distribuído, a recomendação é usar @upstash/ratelimit com headers no Middleware.
+
 export async function registerAction(
-  name: string,
-  email: string,
-  password: string
+  nameRaw: string,
+  emailRaw: string,
+  passwordRaw: string
 ): Promise<RegisterResult> {
   try {
-    // Validações básicas
-    if (!name || name.trim().length < 2) {
-      return { success: false, error: "Nome deve ter pelo menos 2 caracteres." };
+    // 1. Sanitização estrita (Zod) OWASP A06
+    const validation = registerSchema.safeParse({ name: nameRaw, email: emailRaw, password: passwordRaw });
+    if (!validation.success) {
+      // Fail-closed sem vazar detalhes excessivos
+      return { success: false, error: validation.error.issues[0].message };
     }
 
-    if (!email || !email.includes("@")) {
-      return { success: false, error: "Email inválido." };
-    }
+    const { name, email, password } = validation.data;
 
-    if (!password || password.length < 6) {
-      return { success: false, error: "Senha deve ter pelo menos 6 caracteres." };
-    }
-
-    const cleanEmail = email.toLowerCase().trim();
-
-    // Verificar se o email já existe
+    // 2. Zero Account Enumeration (OWASP A07)
+    // Procuramos o usuário, mas se ele existir, disfarçamos.
     const [existingUser] = await db
       .select()
       .from(users)
-      .where(eq(users.email, cleanEmail));
+      .where(eq(users.email, email));
 
     if (existingUser) {
-      return { success: false, error: "Este email já está cadastrado." };
+      // Se existir, nós não criamos o usuário novamente nem enviamos erro.
+      // Apenas simulamos o mesmo fluxo externo de sucesso para evitar enumeração.
+      // Nota: Na vida real, poderíamos enviar um e-mail de "Você já tem conta, faça login".
+      return { 
+        success: true, 
+        message: "E-mail de confirmação enviado! Verifique sua caixa de entrada." 
+      };
     }
 
-    // Hash da senha
-    const hashedPassword = await bcrypt.hash(password, 12);
+    // 3. Argon2id para Hashing Forte (OWASP A05)
+    // Substitui o antigo bcrypt
+    const hashedPassword = await argon2.hash(password);
 
-    // Criar o usuário pendente de confirmação
+    // 4. Inserção Segura
     await db.insert(users).values({
-      name: name.trim(),
-      email: cleanEmail,
+      name,
+      email,
       password: hashedPassword,
       onboardingStatus: "PENDING_INFO",
       emailVerified: null, // Forçar confirmação por e-mail
     });
 
-    // Gerar token de verificação seguro de uso único
+    // 5. Token criptograficamente seguro (OWASP A02)
     const token = crypto.randomBytes(32).toString("hex");
-    const expires = new Date(Date.now() + 24 * 60 * 60 * 1000); // Expirar em 24h
+    const expires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h
 
-    // Salvar token no banco
     await db.insert(verificationTokens).values({
-      identifier: cleanEmail,
+      identifier: email,
       token: token,
       expires: expires,
     });
 
-    // Montar link seguro de ativação
-    const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
-    const activationLink = `${baseUrl}/api/auth/confirm?token=${token}&email=${encodeURIComponent(cleanEmail)}`;
-
     // Enviar e-mail de ativação via Resend API
+    const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+    const activationLink = `${baseUrl}/api/auth/confirm?token=${token}&email=${encodeURIComponent(email)}`;
+    
     const resendApiKey = process.env.RESEND_API_KEY;
     if (resendApiKey) {
       try {
@@ -82,13 +93,13 @@ export async function registerAction(
           },
           body: JSON.stringify({
             from: "ExtrairLeads <onboarding@resend.dev>",
-            to: cleanEmail,
+            to: email,
             subject: "Ative sua conta - ExtrairLeads",
             html: `
               <div style="font-family: sans-serif; background-color: #050505; color: #f4f4f5; padding: 40px; border-radius: 16px; max-width: 600px; margin: 0 auto; border: 1px solid #27272a;">
                 <h2 style="color: #ffffff; font-size: 24px; font-weight: bold; margin-bottom: 20px;">Ative sua conta de prospecção</h2>
                 <p style="color: #a1a1aa; font-size: 14px; line-height: 1.6;">
-                  Olá, <strong>${name.trim()}</strong>!<br/><br/>
+                  Olá, <strong>${name}</strong>!<br/><br/>
                   Obrigado por se cadastrar no <strong>ExtrairLeads</strong>, a inteligência neural de vendas corporativas B2B.<br/>
                   Para ativar o acesso a sua conta e prosseguir para o onboarding, clique no link de ativação segura abaixo:
                 </p>
@@ -110,10 +121,8 @@ export async function registerAction(
           }),
         });
       } catch (err) {
-        console.error("[registerAction] Erro no envio do Resend:", err);
+        console.error("[registerAction] Erro silencioso no envio de e-mail.");
       }
-    } else {
-      console.warn("[registerAction] RESEND_API_KEY ausente no .env. Link de ativação:", activationLink);
     }
 
     return { 
@@ -121,9 +130,9 @@ export async function registerAction(
       message: "E-mail de confirmação enviado! Verifique sua caixa de entrada." 
     };
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.error("[registerAction] Erro:", message);
-    return { success: false, error: "Erro interno ao criar conta. Tente novamente." };
+    // Fail-closed (OWASP A10): Erros internos NUNCA vazam stack trace
+    console.error("[registerAction] Erro Crítico:", error);
+    return { success: false, error: "Serviço temporariamente indisponível. Tente novamente." };
   }
 }
 

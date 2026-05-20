@@ -1,11 +1,16 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
-import bcrypt from "bcryptjs";
+import argon2 from "@node-rs/argon2";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { authConfig } from "./auth.config";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  ...authConfig,
+  session: {
+    strategy: "jwt",
+  },
   providers: [
     Credentials({
       name: "credentials",
@@ -31,7 +36,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           throw new Error("unverified_email");
         }
 
-        const isValid = await bcrypt.compare(password, user.password);
+        let isValid = false;
+        try {
+          isValid = await argon2.verify(user.password, password);
+        } catch (e) {
+          return null;
+        }
+
         if (!isValid) {
           return null;
         }
@@ -44,24 +55,4 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       },
     }),
   ],
-  session: {
-    strategy: "jwt",
-  },
-  pages: {
-    signIn: "/login",
-  },
-  callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
-        token.id = user.id;
-      }
-      return token;
-    },
-    async session({ session, token }) {
-      if (session.user) {
-        session.user.id = token.id as string;
-      }
-      return session;
-    },
-  },
 });
