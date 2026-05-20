@@ -68,8 +68,8 @@ export function Pagination({ currentPage, totalPages, totalItems, itemsPerPage }
               size="icon-sm"
               onClick={() => goToPage(page)}
               className={cn(
-                "min-w-[32px]",
-                page === currentPage && "bg-emerald-500 hover:bg-emerald-400 text-black"
+                "min-w-[32px] cursor-pointer",
+                page === currentPage && "bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/25 backdrop-blur-md hover:bg-emerald-500/20 hover:text-emerald-300 hover:border-emerald-500/40 transition-all duration-300 shadow-[0_0_15px_rgba(16,185,129,0.15)] hover:scale-105 active:scale-95"
               )}
             >
               {page}

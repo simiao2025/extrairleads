@@ -136,7 +136,7 @@ function AppointmentDialog({ open, onOpenChange, appointment, leads, onSuccess }
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} className="text-zinc-400">
               Cancelar
             </Button>
-            <Button type="submit" disabled={loading} className="bg-emerald-500 hover:bg-emerald-400 text-black font-bold">
+            <Button type="submit" disabled={loading} className="bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/25 backdrop-blur-md hover:bg-emerald-500/20 hover:text-emerald-300 hover:border-emerald-500/40 hover:shadow-[0_0_25px_rgba(16,185,129,0.25)] hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 cursor-pointer">
               {loading ? "Salvando..." : "Salvar"}
             </Button>
           </DialogFooter>
@@ -222,7 +222,7 @@ export function AppointmentsClient({ initialAppointments, availableLeads }: Appo
           </div>
           <h3 className="text-lg font-bold text-zinc-300 mb-2">Nenhum agendamento</h3>
           <p className="text-sm text-zinc-500 mb-6">Crie seu primeiro agendamento para acompanhar seus leads interessados.</p>
-          <Button onClick={() => setShowCreate(true)} className="bg-emerald-500 hover:bg-emerald-400 text-black font-bold">
+          <Button onClick={() => setShowCreate(true)} className="bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/25 backdrop-blur-md hover:bg-emerald-500/20 hover:text-emerald-300 hover:border-emerald-500/40 hover:shadow-[0_0_25px_rgba(16,185,129,0.25)] hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 cursor-pointer">
             <Plus className="w-4 h-4 mr-2" />
             Criar Agendamento
           </Button>
@@ -241,7 +241,7 @@ export function AppointmentsClient({ initialAppointments, availableLeads }: Appo
   return (
     <>
       <div className="flex justify-end">
-        <Button onClick={() => setShowCreate(true)} className="bg-emerald-500 hover:bg-emerald-400 text-black font-bold">
+        <Button onClick={() => setShowCreate(true)} className="bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/25 backdrop-blur-md hover:bg-emerald-500/20 hover:text-emerald-300 hover:border-emerald-500/40 hover:shadow-[0_0_25px_rgba(16,185,129,0.25)] hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 cursor-pointer">
           <Plus className="w-4 h-4 mr-2" />
           Novo Agendamento
         </Button>

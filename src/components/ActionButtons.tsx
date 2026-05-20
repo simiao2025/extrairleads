@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ScanSearch, Zap, Loader2 } from "lucide-react";
+import { ScanSearch, Play, RefreshCw, Loader2 } from "lucide-react";
 import { qualifyPendingLeadsAction, startOutreachAction, followUpLeadsAction } from "@/app/actions";
 import { useToast } from "@/components/ui/toast";
 
@@ -30,7 +30,7 @@ export function AnalyzeButton() {
   return (
     <Button
       variant="outline"
-      className="rounded-xl h-12 px-6 border-white/10 bg-white/5 text-muted-foreground hover:bg-white/10 hover:text-white transition-all"
+      className="rounded-xl h-12 px-6 bg-white/[0.02] border border-white/10 text-zinc-400 backdrop-blur-md hover:bg-white/5 hover:border-white/20 hover:text-white hover:shadow-[0_0_15px_rgba(255,255,255,0.05)] transition-all duration-300 active:scale-98 cursor-pointer"
       onClick={handleClick}
       disabled={loading}
     >
@@ -67,14 +67,14 @@ export function OutreachButton() {
 
   return (
     <Button
-      className="rounded-xl h-12 px-8 bg-emerald-500 text-black font-bold hover:bg-emerald-400 hover:-translate-y-0.5 transition-all"
+      className="rounded-xl h-12 px-8 bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/25 backdrop-blur-md hover:bg-emerald-500/20 hover:text-emerald-300 hover:border-emerald-500/40 hover:-translate-y-0.5 hover:shadow-[0_0_25px_rgba(16,185,129,0.25)] active:translate-y-0 active:scale-98 transition-all duration-300 cursor-pointer"
       onClick={handleClick}
       disabled={loading}
     >
       {loading ? (
         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
       ) : (
-        <Zap className="mr-2 h-4 w-4 fill-black" />
+        <Play className="mr-2 h-4 w-4 fill-current" />
       )}
       {loading ? "Processando..." : "Ligar Motor IA"}
     </Button>
@@ -109,14 +109,14 @@ export function FollowUpButton() {
   return (
     <Button
       variant="outline"
-      className="rounded-xl h-12 px-8 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300 transition-all"
+      className="rounded-xl h-12 px-8 bg-orange-500/5 border border-orange-500/20 text-orange-400 backdrop-blur-sm hover:bg-orange-500/15 hover:border-orange-500/45 hover:text-orange-300 hover:shadow-[0_0_20px_rgba(249,115,22,0.15)] hover:-translate-y-0.5 active:translate-y-0 active:scale-98 transition-all duration-300 cursor-pointer"
       onClick={handleClick}
       disabled={loading}
     >
       {loading ? (
         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
       ) : (
-        <Zap className="mr-2 h-4 w-4" />
+        <RefreshCw className="mr-2 h-4 w-4" />
       )}
       {loading ? "Retomando..." : "Retomar Contatos"}
     </Button>

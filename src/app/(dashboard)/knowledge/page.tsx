@@ -168,7 +168,7 @@ export default function KnowledgePage() {
                     <Button 
                       type="submit" 
                       disabled={isPending}
-                      className="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-black py-6 text-base shadow-[0_0_20px_rgba(16,185,129,0.2)] hover:scale-[1.01] active:scale-[0.99] transition-all"
+                      className="w-full bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/25 backdrop-blur-md hover:bg-emerald-500/20 hover:text-emerald-300 hover:border-emerald-500/40 hover:-translate-y-0.5 hover:shadow-[0_0_25px_rgba(16,185,129,0.25)] active:translate-y-0 active:scale-98 transition-all duration-300 cursor-pointer py-6 text-base"
                     >
                       {isPending ? (
                         <>

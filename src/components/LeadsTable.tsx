@@ -125,7 +125,7 @@ function EditDialog({ lead, open, onOpenChange, onSuccess }: EditDialogProps) {
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} className="text-zinc-400">
               Cancelar
             </Button>
-            <Button type="submit" disabled={loading} className="bg-emerald-500 hover:bg-emerald-400 text-black font-bold">
+            <Button type="submit" disabled={loading} className="bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/25 backdrop-blur-md hover:bg-emerald-500/20 hover:text-emerald-300 hover:border-emerald-500/40 hover:shadow-[0_0_25px_rgba(16,185,129,0.25)] hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 cursor-pointer">
               {loading ? "Salvando..." : "Salvar Alterações"}
             </Button>
           </DialogFooter>

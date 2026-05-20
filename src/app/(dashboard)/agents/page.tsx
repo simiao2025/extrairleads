@@ -171,7 +171,7 @@ export default async function ConfigPage() {
 
           <FadeIn delay={0.5}>
             <div className="flex justify-end pt-10 pb-20">
-              <Button type="submit" className="bg-emerald-500 hover:bg-emerald-400 text-black px-12 py-7 text-xl font-black shadow-[0_0_30px_rgba(16,185,129,0.4)] transition-all hover:scale-105 active:scale-95 group">
+              <Button type="submit" className="bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/25 backdrop-blur-md hover:bg-emerald-500/20 hover:text-emerald-300 hover:border-emerald-500/40 hover:-translate-y-0.5 hover:shadow-[0_0_30px_rgba(16,185,129,0.25)] active:translate-y-0 active:scale-98 transition-all duration-300 cursor-pointer px-12 py-7 text-xl font-black group">
                 <Save className="mr-3 w-6 h-6 group-hover:rotate-12 transition-transform" />
                 Salvar Arquitetura Neural
               </Button>

@@ -1,5 +1,5 @@
 import { AnalyticsChart, MetricCard } from "@/components/ui/analytics";
-import { TrendingUp, Target, Zap, Percent } from "lucide-react";
+import { TrendingUp, Target, Database, Percent } from "lucide-react";
 
 interface AnalyticsSectionProps {
   leadsByStatus: Record<string, number>;
@@ -67,7 +67,7 @@ export function AnalyticsSection({ leadsByStatus, conversionRate, totalLeads, qu
           title="Total Extraídos"
           value={totalLeads}
           subtitle="Leads no banco de dados"
-          icon={<Zap className="h-5 w-5 text-sky-400" />}
+          icon={<Database className="h-5 w-5 text-sky-400" />}
           color="text-sky-400"
         />
         <MetricCard

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Search, MapPin, Zap, ZapOff } from "lucide-react";
+import { Search, MapPin, Cpu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -61,7 +61,8 @@ export default function SearchForm() {
             checked={!onlyScrape}
             onCheckedChange={(checked) => setOnlyScrape(!checked)}
           />
-          {!onlyScrape ? <Zap className="w-4 h-4 text-yellow-500 fill-yellow-500" /> : <ZapOff className="w-4 h-4 text-zinc-600" />}
+          {!onlyScrape ? <Cpu className="w-4 h-4 text-orange-500 drop-shadow-[0_0_6px_rgba(249,115,22,0.4)]" /> : 
+<Cpu className="w-4 h-4 text-zinc-600" />}
         </div>
       </CardHeader>
 
@@ -110,10 +111,10 @@ export default function SearchForm() {
           <div className="flex items-end">
             <Button
               type="submit"
-              className={`w-full font-black transition-all shadow-lg hover:scale-105 active:scale-95 ${
+              className={`w-full font-bold transition-all backdrop-blur-md hover:-translate-y-0.5 active:translate-y-0 active:scale-98 cursor-pointer ${
                 onlyScrape
-                  ? "bg-zinc-800 hover:bg-zinc-700 text-white"
-                  : "bg-emerald-500 hover:bg-emerald-400 text-black shadow-[0_0_20px_rgba(16,185,129,0.2)]"
+                  ? "bg-white/5 text-zinc-300 border border-white/10 hover:bg-white/10 hover:text-white hover:border-white/20 hover:shadow-[0_0_15px_rgba(255,255,255,0.05)]"
+                  : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500 hover:text-black hover:border-emerald-500/50 hover:shadow-[0_0_25px_rgba(16,185,129,0.3)]"
               }`}
               disabled={loading}
             >

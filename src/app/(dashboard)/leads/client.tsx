@@ -76,16 +76,16 @@ export function LeadsClient({ initialSearch, initialStatus, filteredLeads, curre
             if (e.target.value) params.set("status", e.target.value);
             router.push(`/leads?${params.toString()}`);
           }}
-          className="h-8 rounded-lg border border-zinc-800 bg-zinc-900 px-3 text-sm text-zinc-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+          className="h-10 rounded-xl border border-white/[0.08] bg-black/40 px-4 text-sm text-zinc-300 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20 transition-all cursor-pointer"
         >
           {STATUS_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>{opt.label}</option>
+            <option key={opt.value} value={opt.value} className="bg-zinc-950 text-zinc-300">{opt.label}</option>
           ))}
         </select>
         <Button
           variant="ghost"
           onClick={applyFilters}
-          className="bg-emerald-500 hover:bg-emerald-400 text-black font-bold"
+          className="bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/25 backdrop-blur-md hover:bg-emerald-500/20 hover:text-emerald-300 hover:border-emerald-500/40 hover:-translate-y-0.5 active:translate-y-0 active:scale-98 transition-all duration-300 cursor-pointer h-10 px-5 rounded-xl"
         >
           Filtrar
         </Button>

@@ -7,7 +7,7 @@ import {
   Target, 
   Workflow, 
   CalendarDays, 
-  Sparkles, 
+  Cpu, 
   Sliders, 
   LogOut, 
   User, 
@@ -61,7 +61,7 @@ export default function Navbar({ user }: NavbarProps) {
     { name: "Base RAG", href: "/knowledge", icon: BookOpen },
     { name: "Campanhas", href: "/campaigns", icon: Workflow },
     { name: "Agendamentos", href: "/appointments", icon: CalendarDays },
-    { name: "Agentes IA", href: "/agents", icon: Sparkles },
+    { name: "Agentes IA", href: "/agents", icon: Cpu },
     { name: "Configurações", href: "/settings", icon: Sliders },
   ];
 
