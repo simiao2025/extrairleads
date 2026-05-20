@@ -9,6 +9,7 @@ export {
   qualifyLeadsAction,
   qualifyPendingLeadsAction,
   startOutreachAction,
+  followUpLeadsAction,
 } from "@/actions/outreach";
 
 export { searchLeadsAction } from "@/actions/scraping";

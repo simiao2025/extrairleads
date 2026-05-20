@@ -22,7 +22,7 @@ import { KanbanCard } from "./KanbanCard";
 import { moveLeadAction } from "@/app/actions";
 import { useToast } from "@/components/ui/toast";
 
-export type LeadStatus = "raw" | "qualified" | "in_queue" | "contacted" | "interested" | "discarded";
+export type LeadStatus = "raw" | "qualified" | "in_queue" | "contacted" | "interested" | "human_intervention" | "discarded";
 
 export interface Lead {
   id: number;
@@ -40,7 +40,7 @@ export interface Lead {
   updatedAt: Date | null;
 }
 
-type KanbanStage = "raw" | "qualified" | "contacted" | "interested" | "in_queue" | "discarded";
+type KanbanStage = "raw" | "qualified" | "contacted" | "interested" | "in_queue" | "human_intervention" | "discarded";
 
 interface StageConfig {
   key: KanbanStage;
@@ -54,7 +54,8 @@ const STAGES: StageConfig[] = [
   { key: "raw", label: "Novos", border: "border-sky-500/50", badge: "bg-sky-500/10 text-sky-400 border-sky-500/20", emptyLabel: "Aguardando" },
   { key: "qualified", label: "Qualificados", border: "border-emerald-500/50", badge: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20", emptyLabel: "Nenhum qualificado" },
   { key: "contacted", label: "Contatados", border: "border-purple-500/50", badge: "bg-purple-500/10 text-purple-400 border-purple-500/20", emptyLabel: "Nenhum contatado" },
-  { key: "interested", label: "Interessados", border: "border-orange-500/50", badge: "bg-orange-500/10 text-orange-400 border-orange-500/20", emptyLabel: "Nenhum interessado" },
+  { key: "human_intervention", label: "Intervenção", border: "border-rose-500/50", badge: "bg-rose-500/10 text-rose-400 border-rose-500/20", emptyLabel: "Tudo tranquilo" },
+  { key: "interested", label: "Interessados", border: "border-amber-500/50", badge: "bg-amber-500/10 text-amber-400 border-amber-500/20", emptyLabel: "Nenhum interessado" },
 ];
 
 interface KanbanBoardProps {
@@ -74,7 +75,7 @@ export function KanbanBoard({ initialLeads }: KanbanBoardProps) {
 
   const leadsByStage = useMemo(() => {
     const map: Record<KanbanStage, Lead[]> = {
-      raw: [], qualified: [], contacted: [], interested: [], in_queue: [], discarded: [],
+      raw: [], qualified: [], contacted: [], interested: [], in_queue: [], human_intervention: [], discarded: [],
     };
     leads.forEach((lead) => {
       const stage = (lead.status as KanbanStage) || "raw";

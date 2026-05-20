@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/db";
-import { leads, campaignConfigs, outreachLogs, users } from "@/db/schema";
+import { leads, campaignConfigs, outreachLogs, users, chatHistory } from "@/db/schema";
 import { revalidatePath } from "next/cache";
 import OpenAI from "openai";
 import { eq, and } from "drizzle-orm";
@@ -152,4 +152,74 @@ Análise Técnica: ${lead.aiAnalysis}` }
   }
   revalidatePath("/");
   return { success: true };
+}
+
+export async function followUpLeadsAction() {
+  const session = await auth();
+  const userId = session?.user?.id ? parseInt(session.user.id, 10) : null;
+  if (!userId) return { success: false, error: "Usuário não autenticado." };
+
+  const [dbUser] = await db.select().from(users).where(eq(users.id, userId));
+  const [config] = await db.select().from(campaignConfigs).where(eq(campaignConfigs.userId, userId));
+  
+  const evolutionUrl = process.env.EVOLUTION_API_URL;
+  const instanceName = dbUser?.whatsappInstanceName;
+  const instanceToken = dbUser?.whatsappInstanceToken;
+
+  if (!evolutionUrl || !instanceName || !instanceToken) {
+    return { success: false, error: "WhatsApp não configurado." };
+  }
+
+  // Buscar leads contactados
+  const contactedLeads = await db
+    .select()
+    .from(leads)
+    .where(and(eq(leads.status, "contacted"), eq(leads.userId, userId)))
+    .limit(config?.weeklyLimit || 5);
+
+  let count = 0;
+  for (const lead of contactedLeads) {
+    if (!lead.phone) continue;
+
+    // Verificar se o lead respondeu (se tem mensagens do usuário)
+    const history = await db.select().from(chatHistory).where(eq(chatHistory.leadId, lead.id));
+    const hasUserReply = history.some(h => h.role === "user");
+    
+    // Só manda follow-up se o cliente ainda NÃO respondeu
+    if (!hasUserReply) {
+      try {
+        const completion = await groq.chat.completions.create({
+          messages: [
+            { role: "system", content: config?.agent2Prompt || "SDR focado em follow-up." }, 
+            { role: "user", content: `DADOS DO LEAD:
+Empresa: ${lead.name}
+Análise Técnica: ${lead.aiAnalysis}
+O cliente não respondeu nosso primeiro contato. Gere UMA MENSAGEM CURTA DE FOLLOW-UP (bump) para tentar reengajar, ex: "Oi [Nome], conseguiu ver a mensagem acima?". Seja natural e breve.` }
+          ],
+          model: "llama-3.3-70b-versatile",
+        });
+        const message = completion.choices[0].message.content;
+        
+        console.log(`[Follow-up] Enviando follow-up via Evolution Go para lead ${lead.name}`);
+        
+        const response = await fetch(`${evolutionUrl}/message/sendText/${instanceName}`, {
+          method: "POST", 
+          headers: { "Content-Type": "application/json", "apikey": instanceToken },
+          body: JSON.stringify({ number: lead.phone, text: message, delay: 1200 }),
+        });
+
+        if (response.ok) {
+          count++;
+          await db.insert(chatHistory).values({
+            leadId: lead.id,
+            role: "assistant",
+            content: message,
+            type: "text",
+          });
+        }
+      } catch (e) { console.error(e); }
+    }
+  }
+  revalidatePath("/");
+  return { success: true, count };
 }

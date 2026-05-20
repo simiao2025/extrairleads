@@ -6,7 +6,7 @@ import { MessageSquare, GripVertical } from "lucide-react";
 import { cn } from "@/lib/utils";
 import LeadDetailsDialog from "./LeadDetailsDialog";
 
-type LeadStatus = "raw" | "qualified" | "in_queue" | "contacted" | "interested" | "discarded";
+type LeadStatus = "raw" | "qualified" | "in_queue" | "contacted" | "interested" | "human_intervention" | "discarded";
 
 interface Lead {
   id: number;

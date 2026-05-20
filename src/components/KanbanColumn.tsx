@@ -4,7 +4,7 @@ import { useDroppable } from "@dnd-kit/core";
 import { cn } from "@/lib/utils";
 import { KanbanCard } from "./KanbanCard";
 
-type LeadStatus = "raw" | "qualified" | "in_queue" | "contacted" | "interested" | "discarded";
+type LeadStatus = "raw" | "qualified" | "in_queue" | "contacted" | "interested" | "human_intervention" | "discarded";
 
 interface Lead {
   id: number;
@@ -51,16 +51,16 @@ export function KanbanColumn({ stage, leads, animationDelay, isDragging }: Kanba
       )}
       style={{ animationDelay: `${animationDelay}ms` }}
     >
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold tracking-wide text-zinc-300">
+      <div className="flex items-center justify-between mb-1">
+        <h3 className="text-sm font-bold tracking-wider text-white/90 uppercase">
           {stage.label}
         </h3>
-        <span className={cn("rounded-md border px-2 py-0.5 text-xs font-bold", stage.badge)}>
+        <span className={cn("rounded-md border px-2 py-0.5 text-[10px] font-black uppercase tracking-widest", stage.badge)}>
           {leads.length}
         </span>
       </div>
 
-      <div className="h-px w-full bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+      <div className="h-px w-full bg-gradient-to-r from-transparent via-white/10 to-transparent mb-2" />
 
       <div className="flex flex-col gap-3 flex-1">
         {leads.map((lead, i) => (

@@ -175,6 +175,8 @@ ${lead.aiAnalysis || "Nenhuma análise prévia disponível."}
 DIRETRIZES DE AUTONOMIA (FERRAMENTAS):
 - Você possui total autonomia para CADASTRAR/ATUALIZAR dados da empresa/contato chamando a ferramenta 'update_lead_info'. Chame-a assim que descobrir o nome da empresa, ramo, cidade ou site.
 - Você possui autonomia para FECHAR AGENDAMENTOS chamando a ferramenta 'create_appointment'. Chame-a quando o lead concordar com uma data e hora para conversarmos.
+- Você possui autonomia para TRANSBORDAR PARA HUMANO chamando a ferramenta 'escalate_to_human'. Chame-a se o cliente fizer perguntas financeiras complexas, se irritar, ou estiver pronto para pagar.
+- Você possui autonomia para ENVIAR ÁUDIOS chamando a ferramenta 'send_voice_note'. Use isso estrategicamente para quebrar o gelo, contornar objeções críticas ou gerar extrema empatia.
 
 BASE DE CONHECIMENTO (RAG):
 Use apenas as seguintes informações corporativas oficiais para esclarecer dúvidas e apresentar produtos/serviços:
@@ -218,6 +220,34 @@ ${formattedHistory}
             required: ["dateStr"]
           }
         }
+      },
+      {
+        type: "function" as const,
+        function: {
+          name: "escalate_to_human",
+          description: "Aciona o transbordo para um atendente humano. Chame esta ferramenta se o cliente fizer perguntas financeiras muito complexas, se irritar, ou estiver pronto para passar o cartão e fechar a compra.",
+          parameters: {
+            type: "object",
+            properties: {
+              reason: { type: "string", description: "Motivo do transbordo." }
+            },
+            required: ["reason"]
+          }
+        }
+      },
+      {
+        type: "function" as const,
+        function: {
+          name: "send_voice_note",
+          description: "Envia um áudio de voz natural para o cliente. Use para gerar proximidade ou contornar objeções. Envie textos curtos (máximo 2 frases).",
+          parameters: {
+            type: "object",
+            properties: {
+              text_to_speak: { type: "string", description: "O texto exato que será convertido em voz e enviado ao cliente." }
+            },
+            required: ["text_to_speak"]
+          }
+        }
       }
     ];
 
@@ -235,6 +265,8 @@ ${formattedHistory}
     const choice = completion.choices[0];
     const toolCalls = choice.message.tool_calls as any[];
     let aiResponseText = choice.message.content || "";
+    let forceAudio = false;
+    let overrideText = "";
 
     // Tratar chamadas de funções autônomas (Tools)
     if (toolCalls && toolCalls.length > 0) {
@@ -267,32 +299,42 @@ ${formattedHistory}
             status: "confirmed",
           });
           await db.update(leads).set({ status: "interested" }).where(eq(leads.id, lead.id));
+        } else if (toolName === "escalate_to_human") {
+          console.log(`[Webhook Tool] Executando escalate_to_human para o Lead ID ${lead.id}:`, toolArgs);
+          await db.update(leads).set({ status: "human_intervention" }).where(eq(leads.id, lead.id));
+        } else if (toolName === "send_voice_note") {
+          console.log(`[Webhook Tool] IA decidiu enviar áudio:`, toolArgs);
+          forceAudio = true;
+          overrideText = toolArgs.text_to_speak;
         }
       }
 
-      // Re-chama o modelo Llama com a confirmação das ferramentas
-      const secondCompletion = await groq.chat.completions.create({
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: textContent },
-          choice.message,
-          ...toolCalls.map((tc) => ({
-            role: "tool" as const,
-            tool_call_id: tc.id,
-            name: tc.function.name,
-            content: "Success",
-          })),
-        ],
-        model: "llama-3.3-70b-versatile",
-      });
+      if (overrideText) {
+        aiResponseText = overrideText;
+      } else {
+        const secondCompletion = await groq.chat.completions.create({
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: textContent },
+            choice.message,
+            ...toolCalls.map((tc) => ({
+              role: "tool" as const,
+              tool_call_id: tc.id,
+              name: tc.function.name,
+              content: "Success",
+            })),
+          ],
+          model: "llama-3.3-70b-versatile",
+        });
 
-      aiResponseText = secondCompletion.choices[0].message.content || "";
+        aiResponseText = secondCompletion.choices[0].message.content || "";
+      }
     }
 
     if (!aiResponseText.trim()) return NextResponse.json({ ok: true });
 
     // 7. Enviar Mensagem Final (Texto Dividido em Blocos ou Áudio Natural)
-    const shouldReplyAudio = !!audioMessage && !!process.env.OPENAI_API_KEY;
+    const shouldReplyAudio = (!!audioMessage || forceAudio) && !!process.env.OPENAI_API_KEY;
 
     if (shouldReplyAudio) {
       // Responder com Áudio

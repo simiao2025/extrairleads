@@ -3,7 +3,7 @@ import { leads } from "@/db/schema";
 import { asc, eq, and } from "drizzle-orm";
 import SearchForm from "@/components/SearchForm";
 import { Layers, User, MessageSquare, Star } from "lucide-react";
-import { AnalyzeButton, OutreachButton } from "@/components/ActionButtons";
+import { AnalyzeButton, OutreachButton, FollowUpButton } from "@/components/ActionButtons";
 import { KanbanBoard } from "@/components/KanbanBoard";
 import { Pagination } from "@/components/ui/pagination";
 import { cn } from "@/lib/utils";
@@ -105,6 +105,7 @@ export default async function Home({ searchParams }: PageProps) {
 
           <div className="flex shrink-0 items-center gap-3">
             <AnalyzeButton />
+            <FollowUpButton />
             <OutreachButton />
           </div>
         </section>

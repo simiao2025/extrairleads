@@ -6,6 +6,7 @@ export const kanbanStageEnum = pgEnum("kanban_stage", [
   "in_queue",
   "contacted",
   "interested",
+  "human_intervention",
   "discarded",
 ]);
 

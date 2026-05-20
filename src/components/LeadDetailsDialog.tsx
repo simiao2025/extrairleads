@@ -8,7 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 import { ChatMessage } from "@/types/chat";
 
-type LeadStatus = "raw" | "qualified" | "in_queue" | "contacted" | "interested" | "discarded";
+type LeadStatus = "raw" | "qualified" | "in_queue" | "contacted" | "interested" | "human_intervention" | "discarded";
 
 interface Lead {
   id: number;
@@ -39,20 +39,24 @@ export default function LeadDetailsDialog({ lead }: { lead: Lead }) {
 
   return (
     <Dialog onOpenChange={(open) => open && loadChat()}>
-      <DialogTrigger render={<button className="w-full text-left p-4 rounded-xl bg-zinc-900/40 backdrop-blur-xl border border-white/[0.05] hover:border-cyan-500/50 transition-colors cursor-pointer group" />}>
-        <div className="flex justify-between items-start">
-          <p className="font-bold text-sm truncate w-4/5">{lead.name}</p>
-          {lead.aiScore && (
-            <span className="text-[10px] font-bold text-emerald-900 bg-emerald-400 px-1.5 py-0.5 rounded shadow-[0_0_10px_rgba(52,211,153,0.3)]">
-              {lead.aiScore}
-            </span>
-          )}
-        </div>
-        <p className="text-xs text-zinc-500 mt-1 truncate">{lead.city}, {lead.state}</p>
-        <div className="mt-4 flex items-center justify-between">
-          <span className="text-[10px] bg-zinc-800 px-2 py-0.5 rounded text-zinc-400">{lead.niche}</span>
-          <MessageSquare className="w-3.5 h-3.5 text-zinc-600 group-hover:text-cyan-500 transition-colors" />
-        </div>
+      <DialogTrigger>
+        <button className="w-full text-left p-4 rounded-xl bg-white/[0.02] backdrop-blur-xl border border-white/[0.05] hover:border-emerald-500/30 hover:bg-white/[0.04] transition-all cursor-pointer group shadow-lg shadow-black/20 hover:shadow-emerald-500/10">
+          <div className="flex justify-between items-start">
+            <p className="font-bold text-sm truncate w-4/5 text-white/90 group-hover:text-emerald-400 transition-colors">{lead.name}</p>
+            {lead.aiScore && (
+              <span className="text-[10px] font-black text-emerald-950 bg-emerald-400/90 px-1.5 py-0.5 rounded-md shadow-[0_0_12px_rgba(52,211,153,0.4)]">
+                {lead.aiScore}
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-white/50 mt-1 truncate">{lead.city}, {lead.state}</p>
+          <div className="mt-4 flex items-center justify-between">
+            <span className="text-[10px] font-medium bg-white/5 border border-white/10 px-2 py-0.5 rounded-full text-white/60">{lead.niche || "Sem Nicho"}</span>
+            <div className="w-6 h-6 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-emerald-500/20 transition-colors">
+              <MessageSquare className="w-3 h-3 text-white/40 group-hover:text-emerald-400 transition-colors" />
+            </div>
+          </div>
+        </button>
       </DialogTrigger>
       
       <DialogContent className="bg-zinc-950/90 backdrop-blur-2xl border-zinc-800 text-white max-w-2xl h-[80vh] flex flex-col shadow-2xl">

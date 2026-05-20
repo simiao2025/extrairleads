@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ScanSearch, Zap, Loader2 } from "lucide-react";
-import { qualifyPendingLeadsAction, startOutreachAction } from "@/app/actions";
+import { qualifyPendingLeadsAction, startOutreachAction, followUpLeadsAction } from "@/app/actions";
 import { useToast } from "@/components/ui/toast";
 
 export function AnalyzeButton() {
@@ -77,6 +77,48 @@ export function OutreachButton() {
         <Zap className="mr-2 h-4 w-4 fill-black" />
       )}
       {loading ? "Processando..." : "Ligar Motor IA"}
+    </Button>
+  );
+}
+
+export function FollowUpButton() {
+  const [loading, setLoading] = useState(false);
+  const { success, error } = useToast();
+
+  const handleClick = async () => {
+    setLoading(true);
+    try {
+      const result = await followUpLeadsAction();
+      if (result.success) {
+        if (result.count === 0) {
+          success("Nenhum lead aguardando follow-up.");
+        } else {
+          success(`Follow-up enviado para ${result.count} lead(s)!`);
+        }
+      } else {
+        error(result.error || "Erro ao realizar follow-up.");
+      }
+    } catch (err) {
+      error("Erro na rotina de follow-up. Verifique o console.");
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Button
+      variant="outline"
+      className="rounded-xl h-12 px-8 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300 transition-all"
+      onClick={handleClick}
+      disabled={loading}
+    >
+      {loading ? (
+        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+      ) : (
+        <Zap className="mr-2 h-4 w-4" />
+      )}
+      {loading ? "Retomando..." : "Retomar Contatos"}
     </Button>
   );
 }
