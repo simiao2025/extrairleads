@@ -58,12 +58,16 @@ export async function qualifyLeadsAction(leadIds: number[]) {
         response_format: { type: "json_object" },
       });
       const result = JSON.parse(completion.choices[0].message.content || "{}");
+      const scoreNum = Number(result.score) || 0;
+      const parsedScore = Math.round(scoreNum);
+      const isQualified = scoreNum >= 7;
+
       await db
         .update(leads)
         .set({ 
-          aiScore: result.score, 
+          aiScore: parsedScore, 
           aiAnalysis: result.analysis, 
-          status: result.score >= 7 ? "qualified" : "discarded",
+          status: isQualified ? "qualified" : "discarded",
           updatedAt: new Date()
         })
         .where(eq(leads.id, id));
