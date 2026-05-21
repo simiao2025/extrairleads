@@ -13,7 +13,19 @@
     "test:e2e:ui": "playwright test --ui",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "audit:biome": "biome check src/",
+    "audit:deadcode": "knip --reporter compact",
+    "audit:duplicates": "jscpd src/ --min-lines 5 --min-tokens 50",
+    "audit:deps": "depcheck --ignores=\"dotenv,@types/*,eslint-*,@tailwindcss/*,tailwindcss,tw-animate-css,tailwindcss-animate,@vitejs/plugin-react,jsdom\"",
+    "audit:circular": "madge src/ --circular --extensions ts,tsx",
+    "audit:all": "npm run audit:biome; npm run audit:deadcode; npm run audit:duplicates; npm run audit:deps; npm run audit:circular",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "src/**/*.{ts,tsx}": [
+      "biome check --write --no-errors-on-unmatched"
+    ]
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",
@@ -42,6 +54,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.4.15",
     "@playwright/test": "^1.60.0",
     "@tailwindcss/postcss": "^4",
     "@testing-library/dom": "^10.4.1",
@@ -52,11 +65,17 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^6.0.1",
+    "depcheck": "1.4.7",
     "dotenv": "^17.4.2",
     "drizzle-kit": "^0.31.10",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
+    "husky": "9.1.7",
+    "jscpd": "4.2.3",
     "jsdom": "^29.1.1",
+    "knip": "6.14.1",
+    "lint-staged": "17.0.5",
+    "madge": "8.0.0",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.1.6"

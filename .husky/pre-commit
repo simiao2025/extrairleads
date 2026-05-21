@@ -1,0 +1,10 @@
+# Block commits containing focused tests (.only)
+STAGED_FILES=$(git diff --cached --name-only -- '*.ts' '*.tsx' '*.js' '*.jsx')
+if [ -n "$STAGED_FILES" ]; then
+  if echo "$STAGED_FILES" | xargs grep -l '\.only(' 2>/dev/null; then
+    echo "❌ Error: Do not commit tests with '.only(' active!"
+    exit 1
+  fi
+fi
+
+npx lint-staged
