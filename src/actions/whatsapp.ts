@@ -2,7 +2,7 @@
 
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
-import { users } from "@/db/schema";
+import { users, leads, chatHistory } from "@/db/schema";
 import { auth } from "@/lib/auth";
 
 const GLOBAL_KEY = process.env.EVOLUTION_GLOBAL_API_KEY || "abcslirm2026";
@@ -183,6 +183,51 @@ export async function getWhatsAppQrCodeAction() {
       qrCode: qrImage,
       instanceName,
     };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function sendManualWhatsAppMessageAction(leadId: number, text: string) {
+  try {
+    const user = await getCurrentUser();
+    if (!user) return { success: false, error: "Usuário não autenticado." };
+
+    const instanceName = user.whatsappInstanceName;
+    const instanceToken = user.whatsappInstanceToken;
+    const evolutionUrl = process.env.EVOLUTION_API_URL;
+
+    if (!evolutionUrl || !instanceName || !instanceToken) {
+      return { success: false, error: "WhatsApp não configurado ou desconectado." };
+    }
+
+    const [lead] = await db.select().from(leads).where(eq(leads.id, leadId));
+    if (!lead || !lead.phone) {
+      return { success: false, error: "Lead não encontrado ou sem número de telefone." };
+    }
+
+    const response = await fetch(`${evolutionUrl}/message/sendText/${instanceName}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: instanceToken,
+      },
+      body: JSON.stringify({ number: lead.phone, text, delay: 1200 }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      return { success: false, error: `Falha na API do WhatsApp: ${errorText}` };
+    }
+
+    await db.insert(chatHistory).values({
+      leadId: lead.id,
+      role: "assistant", // Agent sending message
+      content: text,
+      type: "text",
+    });
+
+    return { success: true };
   } catch (error: any) {
     return { success: false, error: error.message };
   }

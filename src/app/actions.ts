@@ -26,9 +26,11 @@ export {
   qualifyLeadsAction,
   qualifyPendingLeadsAction,
   startOutreachAction,
+  generateAiSuggestionAction,
 } from "@/actions/outreach";
 export { searchLeadsAction } from "@/actions/scraping";
 export {
   checkWhatsAppConnectionAction,
   getWhatsAppQrCodeAction,
+  sendManualWhatsAppMessageAction,
 } from "@/actions/whatsapp";

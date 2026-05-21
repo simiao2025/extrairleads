@@ -1,11 +1,12 @@
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { Layers, MessageSquare, Star, User } from "lucide-react";
 import { AnalyzeButton, FollowUpButton, OutreachButton } from "@/components/ActionButtons";
 import { KanbanBoard } from "@/components/KanbanBoard";
+import { GlobalCampaignFilter } from "@/components/GlobalCampaignFilter";
 import SearchForm from "@/components/SearchForm";
 import { Pagination } from "@/components/ui/pagination";
 import { db } from "@/db";
-import { leads } from "@/db/schema";
+import { campaigns, leads } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import { AnalyticsSection } from "./analytics-section";
@@ -62,7 +63,7 @@ function StatCard({
 }
 
 interface PageProps {
-  searchParams: Promise<{ page?: string; limit?: string; period?: string }>;
+  searchParams: Promise<{ page?: string; limit?: string; period?: string; campaignId?: string }>;
 }
 
 export default async function Home({ searchParams }: PageProps) {
@@ -73,10 +74,19 @@ export default async function Home({ searchParams }: PageProps) {
   const page = Math.max(1, parseInt(params.page || "1", 10));
   const limit = Math.min(100, Math.max(1, parseInt(params.limit || String(ITEMS_PER_PAGE), 10)));
   const offset = (page - 1) * limit;
+  const campaignId = params.campaignId ? parseInt(params.campaignId, 10) : undefined;
+
+  const conditions = [eq(leads.userId, userId)];
+  if (campaignId) conditions.push(eq(leads.campaignId, campaignId));
 
   const allLeads = userId
-    ? await db.select().from(leads).where(eq(leads.userId, userId)).orderBy(asc(leads.createdAt))
+    ? await db.select().from(leads).where(and(...conditions)).orderBy(asc(leads.createdAt))
     : [];
+
+  const userCampaigns = userId
+    ? await db.select().from(campaigns).where(eq(campaigns.userId, userId)).orderBy(asc(campaigns.name))
+    : [];
+
   const totalItems = allLeads.length;
   const totalPages = Math.ceil(totalItems / limit);
 
@@ -125,6 +135,9 @@ export default async function Home({ searchParams }: PageProps) {
                 Vender.
               </span>
             </h1>
+            
+            <GlobalCampaignFilter campaigns={userCampaigns} />
+
             <p className="text-base text-muted-foreground leading-relaxed max-w-xl">
               O primeiro motor autônomo de prospecção do Brasil. Localizamos o lead ideal, validamos
               o perfil e iniciamos o engajamento de forma invisível e em milissegundos.
@@ -132,15 +145,15 @@ export default async function Home({ searchParams }: PageProps) {
           </div>
 
           <div className="flex shrink-0 items-center gap-3">
-            <AnalyzeButton />
-            <FollowUpButton />
-            <OutreachButton />
+            <AnalyzeButton campaignId={campaignId} />
+            <FollowUpButton campaignId={campaignId} />
+            <OutreachButton campaignId={campaignId} />
           </div>
         </section>
 
         {/* ── Search Form ── */}
         <div className="animate-in fade-in zoom-in-95 duration-1000 delay-200 fill-mode-both rounded-2xl border border-white/[0.08] bg-white/[0.02] backdrop-blur-sm overflow-hidden">
-          <SearchForm />
+          <SearchForm campaigns={userCampaigns} selectedCampaignId={params.campaignId} />
         </div>
 
         {/* ── Stats ── */}

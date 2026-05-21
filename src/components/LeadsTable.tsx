@@ -1,9 +1,10 @@
 "use client";
 
-import { Globe, MapPin, Pencil, Phone, Search, Trash2, X } from "lucide-react";
+import { Globe, MapPin, Pencil, Phone, Search, Trash2, X, MessageSquare } from "lucide-react";
 import { useState } from "react";
 import { deleteLeadAction, updateLeadAction } from "@/app/actions";
 import type { Lead } from "@/components/KanbanBoard";
+import LeadDetailsDialog from "@/components/LeadDetailsDialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -341,6 +342,16 @@ export function LeadsTable({ leads, onRefresh }: LeadsTableProps) {
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-1">
+                    <LeadDetailsDialog lead={lead}>
+                      <Button
+                        variant="ghost"
+                        size="icon-xs"
+                        className="text-zinc-500 hover:text-[#00a884]"
+                        title="Prospectar / Chat"
+                      >
+                        <MessageSquare className="h-3.5 w-3.5" />
+                      </Button>
+                    </LeadDetailsDialog>
                     <Button
                       variant="ghost"
                       size="icon-xs"

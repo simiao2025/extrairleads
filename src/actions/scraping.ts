@@ -3,7 +3,7 @@
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
-import { campaignConfigs, leads } from "@/db/schema";
+import { campaigns, leads } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { qualifyLeadsAction, startOutreachAction } from "./outreach";
 
@@ -12,11 +12,13 @@ export async function searchLeadsAction({
   city,
   state,
   onlyScrape = false,
+  campaignId,
 }: {
   niche: string;
   city: string;
   state: string;
   onlyScrape?: boolean;
+  campaignId: number;
 }) {
   const session = await auth();
   const userId = session?.user?.id ? parseInt(session.user.id, 10) : null;
@@ -46,6 +48,7 @@ export async function searchLeadsAction({
         if (existing) continue;
       }
       leadsToInsert.push({
+        campaignId,
         userId,
         name: result.title,
         phone,
@@ -65,9 +68,9 @@ export async function searchLeadsAction({
     if (!onlyScrape) {
       await qualifyLeadsAction(inserted.map((l) => l.id));
 
-      const [config] = await db.select().from(campaignConfigs);
-      if (config?.autoOutreach === "true") {
-        await startOutreachAction();
+      const [campaign] = await db.select().from(campaigns).where(eq(campaigns.id, campaignId));
+      if (campaign?.autoOutreach === "true") {
+        await startOutreachAction(campaignId);
       }
     }
 

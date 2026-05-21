@@ -81,11 +81,30 @@ export const verificationTokens = pgTable("verification_tokens", {
   expires: timestamp("expires").notNull(),
 });
 
+export const campaigns = pgTable(
+  "campaigns",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    niche: text("niche"),
+    city: text("city"),
+    state: text("state"),
+    autoOutreach: text("auto_outreach").default("false"), // "true" ou "false"
+    status: text("status").default("active"), // "active", "paused", "completed"
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (table) => [
+    index("campaigns_user_idx").on(table.userId),
+  ]
+);
+
 export const leads = pgTable(
   "leads",
   {
     id: serial("id").primaryKey(),
     userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }),
+    campaignId: integer("campaign_id").references(() => campaigns.id, { onDelete: "set null" }),
     name: text("name").notNull(),
     phone: text("phone"),
     website: text("website"),

@@ -6,14 +6,14 @@ import { followUpLeadsAction, qualifyPendingLeadsAction, startOutreachAction } f
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 
-export function AnalyzeButton() {
+export function AnalyzeButton({ campaignId }: { campaignId?: number }) {
   const [loading, setLoading] = useState(false);
   const { success, error } = useToast();
 
   const handleClick = async () => {
     setLoading(true);
     try {
-      const result = await qualifyPendingLeadsAction();
+      const result = await qualifyPendingLeadsAction(campaignId);
       if (result.count === 0) {
         success("Nenhum lead pendente de análise.");
       } else {
@@ -43,14 +43,14 @@ export function AnalyzeButton() {
   );
 }
 
-export function OutreachButton() {
+export function OutreachButton({ campaignId }: { campaignId?: number }) {
   const [loading, setLoading] = useState(false);
   const { success, error } = useToast();
 
   const handleClick = async () => {
     setLoading(true);
     try {
-      const result = await startOutreachAction();
+      const result = await startOutreachAction(campaignId);
       if (result.success) {
         success("Motor IA ativado! Mensagens sendo disparadas.");
       } else {
@@ -79,14 +79,14 @@ export function OutreachButton() {
   );
 }
 
-export function FollowUpButton() {
+export function FollowUpButton({ campaignId }: { campaignId?: number }) {
   const [loading, setLoading] = useState(false);
   const { success, error } = useToast();
 
   const handleClick = async () => {
     setLoading(true);
     try {
-      const result = await followUpLeadsAction();
+      const result = await followUpLeadsAction(campaignId);
       if (result.success) {
         if (result.count === 0) {
           success("Nenhum lead aguardando follow-up.");

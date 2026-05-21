@@ -11,10 +11,17 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/toast";
 
-export default function SearchForm() {
+export default function SearchForm({ 
+  campaigns = [], 
+  selectedCampaignId 
+}: { 
+  campaigns?: any[];
+  selectedCampaignId?: string;
+}) {
   const [niche, setNiche] = useState("");
   const [city, setCity] = useState("");
   const [state, setState] = useState("");
+  const [campaignId, setCampaignId] = useState(selectedCampaignId || "");
   const [loading, setLoading] = useState(false);
   const [onlyScrape, setOnlyScrape] = useState(false);
   const { success, error } = useToast();
@@ -25,7 +32,20 @@ export default function SearchForm() {
     setLoading(true);
 
     try {
-      const result = await searchLeadsAction({ niche, city, state, onlyScrape });
+      if (!campaignId) {
+        error("Selecione uma campanha de destino!");
+        setLoading(false);
+        return;
+      }
+
+      const result = await searchLeadsAction({ 
+        niche, 
+        city, 
+        state, 
+        onlyScrape, 
+        campaignId: parseInt(campaignId, 10) 
+      });
+      
       if (result.success) {
         success(`${result.count} leads extraídos com sucesso!`);
         router.refresh();
@@ -115,7 +135,25 @@ export default function SearchForm() {
             />
           </div>
 
-          <div className="flex items-end">
+          <div className="md:col-span-4 mt-2 mb-2">
+            <label className="text-[10px] font-bold text-zinc-500 mb-1.5 block uppercase">Campanha de Destino</label>
+            <select
+              value={campaignId}
+              onChange={(e) => setCampaignId(e.target.value)}
+              className="w-full flex h-10 rounded-md border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/20 focus-visible:border-emerald-500/50 disabled:cursor-not-allowed disabled:opacity-50 text-white"
+              required
+            >
+              <option value="" disabled>Selecione uma campanha...</option>
+              {campaigns.map(c => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+            {campaigns.length === 0 && (
+              <p className="text-xs text-amber-500 mt-2">Você não possui campanhas. Crie uma na aba "Campanhas" antes de extrair.</p>
+            )}
+          </div>
+
+          <div className="md:col-span-4 flex items-end">
             <Button
               type="submit"
               className={`w-full font-bold transition-all backdrop-blur-md hover:-translate-y-0.5 active:translate-y-0 active:scale-98 cursor-pointer ${

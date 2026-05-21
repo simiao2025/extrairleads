@@ -89,15 +89,18 @@ export async function qualifyLeadsAction(leadIds: number[]) {
   }
 }
 
-export async function qualifyPendingLeadsAction() {
+export async function qualifyPendingLeadsAction(campaignId?: number) {
   const session = await auth();
   const userId = session?.user?.id ? parseInt(session.user.id, 10) : null;
   if (!userId) return { success: false, error: "Usuário não autenticado." };
 
+  const conditions = [eq(leads.status, "raw"), eq(leads.userId, userId)];
+  if (campaignId) conditions.push(eq(leads.campaignId, campaignId));
+
   const rawLeads = await db
     .select()
     .from(leads)
-    .where(and(eq(leads.status, "raw"), eq(leads.userId, userId)));
+    .where(and(...conditions));
   if (rawLeads.length === 0)
     return { success: true, count: 0, message: "Nenhum lead pendente de análise." };
 
@@ -106,7 +109,7 @@ export async function qualifyPendingLeadsAction() {
   return { success: true, count: rawLeads.length };
 }
 
-export async function startOutreachAction() {
+export async function startOutreachAction(campaignId?: number) {
   const session = await auth();
   const userId = session?.user?.id ? parseInt(session.user.id, 10) : null;
   if (!userId) return { success: false, error: "Usuário não autenticado." };
@@ -128,10 +131,15 @@ export async function startOutreachAction() {
     };
   }
 
+  const conditions = [eq(leads.status, "qualified"), eq(leads.userId, userId)];
+  if (campaignId) {
+    conditions.push(eq(leads.campaignId, campaignId));
+  }
+
   const qualifiedLeads = await db
     .select()
     .from(leads)
-    .where(and(eq(leads.status, "qualified"), eq(leads.userId, userId)))
+    .where(and(...conditions))
     .limit(config?.weeklyLimit || 5);
 
   for (const lead of qualifiedLeads) {
@@ -176,7 +184,7 @@ Análise Técnica: ${lead.aiAnalysis}`,
   return { success: true };
 }
 
-export async function followUpLeadsAction() {
+export async function followUpLeadsAction(campaignId?: number) {
   const session = await auth();
   const userId = session?.user?.id ? parseInt(session.user.id, 10) : null;
   if (!userId) return { success: false, error: "Usuário não autenticado." };
@@ -187,19 +195,22 @@ export async function followUpLeadsAction() {
     .from(campaignConfigs)
     .where(eq(campaignConfigs.userId, userId));
 
-  const evolutionUrl = process.env.EVOLUTION_API_URL;
-  const instanceName = dbUser?.whatsappInstanceName;
-  const instanceToken = dbUser?.whatsappInstanceToken;
+  const instanceName = dbUser?.evolutionInstanceName;
+  const instanceToken = dbUser?.evolutionApiKey;
+  const evolutionUrl = process.env.EVOLUTION_API_URL || "https://api.evolution.com";
 
-  if (!evolutionUrl || !instanceName || !instanceToken) {
+  if (!instanceName || !instanceToken) {
     return { success: false, error: "WhatsApp não configurado." };
   }
 
   // Buscar leads contactados
+  const conditions = [eq(leads.status, "contacted"), eq(leads.userId, userId)];
+  if (campaignId) conditions.push(eq(leads.campaignId, campaignId));
+
   const contactedLeads = await db
     .select()
     .from(leads)
-    .where(and(eq(leads.status, "contacted"), eq(leads.userId, userId)))
+    .where(and(...conditions))
     .limit(config?.weeklyLimit || 5);
 
   let count = 0;
@@ -249,4 +260,44 @@ O cliente não respondeu nosso primeiro contato. Gere UMA MENSAGEM CURTA DE FOLL
   }
   revalidatePath("/");
   return { success: true, count };
+}
+
+export async function generateAiSuggestionAction(leadId: number) {
+  const session = await auth();
+  const userId = session?.user?.id ? parseInt(session.user.id, 10) : null;
+  if (!userId) return { success: false, error: "Usuário não autenticado." };
+
+  const [lead] = await db.select().from(leads).where(eq(leads.id, leadId));
+  if (!lead) return { success: false, error: "Lead não encontrado." };
+
+  const [config] = await db
+    .select()
+    .from(campaignConfigs)
+    .where(eq(campaignConfigs.userId, userId));
+
+  const systemPrompt = config?.agent2Prompt || "Vendedor B2B direto e amigável.";
+
+  try {
+    const completion = await groq.chat.completions.create({
+      messages: [
+        { role: "system", content: systemPrompt },
+        {
+          role: "user",
+          content: `DADOS DO LEAD:
+Empresa: ${lead.name}
+Nicho: ${lead.niche || ""}
+Localização: ${lead.city || ""}, ${lead.state || ""}
+Análise Técnica da IA: ${lead.aiAnalysis || "Nenhuma análise prévia."}
+
+Gere uma sugestão de mensagem inicial de prospecção ou follow-up para este lead no WhatsApp. Seja natural, humano, breve e focado em gerar resposta. NÃO use placeholders.`,
+        },
+      ],
+      model: "llama-3.3-70b-versatile",
+    });
+    
+    const message = completion.choices[0].message.content || "";
+    return { success: true, suggestion: message.trim() };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
 }
