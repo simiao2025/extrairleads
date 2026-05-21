@@ -14,7 +14,7 @@ export {
 
 export { searchLeadsAction } from "@/actions/scraping";
 
-export { registerAction, checkEmailVerifiedAction } from "@/actions/auth";
+export { registerAction, checkEmailVerifiedAction, forgotPasswordAction, resetPasswordAction } from "@/actions/auth";
 
 export {
   saveOnboardingInfoAction,

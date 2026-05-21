@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Lock, Mail, ArrowRight, User, CheckCircle2, AlertTriangle } from "lucide-react";
 import Link from "next/link";
-import { registerAction, checkEmailVerifiedAction } from "@/app/actions";
+import { registerAction, checkEmailVerifiedAction, forgotPasswordAction } from "@/app/actions";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -16,6 +16,11 @@ export default function LoginPage() {
   const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [showForgot, setShowForgot] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotError, setForgotError] = useState("");
+  const [forgotSuccess, setForgotSuccess] = useState("");
 
   // Capturar parâmetros da URL de redirecionamento de confirmação de e-mail
   useEffect(() => {
@@ -35,6 +40,26 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (showForgot) {
+      setForgotLoading(true);
+      setForgotError("");
+      setForgotSuccess("");
+      try {
+        const result = await forgotPasswordAction(forgotEmail);
+        if (!result.success) {
+          setForgotError(result.error || "Erro ao enviar e-mail de recuperação.");
+          return;
+        }
+        setForgotSuccess(result.message || "Verifique sua caixa de entrada.");
+      } catch (err) {
+        setForgotError("Erro ao enviar e-mail de recuperação. Tente novamente.");
+      } finally {
+        setForgotLoading(false);
+      }
+      return;
+    }
+
     setLoading(true);
     setError("");
     setSuccess("");
@@ -154,17 +179,66 @@ export default function LoginPage() {
           
           <div className="space-y-2 text-center lg:text-left">
             <h2 className="font-heading text-3xl font-black tracking-tight text-white">
-              {isLogin ? "Acessar Painel" : "Criar Conta"}
+              {showForgot ? "Recuperar Senha" : isLogin ? "Acessar Painel" : "Criar Conta"}
             </h2>
             <p className="text-zinc-500 text-sm">
-              {isLogin
+              {showForgot
+                ? "Informe seu e-mail para receber o link de redefinição."
+                : isLogin
                 ? "Insira suas credenciais corporativas abaixo."
                 : "Inicie sua jornada de prospecção inteligente."}
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {!isLogin && (
+            {showForgot ? (
+              <>
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
+                    Email Corporativo
+                  </label>
+                  <div className="relative group">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within:text-white transition-colors" />
+                    <Input
+                      type="email"
+                      placeholder="voce@empresa.com"
+                      value={forgotEmail}
+                      onChange={(e) => setForgotEmail(e.target.value)}
+                      className="pl-10 h-11 bg-zinc-900/30 border-zinc-800 text-white focus-visible:ring-zinc-700 focus-visible:border-zinc-700 transition-all shadow-inner"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {forgotError && (
+                  <div className="p-3 bg-red-500/5 border border-red-500/10 rounded-xl flex items-start gap-2.5 animate-in fade-in slide-in-from-top-2">
+                    <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                    <p className="text-red-400 text-xs font-medium leading-relaxed">
+                      {forgotError}
+                    </p>
+                  </div>
+                )}
+
+                {forgotSuccess && (
+                  <div className="p-3 bg-emerald-500/5 border border-emerald-500/10 rounded-xl flex items-start gap-2.5 animate-in fade-in slide-in-from-top-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                    <p className="text-emerald-400 text-xs font-medium leading-relaxed">
+                      {forgotSuccess}
+                    </p>
+                  </div>
+                )}
+
+                <Button
+                  type="submit"
+                  disabled={forgotLoading || !!forgotSuccess}
+                  className="w-full h-11 mt-2 bg-white hover:bg-zinc-200 text-black font-bold text-sm rounded-xl transition-all duration-200 cursor-pointer"
+                >
+                  {forgotLoading ? "Enviando..." : "Enviar Link de Recuperação"}
+                </Button>
+              </>
+            ) : (
+              <>
+                {!isLogin && (
               <div className="space-y-1.5">
                 <label className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
                   Nome Completo
@@ -205,7 +279,7 @@ export default function LoginPage() {
                   Senha
                 </label>
                 {isLogin && (
-                  <button type="button" className="text-[11px] font-medium text-zinc-400 hover:text-white">
+                  <button type="button" onClick={() => { setShowForgot(true); setForgotEmail(form.email); setForgotError(""); setForgotSuccess(""); }} className="text-[11px] font-medium text-zinc-400 hover:text-white cursor-pointer">
                     Esqueceu a senha?
                   </button>
                 )}
@@ -256,22 +330,34 @@ export default function LoginPage() {
                 </>
               )}
             </Button>
+              </>
+            )}
           </form>
 
           <div className="text-center pt-2">
-            <button
-              type="button"
-              onClick={() => {
-                setIsLogin(!isLogin);
-                setError("");
-                setSuccess("");
-              }}
-              className="text-[13px] text-zinc-400 hover:text-white transition-colors font-medium cursor-pointer"
-            >
-              {isLogin
-                ? "Ainda não tem acesso? Solicite uma conta"
-                : "Já possui credenciais? Faça login"}
-            </button>
+            {showForgot ? (
+              <button
+                type="button"
+                onClick={() => { setShowForgot(false); setForgotError(""); setForgotSuccess(""); }}
+                className="text-[13px] text-zinc-400 hover:text-white transition-colors font-medium cursor-pointer"
+              >
+                Voltar para o login
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  setIsLogin(!isLogin);
+                  setError("");
+                  setSuccess("");
+                }}
+                className="text-[13px] text-zinc-400 hover:text-white transition-colors font-medium cursor-pointer"
+              >
+                {isLogin
+                  ? "Ainda não tem acesso? Solicite uma conta"
+                  : "Já possui credenciais? Faça login"}
+              </button>
+            )}
           </div>
         </div>
       </div>

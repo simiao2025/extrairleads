@@ -5,7 +5,7 @@ import type { NextRequest } from "next/server";
 
 export const { auth: middleware } = NextAuth(authConfig);
 
-const PUBLIC_ROUTES = ["/login", "/api/auth", "/api/webhook/whatsapp"];
+const PUBLIC_ROUTES = ["/login", "/reset-password", "/api/auth", "/api/webhook/whatsapp"];
 
 export default middleware((req) => {
   const session = req.auth;
