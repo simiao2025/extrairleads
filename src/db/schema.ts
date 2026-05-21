@@ -40,27 +40,39 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-export const accounts = pgTable("accounts", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }),
-  type: text("type").notNull(),
-  provider: text("provider").notNull(),
-  providerAccountId: text("provider_account_id").notNull(),
-  refresh_token: text("refresh_token"),
-  access_token: text("access_token"),
-  expires_at: integer("expires_at"),
-  token_type: text("token_type"),
-  scope: text("scope"),
-  id_token: text("id_token"),
-  session_state: text("session_state"),
-});
+export const accounts = pgTable(
+  "accounts",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }),
+    type: text("type").notNull(),
+    provider: text("provider").notNull(),
+    providerAccountId: text("provider_account_id").notNull(),
+    refresh_token: text("refresh_token"),
+    access_token: text("access_token"),
+    expires_at: integer("expires_at"),
+    token_type: text("token_type"),
+    scope: text("scope"),
+    id_token: text("id_token"),
+    session_state: text("session_state"),
+  },
+  (table) => [
+    index("accounts_user_idx").on(table.userId),
+  ],
+);
 
-export const sessions = pgTable("sessions", {
-  id: serial("id").primaryKey(),
-  sessionToken: text("session_token").notNull().unique(),
-  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }),
-  expires: timestamp("expires").notNull(),
-});
+export const sessions = pgTable(
+  "sessions",
+  {
+    id: serial("id").primaryKey(),
+    sessionToken: text("session_token").notNull().unique(),
+    userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }),
+    expires: timestamp("expires").notNull(),
+  },
+  (table) => [
+    index("sessions_user_idx").on(table.userId),
+  ],
+);
 
 export const verificationTokens = pgTable("verification_tokens", {
   id: serial("id").primaryKey(),
@@ -94,45 +106,69 @@ export const leads = pgTable(
   ],
 );
 
-export const campaignConfigs = pgTable("campaign_configs", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }),
-  name: text("name").notNull(),
-  searchKeyword: text("search_keyword"),
-  targetCity: text("target_city"),
-  targetState: text("target_state"),
-  agent1Prompt: text("agent_1_prompt"),
-  agent2Prompt: text("agent_2_prompt"),
-  weeklyLimit: integer("weekly_limit").default(50),
-  autoOutreach: text("auto_outreach").default("false"), // "true" ou "false"
-  messageTemplate: text("message_template"),
-  createdAt: timestamp("created_at").defaultNow(),
-});
+export const campaignConfigs = pgTable(
+  "campaign_configs",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    searchKeyword: text("search_keyword"),
+    targetCity: text("target_city"),
+    targetState: text("target_state"),
+    agent1Prompt: text("agent_1_prompt"),
+    agent2Prompt: text("agent_2_prompt"),
+    weeklyLimit: integer("weekly_limit").default(50),
+    autoOutreach: text("auto_outreach").default("false"), // "true" ou "false"
+    messageTemplate: text("message_template"),
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (table) => [
+    index("campaign_configs_user_idx").on(table.userId),
+  ],
+);
 
-export const chatHistory = pgTable("chat_history", {
-  id: serial("id").primaryKey(),
-  leadId: integer("lead_id").references(() => leads.id),
-  role: text("role"), // 'user' ou 'assistant'
-  content: text("content"),
-  type: text("type").default("text"), // 'text' ou 'audio'
-  createdAt: timestamp("created_at").defaultNow(),
-});
+export const chatHistory = pgTable(
+  "chat_history",
+  {
+    id: serial("id").primaryKey(),
+    leadId: integer("lead_id").references(() => leads.id),
+    role: text("role"), // 'user' ou 'assistant'
+    content: text("content"),
+    type: text("type").default("text"), // 'text' ou 'audio'
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (table) => [
+    index("chat_history_lead_idx").on(table.leadId),
+  ],
+);
 
-export const appointments = pgTable("appointments", {
-  id: serial("id").primaryKey(),
-  leadId: integer("lead_id").references(() => leads.id),
-  scheduledAt: timestamp("scheduled_at"),
-  status: text("status").default("confirmed"), // 'confirmed', 'canceled', 'rescheduled'
-  notes: text("notes"),
-  createdAt: timestamp("created_at").defaultNow(),
-});
+export const appointments = pgTable(
+  "appointments",
+  {
+    id: serial("id").primaryKey(),
+    leadId: integer("lead_id").references(() => leads.id),
+    scheduledAt: timestamp("scheduled_at"),
+    status: text("status").default("confirmed"), // 'confirmed', 'canceled', 'rescheduled'
+    notes: text("notes"),
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (table) => [
+    index("appointments_lead_idx").on(table.leadId),
+  ],
+);
 
-export const outreachLogs = pgTable("outreach_logs", {
-  id: serial("id").primaryKey(),
-  leadId: integer("lead_id").references(() => leads.id),
-  status: text("status"), // e.g., 'sent', 'failed'
-  sentAt: timestamp("sent_at").defaultNow(),
-});
+export const outreachLogs = pgTable(
+  "outreach_logs",
+  {
+    id: serial("id").primaryKey(),
+    leadId: integer("lead_id").references(() => leads.id),
+    status: text("status"), // e.g., 'sent', 'failed'
+    sentAt: timestamp("sent_at").defaultNow(),
+  },
+  (table) => [
+    index("outreach_logs_lead_idx").on(table.leadId),
+  ],
+);
 
 // Tipo personalizado para pgvector (dimensão 1536 para OpenAI text-embedding-3-small)
 const vector1536 = customType<{ data: number[] }>({
@@ -141,11 +177,17 @@ const vector1536 = customType<{ data: number[] }>({
   },
 });
 
-export const knowledgeBase = pgTable("knowledge_base", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }),
-  title: text("title").notNull(),
-  content: text("content").notNull(),
-  embedding: vector1536("embedding"),
-  createdAt: timestamp("created_at").defaultNow(),
-});
+export const knowledgeBase = pgTable(
+  "knowledge_base",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    content: text("content").notNull(),
+    embedding: vector1536("embedding"),
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (table) => [
+    index("knowledge_base_user_idx").on(table.userId),
+  ],
+);

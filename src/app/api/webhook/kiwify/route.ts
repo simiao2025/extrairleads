@@ -1,4 +1,4 @@
-import bcrypt from "bcryptjs";
+import argon2 from "@node-rs/argon2";
 import crypto from "node:crypto";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
@@ -81,7 +81,7 @@ export async function POST(request: Request) {
       if (!existingUser) {
         // Gera senha temporária de 12 caracteres hexadecimais
         const tempPassword = crypto.randomBytes(6).toString("hex");
-        const hashedPassword = await bcrypt.hash(tempPassword, 10);
+        const hashedPassword = await argon2.hash(tempPassword);
 
         // Salva usuário no banco de dados com status de onboarding PENDING_INFO
         await db.insert(users).values({
@@ -109,7 +109,7 @@ export async function POST(request: Request) {
       success: true,
       message: "Ignorado - status do pedido não aprovado ou e-mail ausente.",
     });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (_error: unknown) {
+    return NextResponse.json({ success: false, error: "Erro interno do servidor." }, { status: 500 });
   }
 }
