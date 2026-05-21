@@ -2,11 +2,18 @@
 
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { MessageSquare, GripVertical } from "lucide-react";
+import { GripVertical, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import LeadDetailsDialog from "./LeadDetailsDialog";
 
-type LeadStatus = "raw" | "qualified" | "in_queue" | "contacted" | "interested" | "human_intervention" | "discarded";
+type LeadStatus =
+  | "raw"
+  | "qualified"
+  | "in_queue"
+  | "contacted"
+  | "interested"
+  | "human_intervention"
+  | "discarded";
 
 interface Lead {
   id: number;
@@ -30,14 +37,9 @@ interface KanbanCardProps {
 }
 
 export function KanbanCard({ lead, isDragOverlay = false }: KanbanCardProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: lead.id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: lead.id,
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -56,10 +58,7 @@ export function KanbanCard({ lead, isDragOverlay = false }: KanbanCardProps) {
     <div
       ref={setNodeRef}
       style={style}
-      className={cn(
-        "group relative flex items-start gap-2",
-        isDragging && "opacity-30"
-      )}
+      className={cn("group relative flex items-start gap-2", isDragging && "opacity-30")}
     >
       <button
         {...attributes}
@@ -88,9 +87,13 @@ function CardContent({ lead }: { lead: Lead }) {
           </span>
         )}
       </div>
-      <p className="text-xs text-zinc-500 mt-1 truncate">{lead.city}, {lead.state}</p>
+      <p className="text-xs text-zinc-500 mt-1 truncate">
+        {lead.city}, {lead.state}
+      </p>
       <div className="mt-4 flex items-center justify-between">
-        <span className="text-[10px] bg-zinc-800 px-2 py-0.5 rounded text-zinc-400">{lead.niche}</span>
+        <span className="text-[10px] bg-zinc-800 px-2 py-0.5 rounded text-zinc-400">
+          {lead.niche}
+        </span>
         <MessageSquare className="w-3.5 h-3.5 text-zinc-600 group-hover:text-emerald-500 transition-colors" />
       </div>
     </>

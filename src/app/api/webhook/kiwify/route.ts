@@ -1,19 +1,13 @@
+import bcrypt from "bcryptjs";
+import crypto from "node:crypto";
+import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { users } from "@/db/schema";
-import { eq } from "drizzle-orm";
-import bcrypt from "bcryptjs";
-import crypto from "crypto";
 
 async function sendOnboardingEmail(email: string, name: string, tempPassword: string) {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
-    console.log("=========================================");
-    console.log(`[ONBOARDING MOCK] E-mail de Boas-vindas para: ${email}`);
-    console.log(`Nome: ${name}`);
-    console.log(`Senha Temporária: ${tempPassword}`);
-    console.log(`Link: https://extrairleads.brasilonthebox.shop/login?email=${encodeURIComponent(email)}&temp=${tempPassword}`);
-    console.log("=========================================");
     return;
   }
 
@@ -21,7 +15,7 @@ async function sendOnboardingEmail(email: string, name: string, tempPassword: st
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${apiKey}`,
+        Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
@@ -61,18 +55,15 @@ async function sendOnboardingEmail(email: string, name: string, tempPassword: st
     });
 
     if (!response.ok) {
-      const errText = await response.text();
-      console.error("Erro ao enviar e-mail via Resend API:", errText);
+      const _errText = await response.text();
     }
-  } catch (error) {
-    console.error("Exceção ao enviar e-mail via Resend:", error);
+  } catch (_error) {
   }
 }
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    console.log("Webhook Kiwify Recebido:", JSON.stringify(body));
 
     const { order_status, customer } = body;
 
@@ -80,13 +71,12 @@ export async function POST(request: Request) {
     if (order_status === "approved" && customer?.email) {
       const name = customer.name || "Cliente ExtrairLeads";
       const email = customer.email.toLowerCase().trim();
-      const cpfCnpj = (customer.cpf_cnpj || customer.CPF || customer.CNPJ || "").toString().replace(/\D/g, "");
+      const cpfCnpj = (customer.cpf_cnpj || customer.CPF || customer.CNPJ || "")
+        .toString()
+        .replace(/\D/g, "");
 
       // Verifica se o usuário já existe
-      const [existingUser] = await db
-        .select()
-        .from(users)
-        .where(eq(users.email, email));
+      const [existingUser] = await db.select().from(users).where(eq(users.email, email));
 
       if (!existingUser) {
         // Gera senha temporária de 12 caracteres hexadecimais
@@ -106,15 +96,20 @@ export async function POST(request: Request) {
         // Envia o e-mail de boas-vindas com o link de login
         await sendOnboardingEmail(email, name, tempPassword);
 
-        return NextResponse.json({ success: true, message: "Usuário criado com sucesso e e-mail enviado." });
+        return NextResponse.json({
+          success: true,
+          message: "Usuário criado com sucesso e e-mail enviado.",
+        });
       } else {
         return NextResponse.json({ success: true, message: "Usuário com este e-mail já existe." });
       }
     }
 
-    return NextResponse.json({ success: true, message: "Ignorado - status do pedido não aprovado ou e-mail ausente." });
+    return NextResponse.json({
+      success: true,
+      message: "Ignorado - status do pedido não aprovado ou e-mail ausente.",
+    });
   } catch (error: any) {
-    console.error("Erro no Webhook Kiwify:", error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }

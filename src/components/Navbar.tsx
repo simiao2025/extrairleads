@@ -1,26 +1,23 @@
 "use client";
 
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  BookOpen,
+  CalendarDays,
+  Cpu,
+  LayoutGrid,
+  LogOut,
+  Menu,
+  Sliders,
+  Target,
+  User,
+  Workflow,
+  X,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { 
-  LayoutGrid, 
-  Target, 
-  Workflow, 
-  CalendarDays, 
-  Cpu, 
-  Sliders, 
-  LogOut, 
-  User, 
-  Menu, 
-  X,
-  CheckCircle,
-  AlertCircle,
-  RefreshCw,
-  BookOpen
-} from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
 import { signOut } from "next-auth/react";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { checkWhatsAppConnectionAction } from "@/app/actions";
 
 interface NavbarProps {
@@ -36,8 +33,11 @@ export default function Navbar({ user }: NavbarProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [whatsappStatus, setWhatsappStatus] = useState<{ connected: boolean; state: string } | null>(null);
-  const [checkingStatus, setCheckingStatus] = useState(false);
+  const [whatsappStatus, setWhatsappStatus] = useState<{
+    connected: boolean;
+    state: string;
+  } | null>(null);
+  const [_checkingStatus, setCheckingStatus] = useState(false);
 
   // Consulta o status do WhatsApp no Evolution Go ao carregar
   useEffect(() => {
@@ -49,7 +49,7 @@ export default function Navbar({ user }: NavbarProps) {
             setWhatsappStatus({ connected: !!res.connected, state: res.state || "DISCONNECTED" });
           }
         })
-        .catch((err) => console.error("Erro check connection navbar:", err))
+        .catch((_err) => {})
         .finally(() => setCheckingStatus(false));
     }
   }, [user]);
@@ -77,11 +77,13 @@ export default function Navbar({ user }: NavbarProps) {
         <div className="max-w-7xl mx-auto px-4 md:px-8 h-14 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3 group">
             <div className="w-11 h-11 bg-transparent flex items-center justify-center transition-all duration-500 group-hover:scale-105 overflow-hidden">
-              <img src="/scraping.png" alt="Logo" className="w-full h-full object-contain filter drop-shadow-[0_0_8px_rgba(16,185,129,0.15)]" />
+              <img
+                src="/scraping.png"
+                alt="Logo"
+                className="w-full h-full object-contain filter drop-shadow-[0_0_8px_rgba(16,185,129,0.15)]"
+              />
             </div>
-            <span className="text-lg font-black tracking-tight text-white">
-              ExtrairLeads
-            </span>
+            <span className="text-lg font-black tracking-tight text-white">ExtrairLeads</span>
           </Link>
 
           {/* Desktop Navigation Links */}
@@ -101,8 +103,12 @@ export default function Navbar({ user }: NavbarProps) {
                       transition={{ type: "spring", stiffness: 400, damping: 30 }}
                     />
                   ) : null}
-                  <span className={`relative flex items-center gap-2 z-10 ${isActive ? "text-white font-semibold" : "text-zinc-400 hover:text-zinc-200"}`}>
-                    <link.icon className={`w-3.5 h-3.5 ${isActive ? "text-emerald-500" : "text-zinc-500"}`} />
+                  <span
+                    className={`relative flex items-center gap-2 z-10 ${isActive ? "text-white font-semibold" : "text-zinc-400 hover:text-zinc-200"}`}
+                  >
+                    <link.icon
+                      className={`w-3.5 h-3.5 ${isActive ? "text-emerald-500" : "text-zinc-500"}`}
+                    />
                     {link.name}
                   </span>
                 </Link>
@@ -113,15 +119,17 @@ export default function Navbar({ user }: NavbarProps) {
           <div className="flex items-center gap-4">
             {/* Badge Dinâmico de WhatsApp no Desktop */}
             {user && whatsappStatus && (
-              <Link 
+              <Link
                 href="/settings"
                 className={`hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border transition-all duration-200 ${
-                  whatsappStatus.connected 
+                  whatsappStatus.connected
                     ? "bg-emerald-500/5 border-emerald-500/20 text-emerald-400"
                     : "bg-red-500/5 border-red-500/20 text-red-400 hover:bg-red-500/10"
                 }`}
               >
-                <div className={`w-1.5 h-1.5 rounded-full ${whatsappStatus.connected ? "bg-emerald-400 animate-pulse" : "bg-red-400"}`} />
+                <div
+                  className={`w-1.5 h-1.5 rounded-full ${whatsappStatus.connected ? "bg-emerald-400 animate-pulse" : "bg-red-400"}`}
+                />
                 <span>WhatsApp: {whatsappStatus.connected ? "Conectado" : "Desconectado"}</span>
               </Link>
             )}
@@ -193,7 +201,11 @@ export default function Navbar({ user }: NavbarProps) {
                     className="flex items-center gap-2"
                   >
                     <div className="w-10 h-10 bg-transparent flex items-center justify-center overflow-hidden">
-                      <img src="/scraping.png" alt="Logo" className="w-full h-full object-contain" />
+                      <img
+                        src="/scraping.png"
+                        alt="Logo"
+                        className="w-full h-full object-contain"
+                      />
                     </div>
                     <span className="text-md font-black tracking-tight text-white">
                       ExtrairLeads
@@ -209,18 +221,20 @@ export default function Navbar({ user }: NavbarProps) {
 
                 {/* Status de Conexão no Celular */}
                 {user && whatsappStatus && (
-                  <Link 
+                  <Link
                     href="/settings"
                     onClick={() => setIsMobileMenuOpen(false)}
                     className={`flex items-center justify-between px-3 py-2.5 rounded-xl border text-xs font-semibold ${
-                      whatsappStatus.connected 
+                      whatsappStatus.connected
                         ? "bg-emerald-500/5 border-emerald-500/10 text-emerald-400"
                         : "bg-red-500/5 border-red-500/10 text-red-400"
                     }`}
                   >
                     <span className="text-zinc-500 font-medium">WhatsApp:</span>
                     <span className="flex items-center gap-1.5">
-                      <div className={`w-1.5 h-1.5 rounded-full ${whatsappStatus.connected ? "bg-emerald-400" : "bg-red-400"}`} />
+                      <div
+                        className={`w-1.5 h-1.5 rounded-full ${whatsappStatus.connected ? "bg-emerald-400" : "bg-red-400"}`}
+                      />
                       {whatsappStatus.connected ? "Conectado" : "Desconectado"}
                     </span>
                   </Link>
@@ -230,15 +244,13 @@ export default function Navbar({ user }: NavbarProps) {
                 {user && (
                   <div className="bg-zinc-900/40 border border-zinc-900 rounded-xl p-3 flex items-center gap-3">
                     <div className="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center text-white border border-zinc-800 font-bold text-sm uppercase">
-                      {user.name ? user.name[0] : (user.email ? user.email[0] : "U")}
+                      {user.name ? user.name[0] : user.email ? user.email[0] : "U"}
                     </div>
                     <div className="min-w-0">
                       <p className="text-[13px] font-bold text-white truncate">
                         {user.name || "Usuário"}
                       </p>
-                      <p className="text-[11px] text-zinc-500 truncate">
-                        {user.email}
-                      </p>
+                      <p className="text-[11px] text-zinc-500 truncate">{user.email}</p>
                     </div>
                   </div>
                 )}
@@ -258,7 +270,9 @@ export default function Navbar({ user }: NavbarProps) {
                             : "text-zinc-400 hover:text-white hover:bg-zinc-900/30 border border-transparent"
                         }`}
                       >
-                        <link.icon className={`w-4 h-4 ${isActive ? "text-emerald-500" : "text-zinc-500"}`} />
+                        <link.icon
+                          className={`w-4 h-4 ${isActive ? "text-emerald-500" : "text-zinc-500"}`}
+                        />
                         {link.name}
                       </Link>
                     );

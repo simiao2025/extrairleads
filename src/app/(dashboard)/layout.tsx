@@ -1,9 +1,9 @@
-import Navbar from "@/components/Navbar";
-import { auth } from "@/lib/auth";
-import { db } from "@/db";
-import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
+import Navbar from "@/components/Navbar";
+import { db } from "@/db";
+import { users } from "@/db/schema";
+import { auth } from "@/lib/auth";
 
 export default async function DashboardLayout({
   children,

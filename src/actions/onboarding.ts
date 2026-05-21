@@ -1,10 +1,10 @@
 "use server";
 
+import crypto from "node:crypto";
+import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { users } from "@/db/schema";
-import { eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
-import crypto from "crypto";
 
 export async function saveOnboardingInfoAction(data: {
   phone: string;
@@ -26,10 +26,7 @@ export async function saveOnboardingInfoAction(data: {
     }
 
     // Busca o usuário logado para capturar dados
-    const [dbUser] = await db
-      .select()
-      .from(users)
-      .where(eq(users.email, session.user.email));
+    const [dbUser] = await db.select().from(users).where(eq(users.email, session.user.email));
 
     if (!dbUser) {
       return { success: false, error: "Usuário não encontrado." };
@@ -37,18 +34,19 @@ export async function saveOnboardingInfoAction(data: {
 
     // CPF ou CNPJ limpo de caracteres especiais para nomear a instância do Evolution Go
     const instanceName = cpfCnpj.toString().replace(/\D/g, "");
-    const instanceToken = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2) + Date.now().toString(36);
+    const instanceToken = crypto.randomUUID
+      ? crypto.randomUUID()
+      : Math.random().toString(36).substring(2) + Date.now().toString(36);
 
     const evolutionUrl = process.env.EVOLUTION_API_URL;
     const globalKey = process.env.EVOLUTION_GLOBAL_API_KEY || "abcslirm2026";
 
     if (evolutionUrl) {
       try {
-        console.log(`[Onboarding] Tentando criar instância no Evolution Go: ${instanceName} via url: ${evolutionUrl}`);
         const response = await fetch(`${evolutionUrl}/instance/create`, {
           method: "POST",
           headers: {
-            "apikey": globalKey,
+            apikey: globalKey,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
@@ -61,17 +59,13 @@ export async function saveOnboardingInfoAction(data: {
         });
 
         if (!response.ok) {
-          const errText = await response.text();
-          console.error("[Onboarding] Evolution Go - Falha ao criar instância:", errText);
+          const _errText = await response.text();
         } else {
-          const resJson = await response.json();
-          console.log("[Onboarding] Instância criada com sucesso no Evolution Go:", JSON.stringify(resJson));
+          const _resJson = await response.json();
         }
-      } catch (err) {
-        console.error("[Onboarding] Evolution Go - Exceção na requisição de criação de instância:", err);
+      } catch (_err) {
       }
     } else {
-      console.warn("[Onboarding] Aviso: EVOLUTION_API_URL não está configurada no .env.");
     }
 
     // Atualiza dados cadastrais e conclui onboarding
@@ -92,12 +86,11 @@ export async function saveOnboardingInfoAction(data: {
 
     return { success: true };
   } catch (error: any) {
-    console.error("Erro em saveOnboardingInfoAction:", error);
     return { success: false, error: error.message };
   }
 }
 
 // Action obsoleta mantida temporariamente vazia para evitar quebras em referências
-export async function changeOnboardingPasswordAction(password: string) {
+export async function changeOnboardingPasswordAction(_password: string) {
   return { success: true };
 }

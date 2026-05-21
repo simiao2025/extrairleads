@@ -1,13 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { AlertTriangle, ArrowRight, CheckCircle2, Lock, } from "lucide-react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { resetPasswordAction } from "@/app/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Lock, ArrowRight, CheckCircle2, AlertTriangle, Mail } from "lucide-react";
-import Link from "next/link";
-import { resetPasswordAction } from "@/app/actions";
-import { Suspense } from "react";
 
 function ResetPasswordForm() {
   const router = useRouter();
@@ -61,7 +60,7 @@ function ResetPasswordForm() {
       setTimeout(() => {
         router.push("/login");
       }, 3000);
-    } catch (err) {
+    } catch (_err) {
       setError("Erro ao redefinir a senha. Tente novamente.");
     } finally {
       setLoading(false);
@@ -81,7 +80,11 @@ function ResetPasswordForm() {
           <div className="w-full h-full relative">
             <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/50 to-[#050505]/90 z-10"></div>
             <div className="absolute inset-0 bg-gradient-to-r from-[#050505] via-[#050505]/30 to-transparent z-10"></div>
-            <img src="/robot.png" alt="Robô SDR Neural" className="w-full h-full object-cover object-center filter brightness-[0.8]" />
+            <img
+              src="/robot.png"
+              alt="Robô SDR Neural"
+              className="w-full h-full object-cover object-center filter brightness-[0.8]"
+            />
           </div>
         </div>
 
@@ -90,7 +93,9 @@ function ResetPasswordForm() {
             <div className="w-14 h-14 bg-transparent flex items-center justify-center transition-all duration-500 group-hover:scale-105 overflow-hidden">
               <img src="/scraping.png" alt="Logo" className="w-full h-full object-contain" />
             </div>
-            <span className="font-heading font-black text-2xl tracking-tight text-white">ExtrairLeads</span>
+            <span className="font-heading font-black text-2xl tracking-tight text-white">
+              ExtrairLeads
+            </span>
           </Link>
         </div>
 
@@ -124,7 +129,9 @@ function ResetPasswordForm() {
               <img src="/scraping.png" alt="Logo" className="w-full h-full object-contain" />
             </div>
           </Link>
-          <span className="font-heading font-black text-xl tracking-tight text-white">ExtrairLeads</span>
+          <span className="font-heading font-black text-xl tracking-tight text-white">
+            ExtrairLeads
+          </span>
         </div>
 
         <div className="w-full max-w-[340px] space-y-8 relative z-10 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200 fill-mode-both">
@@ -133,9 +140,7 @@ function ResetPasswordForm() {
               Redefinir Senha
             </h2>
             <p className="text-zinc-500 text-sm">
-              {tokenValid
-                ? `Defina uma nova senha para ${email}.`
-                : "Link inválido ou expirado."}
+              {tokenValid ? `Defina uma nova senha para ${email}.` : "Link inválido ou expirado."}
             </p>
           </div>
 
@@ -180,18 +185,14 @@ function ResetPasswordForm() {
               {error && (
                 <div className="p-3 bg-red-500/5 border border-red-500/10 rounded-xl flex items-start gap-2.5 animate-in fade-in slide-in-from-top-2">
                   <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
-                  <p className="text-red-400 text-xs font-medium leading-relaxed">
-                    {error}
-                  </p>
+                  <p className="text-red-400 text-xs font-medium leading-relaxed">{error}</p>
                 </div>
               )}
 
               {success && (
                 <div className="p-3 bg-emerald-500/5 border border-emerald-500/10 rounded-xl flex items-start gap-2.5 animate-in fade-in slide-in-from-top-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                  <p className="text-emerald-400 text-xs font-medium leading-relaxed">
-                    {success}
-                  </p>
+                  <p className="text-emerald-400 text-xs font-medium leading-relaxed">{success}</p>
                 </div>
               )}
 
@@ -216,9 +217,7 @@ function ResetPasswordForm() {
             <div className="space-y-4">
               <div className="p-3 bg-red-500/5 border border-red-500/10 rounded-xl flex items-start gap-2.5 animate-in fade-in slide-in-from-top-2">
                 <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
-                <p className="text-red-400 text-xs font-medium leading-relaxed">
-                  {error}
-                </p>
+                <p className="text-red-400 text-xs font-medium leading-relaxed">{error}</p>
               </div>
             </div>
           )}

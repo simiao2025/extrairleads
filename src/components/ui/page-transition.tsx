@@ -30,12 +30,7 @@ const pageVariants = {
 
 export function PageTransition({ children }: { children: React.ReactNode }) {
   return (
-    <motion.div
-      initial="hidden"
-      animate="enter"
-      exit="exit"
-      variants={pageVariants}
-    >
+    <motion.div initial="hidden" animate="enter" exit="exit" variants={pageVariants}>
       {children}
     </motion.div>
   );

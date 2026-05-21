@@ -1,5 +1,5 @@
+import { Database, Percent, Target, TrendingUp } from "lucide-react";
 import { AnalyticsChart, MetricCard } from "@/components/ui/analytics";
-import { TrendingUp, Target, Database, Percent } from "lucide-react";
 
 interface AnalyticsSectionProps {
   leadsByStatus: Record<string, number>;
@@ -24,7 +24,12 @@ const STATUS_LABELS: Record<string, string> = {
   discarded: "Descartados",
 };
 
-export function AnalyticsSection({ leadsByStatus, conversionRate, totalLeads, qualifiedLeads }: AnalyticsSectionProps) {
+export function AnalyticsSection({
+  leadsByStatus,
+  conversionRate,
+  totalLeads,
+  qualifiedLeads,
+}: AnalyticsSectionProps) {
   const pieData = Object.entries(leadsByStatus)
     .filter(([, value]) => value > 0)
     .map(([name, value]) => ({
@@ -33,9 +38,7 @@ export function AnalyticsSection({ leadsByStatus, conversionRate, totalLeads, qu
       fill: STATUS_COLORS[name] || "#71717a",
     }));
 
-  const avgScore = totalLeads > 0
-    ? Math.round((leadsByStatus.qualified / totalLeads) * 100)
-    : 0;
+  const avgScore = totalLeads > 0 ? Math.round((leadsByStatus.qualified / totalLeads) * 100) : 0;
 
   return (
     <section className="space-y-6">
@@ -80,11 +83,7 @@ export function AnalyticsSection({ leadsByStatus, conversionRate, totalLeads, qu
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <AnalyticsChart
-          title="Distribuição por Status"
-          type="pie"
-          data={pieData}
-        />
+        <AnalyticsChart title="Distribuição por Status" type="pie" data={pieData} />
         <div className="lg:col-span-2">
           <AnalyticsChart
             title="Visão Geral do Pipeline"

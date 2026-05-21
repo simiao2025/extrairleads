@@ -1,8 +1,8 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { X, CheckCircle2, AlertCircle, Info, AlertTriangle } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { AlertCircle, AlertTriangle, CheckCircle2, Info, X } from "lucide-react";
+import { createContext, useCallback, useContext, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 
 type ToastType = "success" | "error" | "info" | "warning";
@@ -56,7 +56,7 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: (id: string)
       transition={{ type: "spring", stiffness: 400, damping: 30 }}
       className={cn(
         "relative flex items-center gap-3 rounded-xl border px-4 py-3 pr-10 shadow-2xl backdrop-blur-xl",
-        styles[toast.type]
+        styles[toast.type],
       )}
     >
       <Icon className="h-5 w-5 shrink-0" />
@@ -94,7 +94,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
         timersRef.current.set(id, timer);
       }
     },
-    [dismiss]
+    [dismiss],
   );
 
   const value: ToastContextType = {

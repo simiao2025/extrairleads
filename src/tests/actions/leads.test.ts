@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from "vitest";
-import { moveLeadAction, deleteLeadAction, updateLeadAction } from "@/actions/leads";
+import { describe, expect, it, vi } from "vitest";
+import { deleteLeadAction, moveLeadAction, updateLeadAction } from "@/actions/leads";
 
 vi.mock("@/db", () => ({
   db: {
@@ -78,7 +78,7 @@ describe("Lead Status Validation", () => {
   it("should reject invalid stages", () => {
     const invalidStages = ["invalid", "new", "pending", ""];
     invalidStages.forEach((stage) => {
-      expect(VALID_STAGES.includes(stage as typeof VALID_STAGES[number])).toBe(false);
+      expect(VALID_STAGES.includes(stage as (typeof VALID_STAGES)[number])).toBe(false);
     });
   });
 });

@@ -1,19 +1,23 @@
 "use server";
 
-import { db } from "@/db";
-import { leads, campaignConfigs } from "@/db/schema";
-import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
-import { qualifyLeadsAction } from "./outreach";
-import { startOutreachAction } from "./outreach";
+import { revalidatePath } from "next/cache";
+import { db } from "@/db";
+import { campaignConfigs, leads } from "@/db/schema";
 import { auth } from "@/lib/auth";
+import { qualifyLeadsAction, startOutreachAction } from "./outreach";
 
 export async function searchLeadsAction({
   niche,
   city,
   state,
-  onlyScrape = false
-}: { niche: string; city: string; state: string; onlyScrape?: boolean }) {
+  onlyScrape = false,
+}: {
+  niche: string;
+  city: string;
+  state: string;
+  onlyScrape?: boolean;
+}) {
   const session = await auth();
   const userId = session?.user?.id ? parseInt(session.user.id, 10) : null;
   if (!userId) {
@@ -24,7 +28,12 @@ export async function searchLeadsAction({
   if (!apiKey) return { success: false, error: "SerpApi Key ausente." };
 
   try {
-    const params = new URLSearchParams({ engine: "google_maps", q: `${niche} em ${city}, ${state}`, type: "search", api_key: apiKey });
+    const params = new URLSearchParams({
+      engine: "google_maps",
+      q: `${niche} em ${city}, ${state}`,
+      type: "search",
+      api_key: apiKey,
+    });
     const response = await fetch(`https://serpapi.com/search.json?${params.toString()}`);
     const data = await response.json();
     const localResults = data.local_results || [];
@@ -38,7 +47,13 @@ export async function searchLeadsAction({
       }
       leadsToInsert.push({
         userId,
-        name: result.title, phone, website: result.website || null, niche, city, state, status: "raw" as const,
+        name: result.title,
+        phone,
+        website: result.website || null,
+        niche,
+        city,
+        state,
+        status: "raw" as const,
         metadata: { rating: result.rating, reviews: result.reviews, address: result.address },
       });
     }
@@ -48,8 +63,7 @@ export async function searchLeadsAction({
     const inserted = await db.insert(leads).values(leadsToInsert).returning();
 
     if (!onlyScrape) {
-      console.log("Acionando Agentes de IA...");
-      await qualifyLeadsAction(inserted.map(l => l.id));
+      await qualifyLeadsAction(inserted.map((l) => l.id));
 
       const [config] = await db.select().from(campaignConfigs);
       if (config?.autoOutreach === "true") {

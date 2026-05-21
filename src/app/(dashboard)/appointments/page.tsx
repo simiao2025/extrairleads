@@ -1,9 +1,9 @@
+import { desc, eq } from "drizzle-orm";
+import { ArrowLeft, Calendar } from "lucide-react";
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import { db } from "@/db";
 import { appointments, leads } from "@/db/schema";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft, Calendar } from "lucide-react";
-import { desc, eq } from "drizzle-orm";
 import { AppointmentsClient } from "./client";
 
 export default async function AppointmentsPage() {

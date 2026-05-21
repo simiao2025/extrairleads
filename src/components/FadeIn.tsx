@@ -2,7 +2,15 @@
 
 import { motion } from "framer-motion";
 
-export function FadeIn({ children, delay = 0, className = "" }: { children: React.ReactNode, delay?: number, className?: string }) {
+export function FadeIn({
+  children,
+  delay = 0,
+  className = "",
+}: {
+  children: React.ReactNode;
+  delay?: number;
+  className?: string;
+}) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -15,7 +23,13 @@ export function FadeIn({ children, delay = 0, className = "" }: { children: Reac
   );
 }
 
-export function StaggerContainer({ children, className = "" }: { children: React.ReactNode, className?: string }) {
+export function StaggerContainer({
+  children,
+  className = "",
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
   return (
     <motion.div
       initial="hidden"
@@ -23,9 +37,9 @@ export function StaggerContainer({ children, className = "" }: { children: React
       variants={{
         visible: {
           transition: {
-            staggerChildren: 0.1
-          }
-        }
+            staggerChildren: 0.1,
+          },
+        },
       }}
       className={className}
     >
@@ -34,12 +48,18 @@ export function StaggerContainer({ children, className = "" }: { children: React
   );
 }
 
-export function StaggerItem({ children, className = "" }: { children: React.ReactNode, className?: string }) {
+export function StaggerItem({
+  children,
+  className = "",
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
   return (
     <motion.div
       variants={{
         hidden: { opacity: 0, y: 20 },
-        visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
+        visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } },
       }}
       className={className}
     >

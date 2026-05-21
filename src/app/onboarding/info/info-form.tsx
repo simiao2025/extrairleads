@@ -1,8 +1,8 @@
 "use client";
 
+import { Loader2, Search } from "lucide-react";
 import { useState } from "react";
 import { saveOnboardingInfoAction } from "@/app/actions";
-import { Search, Loader2 } from "lucide-react";
 
 interface InfoFormProps {
   initialData: {
@@ -34,7 +34,7 @@ export default function InfoForm({ initialData }: InfoFormProps) {
       try {
         const res = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
         const data = await res.json();
-        
+
         if (data.erro) {
           setError("CEP não encontrado.");
         } else {
@@ -42,8 +42,7 @@ export default function InfoForm({ initialData }: InfoFormProps) {
           setCity(data.localidade || "");
           setUf(data.uf || "");
         }
-      } catch (err) {
-        console.error("Erro ao buscar CEP:", err);
+      } catch (_err) {
       } finally {
         setCepLoading(false);
       }
@@ -75,7 +74,7 @@ export default function InfoForm({ initialData }: InfoFormProps) {
       } else {
         setError(res.error || "Ocorreu um erro ao salvar os dados.");
       }
-    } catch (err: any) {
+    } catch (_err: any) {
       setError("Erro de rede ao salvar os dados.");
     } finally {
       setLoading(false);

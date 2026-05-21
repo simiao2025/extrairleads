@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { Search, X } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
+import type { Lead } from "@/components/KanbanBoard";
+import { LeadsTable } from "@/components/LeadsTable";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, X } from "lucide-react";
-import { LeadsTable } from "@/components/LeadsTable";
 import { Pagination } from "@/components/ui/pagination";
-import type { Lead } from "@/components/KanbanBoard";
 
 const ITEMS_PER_PAGE = 20;
 const STATUS_OPTIONS = [
@@ -27,14 +27,22 @@ interface LeadsClientProps {
   currentPage: number;
 }
 
-export function LeadsClient({ initialSearch, initialStatus, filteredLeads, currentPage }: LeadsClientProps) {
+export function LeadsClient({
+  initialSearch,
+  initialStatus,
+  filteredLeads,
+  currentPage,
+}: LeadsClientProps) {
   const router = useRouter();
   const [search, setSearch] = useState(initialSearch);
   const [status, setStatus] = useState(initialStatus);
   const [refreshKey, setRefreshKey] = useState(0);
 
   const totalPages = Math.ceil(filteredLeads.length / ITEMS_PER_PAGE);
-  const pagedLeads = filteredLeads.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+  const pagedLeads = filteredLeads.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE,
+  );
 
   function applyFilters() {
     const params = new URLSearchParams();
@@ -79,7 +87,9 @@ export function LeadsClient({ initialSearch, initialStatus, filteredLeads, curre
           className="h-10 rounded-xl border border-white/[0.08] bg-black/40 px-4 text-sm text-zinc-300 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20 transition-all cursor-pointer"
         >
           {STATUS_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value} className="bg-zinc-950 text-zinc-300">{opt.label}</option>
+            <option key={opt.value} value={opt.value} className="bg-zinc-950 text-zinc-300">
+              {opt.label}
+            </option>
           ))}
         </select>
         <Button

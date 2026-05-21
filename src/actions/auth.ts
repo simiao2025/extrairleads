@@ -1,14 +1,18 @@
 "use server";
 
+import argon2 from "@node-rs/argon2";
+import crypto from "node:crypto";
+import { and, eq } from "drizzle-orm";
+import { z } from "zod";
 import { db } from "@/db";
 import { users, verificationTokens } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
-import argon2 from "@node-rs/argon2";
-import crypto from "crypto";
-import { z } from "zod";
 
 const registerSchema = z.object({
-  name: z.string().trim().min(2, "Nome muito curto.").regex(/^[A-Za-zÀ-ÖØ-öø-ÿ\s]+$/, "Nome inválido."),
+  name: z
+    .string()
+    .trim()
+    .min(2, "Nome muito curto.")
+    .regex(/^[A-Za-zÀ-ÖØ-öø-ÿ\s]+$/, "Nome inválido."),
   email: z.string().trim().toLowerCase().email("Email inválido."),
   password: z.string().min(8, "A senha deve ter pelo menos 8 caracteres."),
 });
@@ -26,11 +30,15 @@ interface RegisterResult {
 export async function registerAction(
   nameRaw: string,
   emailRaw: string,
-  passwordRaw: string
+  passwordRaw: string,
 ): Promise<RegisterResult> {
   try {
     // 1. Sanitização estrita (Zod) OWASP A06
-    const validation = registerSchema.safeParse({ name: nameRaw, email: emailRaw, password: passwordRaw });
+    const validation = registerSchema.safeParse({
+      name: nameRaw,
+      email: emailRaw,
+      password: passwordRaw,
+    });
     if (!validation.success) {
       // Fail-closed sem vazar detalhes excessivos
       return { success: false, error: validation.error.issues[0].message };
@@ -40,18 +48,15 @@ export async function registerAction(
 
     // 2. Zero Account Enumeration (OWASP A07)
     // Procuramos o usuário, mas se ele existir, disfarçamos.
-    const [existingUser] = await db
-      .select()
-      .from(users)
-      .where(eq(users.email, email));
+    const [existingUser] = await db.select().from(users).where(eq(users.email, email));
 
     if (existingUser) {
       // Se existir, nós não criamos o usuário novamente nem enviamos erro.
       // Apenas simulamos o mesmo fluxo externo de sucesso para evitar enumeração.
       // Nota: Na vida real, poderíamos enviar um e-mail de "Você já tem conta, faça login".
-      return { 
-        success: true, 
-        message: "E-mail de confirmação enviado! Verifique sua caixa de entrada." 
+      return {
+        success: true,
+        message: "E-mail de confirmação enviado! Verifique sua caixa de entrada.",
       };
     }
 
@@ -81,14 +86,14 @@ export async function registerAction(
     // Enviar e-mail de ativação via Resend API
     const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
     const activationLink = `${baseUrl}/api/auth/confirm?token=${token}&email=${encodeURIComponent(email)}`;
-    
+
     const resendApiKey = process.env.RESEND_API_KEY;
     if (resendApiKey) {
       try {
         await fetch("https://api.resend.com/emails", {
           method: "POST",
           headers: {
-            "Authorization": `Bearer ${resendApiKey}`,
+            Authorization: `Bearer ${resendApiKey}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
@@ -120,18 +125,15 @@ export async function registerAction(
             `,
           }),
         });
-      } catch (err) {
-        console.error("[registerAction] Erro silencioso no envio de e-mail.");
+      } catch (_err) {
       }
     }
 
-    return { 
-      success: true, 
-      message: "E-mail de confirmação enviado! Verifique sua caixa de entrada." 
+    return {
+      success: true,
+      message: "E-mail de confirmação enviado! Verifique sua caixa de entrada.",
     };
-  } catch (error: unknown) {
-    // Fail-closed (OWASP A10): Erros internos NUNCA vazam stack trace
-    console.error("[registerAction] Erro Crítico:", error);
+  } catch (_error: unknown) {
     return { success: false, error: "Serviço temporariamente indisponível. Tente novamente." };
   }
 }
@@ -150,7 +152,9 @@ function checkForgotRateLimit(email: string): boolean {
   return true;
 }
 
-export async function forgotPasswordAction(emailRaw: string): Promise<{ success: boolean; error?: string; message?: string }> {
+export async function forgotPasswordAction(
+  emailRaw: string,
+): Promise<{ success: boolean; error?: string; message?: string }> {
   try {
     if (!checkForgotRateLimit(emailRaw.toLowerCase().trim())) {
       return { success: false, error: "Muitas tentativas. Tente novamente em 15 minutos." };
@@ -164,7 +168,10 @@ export async function forgotPasswordAction(emailRaw: string): Promise<{ success:
     const [user] = await db.select().from(users).where(eq(users.email, email));
 
     if (!user) {
-      return { success: true, message: "Se o e-mail estiver cadastrado, você receberá um link de recuperação." };
+      return {
+        success: true,
+        message: "Se o e-mail estiver cadastrado, você receberá um link de recuperação.",
+      };
     }
 
     const token = crypto.randomBytes(32).toString("hex");
@@ -185,7 +192,7 @@ export async function forgotPasswordAction(emailRaw: string): Promise<{ success:
         await fetch("https://api.resend.com/emails", {
           method: "POST",
           headers: {
-            "Authorization": `Bearer ${resendApiKey}`,
+            Authorization: `Bearer ${resendApiKey}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
@@ -220,19 +227,24 @@ export async function forgotPasswordAction(emailRaw: string): Promise<{ success:
 `,
           }),
         });
-      } catch (err) {
-        console.error("[forgotPasswordAction] Erro silencioso no envio de e-mail.");
+      } catch (_err) {
       }
     }
 
-    return { success: true, message: "Se o e-mail estiver cadastrado, você receberá um link de recuperação." };
-  } catch (error: unknown) {
-    console.error("[forgotPasswordAction] Erro Crítico:", error);
+    return {
+      success: true,
+      message: "Se o e-mail estiver cadastrado, você receberá um link de recuperação.",
+    };
+  } catch (_error: unknown) {
     return { success: false, error: "Serviço temporariamente indisponível. Tente novamente." };
   }
 }
 
-export async function resetPasswordAction(tokenRaw: string, emailRaw: string, newPasswordRaw: string): Promise<{ success: boolean; error?: string }> {
+export async function resetPasswordAction(
+  tokenRaw: string,
+  emailRaw: string,
+  newPasswordRaw: string,
+): Promise<{ success: boolean; error?: string }> {
   try {
     const token = tokenRaw?.trim();
     const email = emailRaw?.toLowerCase().trim();
@@ -252,12 +264,15 @@ export async function resetPasswordAction(tokenRaw: string, emailRaw: string, ne
       .where(
         and(
           eq(verificationTokens.token, token),
-          eq(verificationTokens.identifier, `reset:${email}`)
-        )
+          eq(verificationTokens.identifier, `reset:${email}`),
+        ),
       );
 
     if (!dbToken || new Date() > new Date(dbToken.expires)) {
-      return { success: false, error: "Link de recuperação expirado ou inválido. Solicite um novo." };
+      return {
+        success: false,
+        error: "Link de recuperação expirado ou inválido. Solicite um novo.",
+      };
     }
 
     const [user] = await db.select().from(users).where(eq(users.email, email));
@@ -267,23 +282,19 @@ export async function resetPasswordAction(tokenRaw: string, emailRaw: string, ne
 
     const hashedPassword = await argon2.hash(newPassword);
 
-    await db
-      .update(users)
-      .set({ password: hashedPassword })
-      .where(eq(users.email, email));
+    await db.update(users).set({ password: hashedPassword }).where(eq(users.email, email));
 
-    await db
-      .delete(verificationTokens)
-      .where(eq(verificationTokens.id, dbToken.id));
+    await db.delete(verificationTokens).where(eq(verificationTokens.id, dbToken.id));
 
     return { success: true };
-  } catch (error: unknown) {
-    console.error("[resetPasswordAction] Erro Crítico:", error);
+  } catch (_error: unknown) {
     return { success: false, error: "Serviço temporariamente indisponível. Tente novamente." };
   }
 }
 
-export async function checkEmailVerifiedAction(email: string): Promise<{ success: boolean; verified: boolean; error?: string }> {
+export async function checkEmailVerifiedAction(
+  email: string,
+): Promise<{ success: boolean; verified: boolean; error?: string }> {
   try {
     const cleanEmail = email.toLowerCase().trim();
     const [user] = await db.select().from(users).where(eq(users.email, cleanEmail));
@@ -291,8 +302,7 @@ export async function checkEmailVerifiedAction(email: string): Promise<{ success
       return { success: false, verified: false, error: "Usuário não encontrado." };
     }
     return { success: true, verified: !!user.emailVerified };
-  } catch (err) {
-    console.error("[checkEmailVerifiedAction] Erro:", err);
+  } catch (_err) {
     return { success: false, verified: false, error: "Erro ao verificar status do e-mail." };
   }
 }

@@ -1,9 +1,9 @@
 "use server";
 
+import { eq } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { campaignConfigs } from "@/db/schema";
-import { revalidatePath } from "next/cache";
-import { eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 
 export async function getAiConfig() {
@@ -14,8 +14,9 @@ export async function getAiConfig() {
     ? await db.select().from(campaignConfigs).where(eq(campaignConfigs.userId, userId))
     : [];
 
-  return config || {
-    agent1Prompt: `Você é um Agente Especialista em Qualificação de Leads para Soluções de Tecnologia, Automação e Presença Digital. Sua missão é analisar dados extraídos do Google Maps via SerpAPI e gerar um score de oportunidade comercial preciso, acionável e estratificado.
+  return (
+    config || {
+      agent1Prompt: `Você é um Agente Especialista em Qualificação de Leads para Soluções de Tecnologia, Automação e Presença Digital. Sua missão é analisar dados extraídos do Google Maps via SerpAPI e gerar um score de oportunidade comercial preciso, acionável e estratificado.
 
 ━━━ DADOS DE ENTRADA (todos os campos disponíveis) ━━━
 
@@ -101,7 +102,7 @@ Retorne APENAS JSON válido, sem markdown, sem explicações externas:
   "analysis": "Dossiê estratégico de qualificação em formato de texto estruturado. Deve obrigatoriamente incluir: 1. PONTOS POSITIVOS (pontos fortes do lead, boa reputação, fotos, etc.); 2. PONTOS NEGATIVOS (dores críticas encontradas, falta de site, demora em WhatsApp/plantão, etc.); 3. DIRETRIZ E GANCHO PARA O SDR (instruções exatas de abordagem comercial personalizadas para este negócio)."
 }
 `,
-    agent2Prompt: `Você é um SDR (Sales Development Representative) especialista em abordagens consultivas via WhatsApp.
+      agent2Prompt: `Você é um SDR (Sales Development Representative) especialista em abordagens consultivas via WhatsApp.
 Sua missão é interagir com o cliente para responder dúvidas, contornar objeções com empatia e agendar uma reunião de demonstração.
 
 ━━━ DIRETRIZES DE COMUNICAÇÃO ━━━
@@ -125,8 +126,9 @@ R - Respond (Responda): Use o RAG para apresentar o valor real ou ROI da soluç�
 
 EXEMPLO DE ABERTURA:
 "Olá! Tudo bem? Notei que a [NOME_EMPRESA] é referência, mas vi que alguns clientes comentam sobre [DOR]. Temos uma solução que pode ajudar. Faz sentido conversarmos sobre isso?"`,
-    weeklyLimit: 50,
-  };
+      weeklyLimit: 50,
+    }
+  );
 }
 
 export async function saveAiConfigAction(formData: FormData) {
@@ -136,21 +138,27 @@ export async function saveAiConfigAction(formData: FormData) {
 
   const agent1Prompt = formData.get("agent1Prompt") as string;
   const agent2Prompt = formData.get("agent2Prompt") as string;
-  const weeklyLimit = parseInt(formData.get("weeklyLimit") as string);
+  const weeklyLimit = parseInt(formData.get("weeklyLimit") as string, 10);
   const autoOutreach = formData.get("autoOutreach") === "on" ? "true" : "false";
 
-  const existing = await db.select().from(campaignConfigs).where(eq(campaignConfigs.userId, userId));
+  const existing = await db
+    .select()
+    .from(campaignConfigs)
+    .where(eq(campaignConfigs.userId, userId));
 
   if (existing.length > 0) {
-    await db.update(campaignConfigs).set({ agent1Prompt, agent2Prompt, weeklyLimit, autoOutreach }).where(eq(campaignConfigs.userId, userId));
+    await db
+      .update(campaignConfigs)
+      .set({ agent1Prompt, agent2Prompt, weeklyLimit, autoOutreach })
+      .where(eq(campaignConfigs.userId, userId));
   } else {
-    await db.insert(campaignConfigs).values({ 
+    await db.insert(campaignConfigs).values({
       userId,
       name: "Configuração Padrão",
-      agent1Prompt, 
-      agent2Prompt, 
+      agent1Prompt,
+      agent2Prompt,
       weeklyLimit,
-      autoOutreach
+      autoOutreach,
     });
   }
 

@@ -1,7 +1,7 @@
+
+import { NextResponse } from "next/server";
 import NextAuth from "next-auth";
 import { authConfig } from "./lib/auth.config";
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
 
 export const { auth: middleware } = NextAuth(authConfig);
 
@@ -9,9 +9,7 @@ const PUBLIC_ROUTES = ["/login", "/reset-password", "/api/auth", "/api/webhook/w
 
 export default middleware((req) => {
   const session = req.auth;
-  const isPublic = PUBLIC_ROUTES.some((route) =>
-    req.nextUrl.pathname.startsWith(route)
-  );
+  const isPublic = PUBLIC_ROUTES.some((route) => req.nextUrl.pathname.startsWith(route));
 
   if (!session && !isPublic) {
     const loginUrl = new URL("/login", req.nextUrl.origin);

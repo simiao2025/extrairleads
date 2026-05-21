@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { and, eq } from "drizzle-orm";
+import { type NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { users, verificationTokens } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -19,8 +19,8 @@ export async function GET(request: NextRequest) {
     .where(
       and(
         eq(verificationTokens.token, token),
-        eq(verificationTokens.identifier, email.toLowerCase().trim())
-      )
+        eq(verificationTokens.identifier, email.toLowerCase().trim()),
+      ),
     );
 
   if (!dbToken || new Date() > new Date(dbToken.expires)) {
@@ -34,11 +34,7 @@ export async function GET(request: NextRequest) {
     .where(eq(users.email, email.toLowerCase().trim()));
 
   // Remove o token utilizado para evitar reaproveitamento
-  await db
-    .delete(verificationTokens)
-    .where(eq(verificationTokens.id, dbToken.id));
+  await db.delete(verificationTokens).where(eq(verificationTokens.id, dbToken.id));
 
-  return NextResponse.redirect(
-    new URL("/login?success=email_verified", request.url)
-  );
+  return NextResponse.redirect(new URL("/login?success=email_verified", request.url));
 }

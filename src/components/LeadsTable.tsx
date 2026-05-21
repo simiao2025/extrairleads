@@ -1,15 +1,28 @@
 "use client";
 
+import { Globe, MapPin, Pencil, Phone, Search, Trash2, X } from "lucide-react";
 import { useState } from "react";
-import { Pencil, Trash2, Phone, Globe, MapPin, Search, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { deleteLeadAction, updateLeadAction } from "@/app/actions";
-import { useToast } from "@/components/ui/toast";
 import type { Lead } from "@/components/KanbanBoard";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { useToast } from "@/components/ui/toast";
 
 const STATUS_COLORS: Record<string, string> = {
   raw: "bg-sky-500/10 text-sky-400 border-sky-500/20",
@@ -79,7 +92,9 @@ function EditDialog({ lead, open, onOpenChange, onSuccess }: EditDialogProps) {
             />
           </div>
           <div>
-            <label className="text-xs font-bold text-zinc-400 mb-1.5 block uppercase">Telefone</label>
+            <label className="text-xs font-bold text-zinc-400 mb-1.5 block uppercase">
+              Telefone
+            </label>
             <Input
               value={form.phone}
               onChange={(e) => setForm({ ...form, phone: e.target.value })}
@@ -87,7 +102,9 @@ function EditDialog({ lead, open, onOpenChange, onSuccess }: EditDialogProps) {
             />
           </div>
           <div>
-            <label className="text-xs font-bold text-zinc-400 mb-1.5 block uppercase">Website</label>
+            <label className="text-xs font-bold text-zinc-400 mb-1.5 block uppercase">
+              Website
+            </label>
             <Input
               value={form.website}
               onChange={(e) => setForm({ ...form, website: e.target.value })}
@@ -96,7 +113,9 @@ function EditDialog({ lead, open, onOpenChange, onSuccess }: EditDialogProps) {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs font-bold text-zinc-400 mb-1.5 block uppercase">Nicho</label>
+              <label className="text-xs font-bold text-zinc-400 mb-1.5 block uppercase">
+                Nicho
+              </label>
               <Input
                 value={form.niche}
                 onChange={(e) => setForm({ ...form, niche: e.target.value })}
@@ -104,7 +123,9 @@ function EditDialog({ lead, open, onOpenChange, onSuccess }: EditDialogProps) {
               />
             </div>
             <div>
-              <label className="text-xs font-bold text-zinc-400 mb-1.5 block uppercase">Cidade</label>
+              <label className="text-xs font-bold text-zinc-400 mb-1.5 block uppercase">
+                Cidade
+              </label>
               <Input
                 value={form.city}
                 onChange={(e) => setForm({ ...form, city: e.target.value })}
@@ -113,7 +134,9 @@ function EditDialog({ lead, open, onOpenChange, onSuccess }: EditDialogProps) {
             </div>
           </div>
           <div>
-            <label className="text-xs font-bold text-zinc-400 mb-1.5 block uppercase">Estado (UF)</label>
+            <label className="text-xs font-bold text-zinc-400 mb-1.5 block uppercase">
+              Estado (UF)
+            </label>
             <Input
               value={form.state}
               onChange={(e) => setForm({ ...form, state: e.target.value.toUpperCase() })}
@@ -122,10 +145,19 @@ function EditDialog({ lead, open, onOpenChange, onSuccess }: EditDialogProps) {
             />
           </div>
           <DialogFooter className="pt-4">
-            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} className="text-zinc-400">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => onOpenChange(false)}
+              className="text-zinc-400"
+            >
               Cancelar
             </Button>
-            <Button type="submit" disabled={loading} className="bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/25 backdrop-blur-md hover:bg-emerald-500/20 hover:text-emerald-300 hover:border-emerald-500/40 hover:shadow-[0_0_25px_rgba(16,185,129,0.25)] hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 cursor-pointer">
+            <Button
+              type="submit"
+              disabled={loading}
+              className="bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/25 backdrop-blur-md hover:bg-emerald-500/20 hover:text-emerald-300 hover:border-emerald-500/40 hover:shadow-[0_0_25px_rgba(16,185,129,0.25)] hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 cursor-pointer"
+            >
               {loading ? "Salvando..." : "Salvar Alterações"}
             </Button>
           </DialogFooter>
@@ -166,7 +198,8 @@ function DeleteDialog({ lead, open, onOpenChange, onSuccess }: DeleteDialogProps
           <DialogTitle className="text-xl font-black text-red-400">Confirmar Exclusão</DialogTitle>
         </DialogHeader>
         <p className="text-zinc-300">
-          Tem certeza que deseja deletar o lead <strong className="text-white">{lead.name}</strong>? Esta ação não pode ser desfeita.
+          Tem certeza que deseja deletar o lead <strong className="text-white">{lead.name}</strong>?
+          Esta ação não pode ser desfeita.
         </p>
         <DialogFooter className="pt-4 gap-2">
           <Button variant="ghost" onClick={() => onOpenChange(false)} className="text-zinc-400">
@@ -209,13 +242,27 @@ export function LeadsTable({ leads, onRefresh }: LeadsTableProps) {
         <Table>
           <TableHeader>
             <TableRow className="border-zinc-800/50 hover:bg-zinc-900/50">
-              <TableHead className="text-zinc-400 font-bold uppercase text-[10px] tracking-widest">Nome</TableHead>
-              <TableHead className="text-zinc-400 font-bold uppercase text-[10px] tracking-widest">Contato</TableHead>
-              <TableHead className="text-zinc-400 font-bold uppercase text-[10px] tracking-widest">Localização</TableHead>
-              <TableHead className="text-zinc-400 font-bold uppercase text-[10px] tracking-widest">Nicho</TableHead>
-              <TableHead className="text-zinc-400 font-bold uppercase text-[10px] tracking-widest">Score IA</TableHead>
-              <TableHead className="text-zinc-400 font-bold uppercase text-[10px] tracking-widest">Status</TableHead>
-              <TableHead className="text-zinc-400 font-bold uppercase text-[10px] tracking-widest text-right">Ações</TableHead>
+              <TableHead className="text-zinc-400 font-bold uppercase text-[10px] tracking-widest">
+                Nome
+              </TableHead>
+              <TableHead className="text-zinc-400 font-bold uppercase text-[10px] tracking-widest">
+                Contato
+              </TableHead>
+              <TableHead className="text-zinc-400 font-bold uppercase text-[10px] tracking-widest">
+                Localização
+              </TableHead>
+              <TableHead className="text-zinc-400 font-bold uppercase text-[10px] tracking-widest">
+                Nicho
+              </TableHead>
+              <TableHead className="text-zinc-400 font-bold uppercase text-[10px] tracking-widest">
+                Score IA
+              </TableHead>
+              <TableHead className="text-zinc-400 font-bold uppercase text-[10px] tracking-widest">
+                Status
+              </TableHead>
+              <TableHead className="text-zinc-400 font-bold uppercase text-[10px] tracking-widest text-right">
+                Ações
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -240,7 +287,12 @@ export function LeadsTable({ leads, onRefresh }: LeadsTableProps) {
                     {lead.website && (
                       <span className="flex items-center gap-1.5 text-xs">
                         <Globe className="h-3 w-3" />
-                        <a href={lead.website} target="_blank" rel="noopener noreferrer" className="hover:text-emerald-400 transition-colors truncate max-w-[150px]">
+                        <a
+                          href={lead.website}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="hover:text-emerald-400 transition-colors truncate max-w-[150px]"
+                        >
                           Website
                         </a>
                       </span>
@@ -264,10 +316,15 @@ export function LeadsTable({ leads, onRefresh }: LeadsTableProps) {
                 </TableCell>
                 <TableCell>
                   {lead.aiScore !== null && lead.aiScore !== undefined ? (
-                    <span className={`font-bold text-sm ${
-                      lead.aiScore >= 8 ? "text-emerald-400" :
-                      lead.aiScore >= 5 ? "text-yellow-400" : "text-red-400"
-                    }`}>
+                    <span
+                      className={`font-bold text-sm ${
+                        lead.aiScore >= 8
+                          ? "text-emerald-400"
+                          : lead.aiScore >= 5
+                            ? "text-yellow-400"
+                            : "text-red-400"
+                      }`}
+                    >
                       {lead.aiScore}/10
                     </span>
                   ) : (
@@ -336,7 +393,12 @@ interface LeadsFiltersProps {
   onStatusChange: (v: string) => void;
 }
 
-export function LeadsFilters({ search, status, onSearchChange, onStatusChange }: LeadsFiltersProps) {
+export function LeadsFilters({
+  search,
+  status,
+  onSearchChange,
+  onStatusChange,
+}: LeadsFiltersProps) {
   return (
     <div className="flex flex-col sm:flex-row gap-3">
       <div className="relative flex-1">
@@ -355,11 +417,18 @@ export function LeadsFilters({ search, status, onSearchChange, onStatusChange }:
       >
         <option value="">Todos os status</option>
         {Object.entries(STATUS_LABELS).map(([key, label]) => (
-          <option key={key} value={key}>{label}</option>
+          <option key={key} value={key}>
+            {label}
+          </option>
         ))}
       </select>
       {search && (
-        <Button variant="ghost" size="icon-sm" onClick={() => onSearchChange("")} className="text-zinc-500">
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={() => onSearchChange("")}
+          className="text-zinc-500"
+        >
           <X className="h-4 w-4" />
         </Button>
       )}

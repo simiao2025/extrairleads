@@ -1,9 +1,9 @@
+import argon2 from "@node-rs/argon2";
+import { eq } from "drizzle-orm";
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
-import argon2 from "@node-rs/argon2";
 import { db } from "@/db";
 import { users } from "@/db/schema";
-import { eq } from "drizzle-orm";
 import { authConfig } from "./auth.config";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
@@ -27,7 +27,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const password = credentials.password as string;
 
         const [user] = await db.select().from(users).where(eq(users.email, email));
-        if (!user || !user.password) {
+        if (!user?.password) {
           return null;
         }
 
@@ -39,7 +39,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         let isValid = false;
         try {
           isValid = await argon2.verify(user.password, password);
-        } catch (e) {
+        } catch (_e) {
           return null;
         }
 

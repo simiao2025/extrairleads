@@ -1,9 +1,9 @@
 "use server";
 
+import { desc, eq } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { appointments, leads } from "@/db/schema";
-import { revalidatePath } from "next/cache";
-import { eq, desc } from "drizzle-orm";
 
 export async function getAppointmentsAction() {
   return db
@@ -54,7 +54,7 @@ export async function updateAppointmentAction(
     scheduledAt?: Date;
     status?: string;
     notes?: string;
-  }
+  },
 ) {
   try {
     const [apt] = await db.select().from(appointments).where(eq(appointments.id, appointmentId));

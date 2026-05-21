@@ -4,7 +4,14 @@ import { useDroppable } from "@dnd-kit/core";
 import { cn } from "@/lib/utils";
 import { KanbanCard } from "./KanbanCard";
 
-type LeadStatus = "raw" | "qualified" | "in_queue" | "contacted" | "interested" | "human_intervention" | "discarded";
+type LeadStatus =
+  | "raw"
+  | "qualified"
+  | "in_queue"
+  | "contacted"
+  | "interested"
+  | "human_intervention"
+  | "discarded";
 
 interface Lead {
   id: number;
@@ -47,15 +54,18 @@ export function KanbanColumn({ stage, leads, animationDelay, isDragging }: Kanba
         isOver
           ? "border-emerald-500/50 bg-emerald-500/5 scale-[1.02]"
           : "border-white/[0.04] bg-white/[0.01]",
-        isDragging && !isOver && "opacity-60"
+        isDragging && !isOver && "opacity-60",
       )}
       style={{ animationDelay: `${animationDelay}ms` }}
     >
       <div className="flex items-center justify-between mb-1">
-        <h3 className="text-sm font-bold tracking-wider text-white/90 uppercase">
-          {stage.label}
-        </h3>
-        <span className={cn("rounded-md border px-2 py-0.5 text-[10px] font-black uppercase tracking-widest", stage.badge)}>
+        <h3 className="text-sm font-bold tracking-wider text-white/90 uppercase">{stage.label}</h3>
+        <span
+          className={cn(
+            "rounded-md border px-2 py-0.5 text-[10px] font-black uppercase tracking-widest",
+            stage.badge,
+          )}
+        >
           {leads.length}
         </span>
       </div>

@@ -1,11 +1,11 @@
+import { asc, eq } from "drizzle-orm";
+import { ArrowLeft, Users } from "lucide-react";
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import { db } from "@/db";
 import { leads } from "@/db/schema";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft, Users } from "lucide-react";
-import { asc, eq } from "drizzle-orm";
-import { LeadsClient } from "./client";
 import { auth } from "@/lib/auth";
+import { LeadsClient } from "./client";
 
 interface PageProps {
   searchParams: Promise<{ page?: string; search?: string; status?: string }>;
@@ -25,7 +25,8 @@ export default async function LeadsPage({ searchParams }: PageProps) {
     : [];
 
   const filteredLeads = allLeads.filter((lead) => {
-    const matchSearch = !search ||
+    const matchSearch =
+      !search ||
       lead.name?.toLowerCase().includes(search.toLowerCase()) ||
       lead.phone?.includes(search) ||
       lead.website?.toLowerCase().includes(search.toLowerCase());
@@ -55,7 +56,12 @@ export default async function LeadsPage({ searchParams }: PageProps) {
           </div>
         </div>
 
-        <LeadsClient initialSearch={search} initialStatus={status} filteredLeads={filteredLeads} currentPage={page} />
+        <LeadsClient
+          initialSearch={search}
+          initialStatus={status}
+          filteredLeads={filteredLeads}
+          currentPage={page}
+        />
       </div>
     </main>
   );

@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { Inter, Outfit } from "next/font/google";
 import "./globals.css";
-import { ToastProvider } from "@/components/ui/toast";
 import { SmoothScrollProvider } from "@/components/providers/smooth-scroll";
+import { ToastProvider } from "@/components/ui/toast";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -29,11 +29,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" className="dark">
-      <body className={`${inter.variable} ${outfit.variable} font-sans bg-background text-foreground selection:bg-emerald-500/20 antialiased`}>
+      <body
+        className={`${inter.variable} ${outfit.variable} font-sans bg-background text-foreground selection:bg-emerald-500/20 antialiased`}
+      >
         <SmoothScrollProvider>
-          <ToastProvider>
-            {children}
-          </ToastProvider>
+          <ToastProvider>{children}</ToastProvider>
         </SmoothScrollProvider>
       </body>
     </html>

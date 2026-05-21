@@ -1,15 +1,15 @@
 "use client";
 
-import { useState } from "react";
-import { Search, MapPin, Cpu } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { searchLeadsAction } from "@/app/actions";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { useToast } from "@/components/ui/toast";
+import { Cpu, MapPin, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { searchLeadsAction } from "@/app/actions";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { useToast } from "@/components/ui/toast";
 
 export default function SearchForm() {
   const [niche, setNiche] = useState("");
@@ -32,8 +32,7 @@ export default function SearchForm() {
       } else {
         error(result.error || "Erro ao buscar leads.");
       }
-    } catch (err) {
-      console.error(err);
+    } catch (_err) {
       error("Erro inesperado na busca.");
     } finally {
       setLoading(false);
@@ -47,13 +46,14 @@ export default function SearchForm() {
           <CardTitle className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">
             Capturar Novos Leads
           </CardTitle>
-          <CardDescription>
-            Defina o nicho e a localização para extrair contatos.
-          </CardDescription>
+          <CardDescription>Defina o nicho e a localização para extrair contatos.</CardDescription>
         </div>
 
         <div className="flex items-center justify-between sm:justify-start space-x-2 bg-zinc-900/50 p-3 rounded-xl border border-zinc-800 self-stretch sm:self-auto">
-          <Label htmlFor="mode" className="text-xs font-bold text-zinc-400 uppercase tracking-tighter">
+          <Label
+            htmlFor="mode"
+            className="text-xs font-bold text-zinc-400 uppercase tracking-tighter"
+          >
             {onlyScrape ? "Apenas Extração" : "Extração + IA"}
           </Label>
           <Switch
@@ -61,15 +61,20 @@ export default function SearchForm() {
             checked={!onlyScrape}
             onCheckedChange={(checked) => setOnlyScrape(!checked)}
           />
-          {!onlyScrape ? <Cpu className="w-4 h-4 text-orange-500 drop-shadow-[0_0_6px_rgba(249,115,22,0.4)]" /> : 
-<Cpu className="w-4 h-4 text-zinc-600" />}
+          {!onlyScrape ? (
+            <Cpu className="w-4 h-4 text-orange-500 drop-shadow-[0_0_6px_rgba(249,115,22,0.4)]" />
+          ) : (
+            <Cpu className="w-4 h-4 text-zinc-600" />
+          )}
         </div>
       </CardHeader>
 
       <CardContent>
         <form onSubmit={handleSearch} className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="md:col-span-1">
-            <label className="text-[10px] font-bold text-zinc-500 mb-1.5 block uppercase">Nicho</label>
+            <label className="text-[10px] font-bold text-zinc-500 mb-1.5 block uppercase">
+              Nicho
+            </label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
               <Input
@@ -83,7 +88,9 @@ export default function SearchForm() {
           </div>
 
           <div className="md:col-span-1">
-            <label className="text-[10px] font-bold text-zinc-500 mb-1.5 block uppercase">Cidade</label>
+            <label className="text-[10px] font-bold text-zinc-500 mb-1.5 block uppercase">
+              Cidade
+            </label>
             <div className="relative">
               <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
               <Input
@@ -118,7 +125,7 @@ export default function SearchForm() {
               }`}
               disabled={loading}
             >
-              {loading ? "Processando..." : (onlyScrape ? "Apenas Extrair" : "Extrair + Ativar IA")}
+              {loading ? "Processando..." : onlyScrape ? "Apenas Extrair" : "Extrair + Ativar IA"}
             </Button>
           </div>
         </form>

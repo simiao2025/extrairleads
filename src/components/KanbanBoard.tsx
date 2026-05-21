@@ -1,28 +1,35 @@
 "use client";
 
-import { useState, useMemo } from "react";
 import {
-  DndContext,
-  DragOverlay,
   closestCorners,
+  DndContext,
+  type DragEndEvent,
+  DragOverlay,
+  type DragStartEvent,
   KeyboardSensor,
   PointerSensor,
   useSensor,
   useSensors,
-  DragStartEvent,
-  DragEndEvent,
 } from "@dnd-kit/core";
 import {
   SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { KanbanColumn } from "./KanbanColumn";
-import { KanbanCard } from "./KanbanCard";
+import { useMemo, useState } from "react";
 import { moveLeadAction } from "@/app/actions";
 import { useToast } from "@/components/ui/toast";
+import { KanbanCard } from "./KanbanCard";
+import { KanbanColumn } from "./KanbanColumn";
 
-export type LeadStatus = "raw" | "qualified" | "in_queue" | "contacted" | "interested" | "human_intervention" | "discarded";
+export type LeadStatus =
+  | "raw"
+  | "qualified"
+  | "in_queue"
+  | "contacted"
+  | "interested"
+  | "human_intervention"
+  | "discarded";
 
 export interface Lead {
   id: number;
@@ -40,7 +47,14 @@ export interface Lead {
   updatedAt: Date | null;
 }
 
-type KanbanStage = "raw" | "qualified" | "contacted" | "interested" | "in_queue" | "human_intervention" | "discarded";
+type KanbanStage =
+  | "raw"
+  | "qualified"
+  | "contacted"
+  | "interested"
+  | "in_queue"
+  | "human_intervention"
+  | "discarded";
 
 interface StageConfig {
   key: KanbanStage;
@@ -51,11 +65,41 @@ interface StageConfig {
 }
 
 const STAGES: StageConfig[] = [
-  { key: "raw", label: "Novos", border: "border-sky-500/50", badge: "bg-sky-500/10 text-sky-400 border-sky-500/20", emptyLabel: "Aguardando" },
-  { key: "qualified", label: "Qualificados", border: "border-emerald-500/50", badge: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20", emptyLabel: "Nenhum qualificado" },
-  { key: "contacted", label: "Contatados", border: "border-purple-500/50", badge: "bg-purple-500/10 text-purple-400 border-purple-500/20", emptyLabel: "Nenhum contatado" },
-  { key: "human_intervention", label: "Intervenção", border: "border-rose-500/50", badge: "bg-rose-500/10 text-rose-400 border-rose-500/20", emptyLabel: "Tudo tranquilo" },
-  { key: "interested", label: "Interessados", border: "border-amber-500/50", badge: "bg-amber-500/10 text-amber-400 border-amber-500/20", emptyLabel: "Nenhum interessado" },
+  {
+    key: "raw",
+    label: "Novos",
+    border: "border-sky-500/50",
+    badge: "bg-sky-500/10 text-sky-400 border-sky-500/20",
+    emptyLabel: "Aguardando",
+  },
+  {
+    key: "qualified",
+    label: "Qualificados",
+    border: "border-emerald-500/50",
+    badge: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+    emptyLabel: "Nenhum qualificado",
+  },
+  {
+    key: "contacted",
+    label: "Contatados",
+    border: "border-purple-500/50",
+    badge: "bg-purple-500/10 text-purple-400 border-purple-500/20",
+    emptyLabel: "Nenhum contatado",
+  },
+  {
+    key: "human_intervention",
+    label: "Intervenção",
+    border: "border-rose-500/50",
+    badge: "bg-rose-500/10 text-rose-400 border-rose-500/20",
+    emptyLabel: "Tudo tranquilo",
+  },
+  {
+    key: "interested",
+    label: "Interessados",
+    border: "border-amber-500/50",
+    badge: "bg-amber-500/10 text-amber-400 border-amber-500/20",
+    emptyLabel: "Nenhum interessado",
+  },
 ];
 
 interface KanbanBoardProps {
@@ -70,12 +114,18 @@ export function KanbanBoard({ initialLeads }: KanbanBoardProps) {
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
   const leadsByStage = useMemo(() => {
     const map: Record<KanbanStage, Lead[]> = {
-      raw: [], qualified: [], contacted: [], interested: [], in_queue: [], human_intervention: [], discarded: [],
+      raw: [],
+      qualified: [],
+      contacted: [],
+      interested: [],
+      in_queue: [],
+      human_intervention: [],
+      discarded: [],
     };
     leads.forEach((lead) => {
       const stage = (lead.status as KanbanStage) || "raw";
@@ -86,7 +136,7 @@ export function KanbanBoard({ initialLeads }: KanbanBoardProps) {
 
   const activeLead = useMemo(
     () => (activeId ? leads.find((l) => l.id === activeId) : null),
-    [activeId, leads]
+    [activeId, leads],
   );
 
   function handleDragStart(event: DragStartEvent) {
@@ -120,14 +170,12 @@ export function KanbanBoard({ initialLeads }: KanbanBoardProps) {
     const lead = leads.find((l) => l.id === leadId);
     if (!lead || lead.status === targetStage) return;
 
-    setLeads((prev) =>
-      prev.map((l) => (l.id === leadId ? { ...l, status: targetStage } : l))
-    );
+    setLeads((prev) => prev.map((l) => (l.id === leadId ? { ...l, status: targetStage } : l)));
 
     const result = await moveLeadAction(leadId, targetStage);
     if (!result.success) {
       setLeads((prev) =>
-        prev.map((l) => (l.id === leadId ? { ...l, status: lead.status as KanbanStage } : l))
+        prev.map((l) => (l.id === leadId ? { ...l, status: lead.status as KanbanStage } : l)),
       );
       error(result.error || "Erro ao mover lead.");
     } else {

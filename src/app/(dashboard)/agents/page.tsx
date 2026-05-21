@@ -1,11 +1,11 @@
-import { getAiConfig, saveAiConfigAction } from "./actions";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Bot, MessageSquare, ShieldCheck, ArrowLeft, Save } from "lucide-react";
+import { ArrowLeft, Bot, MessageSquare, Save, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { FadeIn, StaggerContainer, StaggerItem } from "@/components/FadeIn";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { getAiConfig, saveAiConfigAction } from "./actions";
 import { PromptTemplates } from "./PromptTemplates";
 
 export default async function ConfigPage() {
@@ -24,13 +24,19 @@ export default async function ConfigPage() {
           <header className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Link href="/">
-                <Button variant="ghost" size="icon" className="hover:bg-zinc-800 text-zinc-400 hover:text-white">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="hover:bg-zinc-800 text-zinc-400 hover:text-white"
+                >
                   <ArrowLeft className="w-5 h-5" />
                 </Button>
               </Link>
               <div>
                 <h1 className="text-3xl font-black tracking-tight">Arquitetura de Agentes</h1>
-                <p className="text-sm text-zinc-500 font-medium">Refine o comportamento neural do seu motor de prospecção.</p>
+                <p className="text-sm text-zinc-500 font-medium">
+                  Refine o comportamento neural do seu motor de prospecção.
+                </p>
               </div>
             </div>
           </header>
@@ -51,13 +57,17 @@ export default async function ConfigPage() {
                           <Bot className="w-5 h-5 text-emerald-400" />
                         </div>
                         <div>
-                          <CardTitle className="text-lg font-bold">Agente 1: Analista de Qualificação</CardTitle>
-                          <CardDescription className="text-xs">Critérios para o Llama 3.3 decidir quem é um lead quente.</CardDescription>
+                          <CardTitle className="text-lg font-bold">
+                            Agente 1: Analista de Qualificação
+                          </CardTitle>
+                          <CardDescription className="text-xs">
+                            Critérios para o Llama 3.3 decidir quem é um lead quente.
+                          </CardDescription>
                         </div>
                       </div>
                     </CardHeader>
                     <CardContent className="relative">
-                      <Textarea 
+                      <Textarea
                         name="agent1Prompt"
                         defaultValue={config.agent1Prompt || ""}
                         rows={8}
@@ -78,13 +88,17 @@ export default async function ConfigPage() {
                           <MessageSquare className="w-5 h-5 text-emerald-400" />
                         </div>
                         <div>
-                          <CardTitle className="text-lg font-bold">Agente 2: Redator de Abordagem (SDR)</CardTitle>
-                          <CardDescription className="text-xs">Instruções de escrita para converter o lead via WhatsApp.</CardDescription>
+                          <CardTitle className="text-lg font-bold">
+                            Agente 2: Redator de Abordagem (SDR)
+                          </CardTitle>
+                          <CardDescription className="text-xs">
+                            Instruções de escrita para converter o lead via WhatsApp.
+                          </CardDescription>
                         </div>
                       </div>
                     </CardHeader>
                     <CardContent className="relative">
-                      <Textarea 
+                      <Textarea
                         name="agent2Prompt"
                         defaultValue={config.agent2Prompt || ""}
                         rows={8}
@@ -104,19 +118,27 @@ export default async function ConfigPage() {
                           <ShieldCheck className="w-5 h-5 text-emerald-400" />
                         </div>
                         <div>
-                          <CardTitle className="text-lg font-bold">Protocolos de Segurança</CardTitle>
-                          <CardDescription className="text-xs">Cadência e automação para proteção da conta.</CardDescription>
+                          <CardTitle className="text-lg font-bold">
+                            Protocolos de Segurança
+                          </CardTitle>
+                          <CardDescription className="text-xs">
+                            Cadência e automação para proteção da conta.
+                          </CardDescription>
                         </div>
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-5">
                       <div className="flex items-center justify-between gap-4 p-4 rounded-xl bg-white/[0.02] border border-white/[0.04]">
                         <div>
-                          <label className="text-sm font-bold text-zinc-300">Limite de Disparos Semanais</label>
-                          <p className="text-[11px] text-zinc-500 mt-0.5">Volume máximo de prospecção por agente.</p>
+                          <label className="text-sm font-bold text-zinc-300">
+                            Limite de Disparos Semanais
+                          </label>
+                          <p className="text-[11px] text-zinc-500 mt-0.5">
+                            Volume máximo de prospecção por agente.
+                          </p>
                         </div>
-                        <Input 
-                          type="number" 
+                        <Input
+                          type="number"
                           name="weeklyLimit"
                           defaultValue={config.weeklyLimit || 50}
                           className="w-24 h-11 bg-black/40 border-white/[0.08] focus:border-emerald-500/50 text-center font-black text-emerald-400"
@@ -125,12 +147,16 @@ export default async function ConfigPage() {
 
                       <div className="flex items-center justify-between gap-4 p-4 rounded-xl bg-white/[0.02] border border-white/[0.04]">
                         <div>
-                          <label className="text-sm font-bold text-zinc-300 block">Ativação Autônoma</label>
-                          <p className="text-[11px] text-zinc-500 mt-0.5">Disparar mensagem imediatamente após qualificação positiva.</p>
+                          <label className="text-sm font-bold text-zinc-300 block">
+                            Ativação Autônoma
+                          </label>
+                          <p className="text-[11px] text-zinc-500 mt-0.5">
+                            Disparar mensagem imediatamente após qualificação positiva.
+                          </p>
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer">
-                          <input 
-                            type="checkbox" 
+                          <input
+                            type="checkbox"
                             name="autoOutreach"
                             defaultChecked={config.autoOutreach === "true"}
                             className="sr-only peer"
@@ -149,7 +175,7 @@ export default async function ConfigPage() {
               <FadeIn delay={0.3}>
                 <PromptTemplates />
               </FadeIn>
-              
+
               <FadeIn delay={0.4}>
                 <Card className="border-emerald-500/20 bg-emerald-500/5 backdrop-blur-xl">
                   <CardHeader className="pb-2">
@@ -159,8 +185,8 @@ export default async function ConfigPage() {
                   </CardHeader>
                   <CardContent>
                     <p className="text-[11px] text-emerald-100/60 leading-relaxed">
-                      Lembre-se de salvar suas alterações após copiar um template. O sistema utiliza 
-                      <strong> Llama 3.3 70B</strong> para processar essas instruções em tempo real. 
+                      Lembre-se de salvar suas alterações após copiar um template. O sistema utiliza
+                      <strong> Llama 3.3 70B</strong> para processar essas instruções em tempo real.
                       Seja específico sobre a "dor" que sua solução resolve.
                     </p>
                   </CardContent>
@@ -171,7 +197,10 @@ export default async function ConfigPage() {
 
           <FadeIn delay={0.5}>
             <div className="flex justify-end pt-10 pb-20">
-              <Button type="submit" className="bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/25 backdrop-blur-md hover:bg-emerald-500/20 hover:text-emerald-300 hover:border-emerald-500/40 hover:-translate-y-0.5 hover:shadow-[0_0_30px_rgba(16,185,129,0.25)] active:translate-y-0 active:scale-98 transition-all duration-300 cursor-pointer px-12 py-7 text-xl font-black group">
+              <Button
+                type="submit"
+                className="bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/25 backdrop-blur-md hover:bg-emerald-500/20 hover:text-emerald-300 hover:border-emerald-500/40 hover:-translate-y-0.5 hover:shadow-[0_0_30px_rgba(16,185,129,0.25)] active:translate-y-0 active:scale-98 transition-all duration-300 cursor-pointer px-12 py-7 text-xl font-black group"
+              >
                 <Save className="mr-3 w-6 h-6 group-hover:rotate-12 transition-transform" />
                 Salvar Arquitetura Neural
               </Button>
@@ -182,4 +211,3 @@ export default async function ConfigPage() {
     </main>
   );
 }
-

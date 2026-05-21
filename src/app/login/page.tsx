@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { signIn } from "next-auth/react";
+import { AlertTriangle, ArrowRight, CheckCircle2, Lock, Mail, User } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
+import { useEffect, useState } from "react";
+import { checkEmailVerifiedAction, forgotPasswordAction, registerAction } from "@/app/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Lock, Mail, ArrowRight, User, CheckCircle2, AlertTriangle } from "lucide-react";
-import Link from "next/link";
-import { registerAction, checkEmailVerifiedAction, forgotPasswordAction } from "@/app/actions";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -52,7 +52,7 @@ export default function LoginPage() {
           return;
         }
         setForgotSuccess(result.message || "Verifique sua caixa de entrada.");
-      } catch (err) {
+      } catch (_err) {
         setForgotError("Erro ao enviar e-mail de recuperação. Tente novamente.");
       } finally {
         setForgotLoading(false);
@@ -69,7 +69,9 @@ export default function LoginPage() {
         // ── Pre-check para e-mail verificado ──
         const check = await checkEmailVerifiedAction(form.email);
         if (check.success && !check.verified) {
-          setError("Sua conta ainda não foi ativada. Verifique a caixa de entrada do seu e-mail para confirmar seu cadastro.");
+          setError(
+            "Sua conta ainda não foi ativada. Verifique a caixa de entrada do seu e-mail para confirmar seu cadastro.",
+          );
           setLoading(false);
           return;
         }
@@ -96,12 +98,16 @@ export default function LoginPage() {
           return;
         }
 
-        setSuccess("Conta criada com sucesso! Enviamos um link de ativação segura para o seu e-mail. Por favor, confirme seu cadastro para liberar o login.");
+        setSuccess(
+          "Conta criada com sucesso! Enviamos um link de ativação segura para o seu e-mail. Por favor, confirme seu cadastro para liberar o login.",
+        );
         setIsLogin(true);
         setForm({ name: "", email: form.email, password: "" });
       }
-    } catch (err) {
-      setError(isLogin ? "Erro ao fazer login. Tente novamente." : "Erro ao criar conta. Tente novamente.");
+    } catch (_err) {
+      setError(
+        isLogin ? "Erro ao fazer login. Tente novamente." : "Erro ao criar conta. Tente novamente.",
+      );
     } finally {
       setLoading(false);
     }
@@ -114,7 +120,7 @@ export default function LoginPage() {
         {/* Texturas e Efeitos */}
         <div className="absolute inset-0 bg-noise opacity-[0.4] mix-blend-overlay pointer-events-none z-0"></div>
         <div className="absolute inset-0 bg-cyber-grid opacity-40 z-0"></div>
-        
+
         {/* Gradientes Atmosféricos */}
         <div className="absolute top-[-20%] left-[-10%] w-[70%] h-[70%] bg-emerald-500/10 rounded-full blur-[120px] pointer-events-none z-0"></div>
         <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-blue-600/10 rounded-full blur-[100px] pointer-events-none z-0"></div>
@@ -125,10 +131,10 @@ export default function LoginPage() {
             {/* Máscaras de Gradiente para mesclar o robô no fundo preto perfeitamente */}
             <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/50 to-[#050505]/90 z-10"></div>
             <div className="absolute inset-0 bg-gradient-to-r from-[#050505] via-[#050505]/30 to-transparent z-10"></div>
-            <img 
-              src="/robot.png" 
-              alt="Robô SDR Neural" 
-              className="w-full h-full object-cover object-center filter brightness-[0.8]" 
+            <img
+              src="/robot.png"
+              alt="Robô SDR Neural"
+              className="w-full h-full object-cover object-center filter brightness-[0.8]"
             />
           </div>
         </div>
@@ -138,7 +144,9 @@ export default function LoginPage() {
             <div className="w-14 h-14 bg-transparent flex items-center justify-center transition-all duration-500 group-hover:scale-105 overflow-hidden">
               <img src="/scraping.png" alt="Logo" className="w-full h-full object-contain" />
             </div>
-            <span className="font-heading font-black text-2xl tracking-tight text-white">ExtrairLeads</span>
+            <span className="font-heading font-black text-2xl tracking-tight text-white">
+              ExtrairLeads
+            </span>
           </Link>
         </div>
 
@@ -150,7 +158,8 @@ export default function LoginPage() {
             O motor neural de prospecção B2B.
           </h1>
           <p className="text-zinc-400 text-lg leading-relaxed max-w-md">
-            Identifique, qualifique e converta contas enterprise de forma invisível. Nossa inteligência artificial trabalha em milissegundos para lotar seu pipeline.
+            Identifique, qualifique e converta contas enterprise de forma invisível. Nossa
+            inteligência artificial trabalha em milissegundos para lotar seu pipeline.
           </p>
         </div>
 
@@ -164,7 +173,7 @@ export default function LoginPage() {
       {/* ── Direita: Formulário de Autenticação ── */}
       <div className="flex flex-col justify-center items-center p-6 lg:p-12 relative min-h-screen lg:min-h-0 bg-background/50">
         <div className="absolute inset-0 bg-noise opacity-[0.2] mix-blend-overlay pointer-events-none z-0"></div>
-        
+
         {/* Mobile Header */}
         <div className="lg:hidden w-full max-w-[340px] mb-8 flex flex-col items-center gap-4 relative z-10 animate-in fade-in slide-in-from-top-4 duration-700">
           <Link href="/" className="inline-flex items-center justify-center">
@@ -172,11 +181,12 @@ export default function LoginPage() {
               <img src="/scraping.png" alt="Logo" className="w-full h-full object-contain" />
             </div>
           </Link>
-          <span className="font-heading font-black text-xl tracking-tight text-white">ExtrairLeads</span>
+          <span className="font-heading font-black text-xl tracking-tight text-white">
+            ExtrairLeads
+          </span>
         </div>
 
         <div className="w-full max-w-[340px] space-y-8 relative z-10 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200 fill-mode-both">
-          
           <div className="space-y-2 text-center lg:text-left">
             <h2 className="font-heading text-3xl font-black tracking-tight text-white">
               {showForgot ? "Recuperar Senha" : isLogin ? "Acessar Painel" : "Criar Conta"}
@@ -185,8 +195,8 @@ export default function LoginPage() {
               {showForgot
                 ? "Informe seu e-mail para receber o link de redefinição."
                 : isLogin
-                ? "Insira suas credenciais corporativas abaixo."
-                : "Inicie sua jornada de prospecção inteligente."}
+                  ? "Insira suas credenciais corporativas abaixo."
+                  : "Inicie sua jornada de prospecção inteligente."}
             </p>
           </div>
 
@@ -239,97 +249,108 @@ export default function LoginPage() {
             ) : (
               <>
                 {!isLogin && (
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
-                  Nome Completo
-                </label>
-                <div className="relative group">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within:text-white transition-colors" />
-                  <Input
-                    placeholder="Seu nome"
-                    value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    className="pl-10 h-11 bg-zinc-900/30 border-zinc-800 text-white focus-visible:ring-zinc-700 focus-visible:border-zinc-700 transition-all shadow-inner"
-                    required={!isLogin}
-                  />
-                </div>
-              </div>
-            )}
-
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
-                Email Corporativo
-              </label>
-              <div className="relative group">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within:text-white transition-colors" />
-                <Input
-                  type="email"
-                  placeholder="voce@empresa.com"
-                  value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  className="pl-10 h-11 bg-zinc-900/30 border-zinc-800 text-white focus-visible:ring-zinc-700 focus-visible:border-zinc-700 transition-all shadow-inner"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <label className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
-                  Senha
-                </label>
-                {isLogin && (
-                  <button type="button" onClick={() => { setShowForgot(true); setForgotEmail(form.email); setForgotError(""); setForgotSuccess(""); }} className="text-[11px] font-medium text-zinc-400 hover:text-white cursor-pointer">
-                    Esqueceu a senha?
-                  </button>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
+                      Nome Completo
+                    </label>
+                    <div className="relative group">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within:text-white transition-colors" />
+                      <Input
+                        placeholder="Seu nome"
+                        value={form.name}
+                        onChange={(e) => setForm({ ...form, name: e.target.value })}
+                        className="pl-10 h-11 bg-zinc-900/30 border-zinc-800 text-white focus-visible:ring-zinc-700 focus-visible:border-zinc-700 transition-all shadow-inner"
+                        required={!isLogin}
+                      />
+                    </div>
+                  </div>
                 )}
-              </div>
-              <div className="relative group">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within:text-white transition-colors" />
-                <Input
-                  type="password"
-                  placeholder="••••••••"
-                  value={form.password}
-                  onChange={(e) => setForm({ ...form, password: e.target.value })}
-                  className="pl-10 h-11 bg-zinc-900/30 border-zinc-800 text-white focus-visible:ring-zinc-700 focus-visible:border-zinc-700 transition-all shadow-inner"
-                  required
-                  minLength={6}
-                />
-              </div>
-            </div>
 
-            {error && (
-              <div className="p-3 bg-red-500/5 border border-red-500/10 rounded-xl flex items-start gap-2.5 animate-in fade-in slide-in-from-top-2">
-                <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
-                <p className="text-red-400 text-xs font-medium leading-relaxed">
-                  {error}
-                </p>
-              </div>
-            )}
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
+                    Email Corporativo
+                  </label>
+                  <div className="relative group">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within:text-white transition-colors" />
+                    <Input
+                      type="email"
+                      placeholder="voce@empresa.com"
+                      value={form.email}
+                      onChange={(e) => setForm({ ...form, email: e.target.value })}
+                      className="pl-10 h-11 bg-zinc-900/30 border-zinc-800 text-white focus-visible:ring-zinc-700 focus-visible:border-zinc-700 transition-all shadow-inner"
+                      required
+                    />
+                  </div>
+                </div>
 
-            {success && (
-              <div className="p-3 bg-emerald-500/5 border border-emerald-500/10 rounded-xl flex items-start gap-2.5 animate-in fade-in slide-in-from-top-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                <p className="text-emerald-400 text-xs font-medium leading-relaxed">
-                  {success}
-                </p>
-              </div>
-            )}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
+                      Senha
+                    </label>
+                    {isLogin && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowForgot(true);
+                          setForgotEmail(form.email);
+                          setForgotError("");
+                          setForgotSuccess("");
+                        }}
+                        className="text-[11px] font-medium text-zinc-400 hover:text-white cursor-pointer"
+                      >
+                        Esqueceu a senha?
+                      </button>
+                    )}
+                  </div>
+                  <div className="relative group">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within:text-white transition-colors" />
+                    <Input
+                      type="password"
+                      placeholder="••••••••"
+                      value={form.password}
+                      onChange={(e) => setForm({ ...form, password: e.target.value })}
+                      className="pl-10 h-11 bg-zinc-900/30 border-zinc-800 text-white focus-visible:ring-zinc-700 focus-visible:border-zinc-700 transition-all shadow-inner"
+                      required
+                      minLength={6}
+                    />
+                  </div>
+                </div>
 
-            <Button
-              type="submit"
-              disabled={loading}
-              className="w-full h-11 mt-2 bg-white hover:bg-zinc-200 text-black font-bold text-sm rounded-xl transition-all duration-200 cursor-pointer"
-            >
-              {loading ? (
-                isLogin ? "Autenticando..." : "Criando conta..."
-              ) : (
-                <>
-                  {isLogin ? "Acessar Sistema" : "Criar Conta Agora"}
-                  <ArrowRight className="w-4 h-4 ml-2" />
-                </>
-              )}
-            </Button>
+                {error && (
+                  <div className="p-3 bg-red-500/5 border border-red-500/10 rounded-xl flex items-start gap-2.5 animate-in fade-in slide-in-from-top-2">
+                    <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                    <p className="text-red-400 text-xs font-medium leading-relaxed">{error}</p>
+                  </div>
+                )}
+
+                {success && (
+                  <div className="p-3 bg-emerald-500/5 border border-emerald-500/10 rounded-xl flex items-start gap-2.5 animate-in fade-in slide-in-from-top-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                    <p className="text-emerald-400 text-xs font-medium leading-relaxed">
+                      {success}
+                    </p>
+                  </div>
+                )}
+
+                <Button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full h-11 mt-2 bg-white hover:bg-zinc-200 text-black font-bold text-sm rounded-xl transition-all duration-200 cursor-pointer"
+                >
+                  {loading ? (
+                    isLogin ? (
+                      "Autenticando..."
+                    ) : (
+                      "Criando conta..."
+                    )
+                  ) : (
+                    <>
+                      {isLogin ? "Acessar Sistema" : "Criar Conta Agora"}
+                      <ArrowRight className="w-4 h-4 ml-2" />
+                    </>
+                  )}
+                </Button>
               </>
             )}
           </form>
@@ -338,7 +359,11 @@ export default function LoginPage() {
             {showForgot ? (
               <button
                 type="button"
-                onClick={() => { setShowForgot(false); setForgotError(""); setForgotSuccess(""); }}
+                onClick={() => {
+                  setShowForgot(false);
+                  setForgotError("");
+                  setForgotSuccess("");
+                }}
                 className="text-[13px] text-zinc-400 hover:text-white transition-colors font-medium cursor-pointer"
               >
                 Voltar para o login

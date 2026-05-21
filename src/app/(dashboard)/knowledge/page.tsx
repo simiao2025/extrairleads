@@ -1,26 +1,28 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
-import { 
-  BookOpen, 
-  Plus, 
-  Trash2, 
-  Loader2, 
-  Sparkles,
-  HelpCircle,
-  FileText,
+import {
   AlertCircle,
-  CheckCircle2
+  BookOpen,
+  CheckCircle2,
+  FileText,
+  HelpCircle,
+  Loader2,
+  Plus,
+  Sparkles,
+  Trash2,
 } from "lucide-react";
-import { getKnowledgeBaseAction, saveKnowledgeAction, deleteKnowledgeAction } from "./actions";
+import { useEffect, useState, useTransition } from "react";
+import { FadeIn, StaggerContainer, StaggerItem } from "@/components/FadeIn";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { FadeIn, StaggerContainer, StaggerItem } from "@/components/FadeIn";
+import { deleteKnowledgeAction, getKnowledgeBaseAction, saveKnowledgeAction } from "./actions";
 
 export default function KnowledgePage() {
-  const [documents, setDocuments] = useState<{ id: number; title: string; content: string; createdAt: Date | null }[]>([]);
+  const [documents, setDocuments] = useState<
+    { id: number; title: string; content: string; createdAt: Date | null }[]
+  >([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -31,8 +33,7 @@ export default function KnowledgePage() {
     try {
       const docs = await getKnowledgeBaseAction();
       setDocuments(docs);
-    } catch (err) {
-      console.error(err);
+    } catch (_err) {
       setError("Falha ao carregar a base de conhecimento.");
     } finally {
       setLoading(false);
@@ -41,7 +42,7 @@ export default function KnowledgePage() {
 
   useEffect(() => {
     fetchDocuments();
-  }, []);
+  }, [fetchDocuments]);
 
   // Adicionar documento
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -71,7 +72,10 @@ export default function KnowledgePage() {
 
   // Excluir documento
   const handleDelete = async (id: number) => {
-    if (!confirm("Tem certeza que deseja remover este documento da base de conhecimento do Agente?")) return;
+    if (
+      !confirm("Tem certeza que deseja remover este documento da base de conhecimento do Agente?")
+    )
+      return;
     setError("");
     setSuccess("");
 
@@ -79,7 +83,7 @@ export default function KnowledgePage() {
       await deleteKnowledgeAction(id);
       setSuccess("Documento removido da base vetorial.");
       await fetchDocuments();
-    } catch (err) {
+    } catch (_err) {
       setError("Erro ao excluir o documento.");
     }
   };
@@ -101,9 +105,14 @@ export default function KnowledgePage() {
               </div>
               <div>
                 <h1 className="text-3xl font-black tracking-tight flex items-center gap-2">
-                  Base de Conhecimento <span className="text-xs bg-emerald-500/20 text-emerald-300 font-bold px-2.5 py-0.5 rounded-full border border-emerald-500/30">RAG Vetorial</span>
+                  Base de Conhecimento{" "}
+                  <span className="text-xs bg-emerald-500/20 text-emerald-300 font-bold px-2.5 py-0.5 rounded-full border border-emerald-500/30">
+                    RAG Vetorial
+                  </span>
                 </h1>
-                <p className="text-sm text-zinc-500 font-medium">Cadastre FAQs, serviços e regras para o seu Agente IA consultar em tempo real.</p>
+                <p className="text-sm text-zinc-500 font-medium">
+                  Cadastre FAQs, serviços e regras para o seu Agente IA consultar em tempo real.
+                </p>
               </div>
             </div>
           </header>
@@ -139,14 +148,17 @@ export default function KnowledgePage() {
                     <Plus className="w-5 h-5 text-emerald-400" /> Adicionar Conhecimento
                   </CardTitle>
                   <CardDescription className="text-xs">
-                    As informações inseridas abaixo serão convertidas em vetores matemáticos e injetadas na inteligência artificial do SDR.
+                    As informações inseridas abaixo serão convertidas em vetores matemáticos e
+                    injetadas na inteligência artificial do SDR.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="relative space-y-4">
                   <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Título de Referência</label>
-                      <Input 
+                      <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
+                        Título de Referência
+                      </label>
+                      <Input
                         name="title"
                         required
                         placeholder="Ex: Tabela de Preços do Plano Premium"
@@ -155,8 +167,10 @@ export default function KnowledgePage() {
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Conteúdo Detalhado (FAQ / FAQ do Produto)</label>
-                      <Textarea 
+                      <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
+                        Conteúdo Detalhado (FAQ / FAQ do Produto)
+                      </label>
+                      <Textarea
                         name="content"
                         required
                         rows={8}
@@ -165,8 +179,8 @@ export default function KnowledgePage() {
                       />
                     </div>
 
-                    <Button 
-                      type="submit" 
+                    <Button
+                      type="submit"
                       disabled={isPending}
                       className="w-full bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/25 backdrop-blur-md hover:bg-emerald-500/20 hover:text-emerald-300 hover:border-emerald-500/40 hover:-translate-y-0.5 hover:shadow-[0_0_25px_rgba(16,185,129,0.25)] active:translate-y-0 active:scale-98 transition-all duration-300 cursor-pointer py-6 text-base"
                     >
@@ -203,9 +217,12 @@ export default function KnowledgePage() {
               <FadeIn>
                 <div className="text-center py-16 px-4 rounded-2xl border border-white/[0.04] bg-white/[0.01] backdrop-blur-sm">
                   <HelpCircle className="w-12 h-12 text-zinc-700 mx-auto mb-3" />
-                  <p className="text-zinc-400 font-bold text-base">Nenhum conhecimento alimentado</p>
+                  <p className="text-zinc-400 font-bold text-base">
+                    Nenhum conhecimento alimentado
+                  </p>
                   <p className="text-zinc-600 text-xs mt-1 max-w-sm mx-auto">
-                    Seu SDR usará apenas o prompt básico. Preencha o formulário ao lado para dar respostas inteligentes de produtos e FAQ à IA.
+                    Seu SDR usará apenas o prompt básico. Preencha o formulário ao lado para dar
+                    respostas inteligentes de produtos e FAQ à IA.
                   </p>
                 </div>
               </FadeIn>
@@ -217,16 +234,21 @@ export default function KnowledgePage() {
                       <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/[0.005] to-transparent" />
                       <CardContent className="p-5 flex items-start justify-between gap-4">
                         <div className="space-y-2">
-                          <h3 className="font-bold text-white text-base tracking-tight">{doc.title}</h3>
+                          <h3 className="font-bold text-white text-base tracking-tight">
+                            {doc.title}
+                          </h3>
                           <p className="text-zinc-400 text-xs leading-relaxed line-clamp-3 font-mono whitespace-pre-wrap">
                             {doc.content}
                           </p>
                           <p className="text-[10px] text-zinc-600 font-medium">
-                            Adicionado em: {doc.createdAt ? new Date(doc.createdAt).toLocaleDateString("pt-BR") : "N/A"}
+                            Adicionado em:{" "}
+                            {doc.createdAt
+                              ? new Date(doc.createdAt).toLocaleDateString("pt-BR")
+                              : "N/A"}
                           </p>
                         </div>
-                        <Button 
-                          variant="ghost" 
+                        <Button
+                          variant="ghost"
                           size="icon"
                           onClick={() => handleDelete(doc.id)}
                           className="text-zinc-600 hover:text-red-400 hover:bg-red-500/10 shrink-0"

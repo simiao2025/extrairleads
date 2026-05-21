@@ -1,9 +1,9 @@
 "use client";
 
+import { Loader2, Play, RefreshCw, ScanSearch } from "lucide-react";
 import { useState } from "react";
+import { followUpLeadsAction, qualifyPendingLeadsAction, startOutreachAction } from "@/app/actions";
 import { Button } from "@/components/ui/button";
-import { ScanSearch, Play, RefreshCw, Loader2 } from "lucide-react";
-import { qualifyPendingLeadsAction, startOutreachAction, followUpLeadsAction } from "@/app/actions";
 import { useToast } from "@/components/ui/toast";
 
 export function AnalyzeButton() {
@@ -19,9 +19,8 @@ export function AnalyzeButton() {
       } else {
         success(`${result.count} lead(s) analisado(s) pelo Agente IA com sucesso!`);
       }
-    } catch (err) {
+    } catch (_err) {
       error("Erro ao executar a análise. Verifique o console.");
-      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -57,9 +56,8 @@ export function OutreachButton() {
       } else {
         error(result.error || "Erro ao ativar o motor.");
       }
-    } catch (err) {
+    } catch (_err) {
       error("Erro ao ativar o motor. Verifique o console.");
-      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -98,9 +96,8 @@ export function FollowUpButton() {
       } else {
         error(result.error || "Erro ao realizar follow-up.");
       }
-    } catch (err) {
+    } catch (_err) {
       error("Erro na rotina de follow-up. Verifique o console.");
-      console.error(err);
     } finally {
       setLoading(false);
     }

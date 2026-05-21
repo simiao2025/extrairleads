@@ -1,18 +1,24 @@
 "use client";
 
+import { Calendar, CheckCircle, Clock, Edit2, Phone, Plus, Trash2, XCircle } from "lucide-react";
 import { useState } from "react";
-import { Plus, Edit2, Trash2, Calendar, CheckCircle, XCircle, Clock, Phone } from "lucide-react";
+import {
+  createAppointmentAction,
+  deleteAppointmentAction,
+  updateAppointmentAction,
+} from "@/app/actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  createAppointmentAction,
-  updateAppointmentAction,
-  deleteAppointmentAction,
-} from "@/app/actions";
 import { useToast } from "@/components/ui/toast";
 
 interface Appointment {
@@ -42,13 +48,23 @@ interface AppointmentDialogProps {
   onSuccess: () => void;
 }
 
-function AppointmentDialog({ open, onOpenChange, appointment, leads, onSuccess }: AppointmentDialogProps) {
+function AppointmentDialog({
+  open,
+  onOpenChange,
+  appointment,
+  leads,
+  onSuccess,
+}: AppointmentDialogProps) {
   const [loading, setLoading] = useState(false);
   const { success, error } = useToast();
   const [form, setForm] = useState({
     leadId: appointment?.leadId?.toString() || "",
-    date: appointment?.scheduledAt ? new Date(appointment.scheduledAt).toISOString().split("T")[0] : "",
-    time: appointment?.scheduledAt ? new Date(appointment.scheduledAt).toTimeString().slice(0, 5) : "",
+    date: appointment?.scheduledAt
+      ? new Date(appointment.scheduledAt).toISOString().split("T")[0]
+      : "",
+    time: appointment?.scheduledAt
+      ? new Date(appointment.scheduledAt).toTimeString().slice(0, 5)
+      : "",
     notes: appointment?.notes || "",
   });
 
@@ -60,7 +76,11 @@ function AppointmentDialog({ open, onOpenChange, appointment, leads, onSuccess }
 
     const result = appointment?.id
       ? await updateAppointmentAction(appointment.id, { scheduledAt, notes: form.notes })
-      : await createAppointmentAction({ leadId: parseInt(form.leadId), scheduledAt, notes: form.notes });
+      : await createAppointmentAction({
+          leadId: parseInt(form.leadId, 10),
+          scheduledAt,
+          notes: form.notes,
+        });
 
     setLoading(false);
     if (result.success) {
@@ -133,10 +153,19 @@ function AppointmentDialog({ open, onOpenChange, appointment, leads, onSuccess }
           </div>
 
           <DialogFooter className="pt-4 gap-2">
-            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} className="text-zinc-400">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => onOpenChange(false)}
+              className="text-zinc-400"
+            >
               Cancelar
             </Button>
-            <Button type="submit" disabled={loading} className="bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/25 backdrop-blur-md hover:bg-emerald-500/20 hover:text-emerald-300 hover:border-emerald-500/40 hover:shadow-[0_0_25px_rgba(16,185,129,0.25)] hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 cursor-pointer">
+            <Button
+              type="submit"
+              disabled={loading}
+              className="bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/25 backdrop-blur-md hover:bg-emerald-500/20 hover:text-emerald-300 hover:border-emerald-500/40 hover:shadow-[0_0_25px_rgba(16,185,129,0.25)] hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 cursor-pointer"
+            >
               {loading ? "Salvando..." : "Salvar"}
             </Button>
           </DialogFooter>
@@ -176,14 +205,16 @@ function DeleteDialog({ appointment, open, onOpenChange, onSuccess }: DeleteDial
         <DialogHeader>
           <DialogTitle className="text-xl font-black text-red-400">Confirmar Exclusão</DialogTitle>
         </DialogHeader>
-        <p className="text-zinc-300">
-          Tem certeza que deseja deletar este agendamento?
-        </p>
+        <p className="text-zinc-300">Tem certeza que deseja deletar este agendamento?</p>
         <DialogFooter className="pt-4 gap-2">
           <Button variant="ghost" onClick={() => onOpenChange(false)} className="text-zinc-400">
             Cancelar
           </Button>
-          <Button onClick={handleDelete} disabled={loading} className="bg-red-600 hover:bg-red-500 text-white font-bold">
+          <Button
+            onClick={handleDelete}
+            disabled={loading}
+            className="bg-red-600 hover:bg-red-500 text-white font-bold"
+          >
             {loading ? "Deletando..." : "Sim, Deletar"}
           </Button>
         </DialogFooter>
@@ -197,7 +228,10 @@ interface AppointmentsClientProps {
   availableLeads: LeadOption[];
 }
 
-export function AppointmentsClient({ initialAppointments, availableLeads }: AppointmentsClientProps) {
+export function AppointmentsClient({
+  initialAppointments,
+  availableLeads,
+}: AppointmentsClientProps) {
   const [appointments] = useState(initialAppointments);
   const [editAppointment, setEditAppointment] = useState<Appointment | null>(null);
   const [deleteAppointment, setDeleteAppointment] = useState<Appointment | null>(null);
@@ -221,8 +255,13 @@ export function AppointmentsClient({ initialAppointments, availableLeads }: Appo
             <Calendar className="h-8 w-8 text-zinc-600" />
           </div>
           <h3 className="text-lg font-bold text-zinc-300 mb-2">Nenhum agendamento</h3>
-          <p className="text-sm text-zinc-500 mb-6">Crie seu primeiro agendamento para acompanhar seus leads interessados.</p>
-          <Button onClick={() => setShowCreate(true)} className="bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/25 backdrop-blur-md hover:bg-emerald-500/20 hover:text-emerald-300 hover:border-emerald-500/40 hover:shadow-[0_0_25px_rgba(16,185,129,0.25)] hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 cursor-pointer">
+          <p className="text-sm text-zinc-500 mb-6">
+            Crie seu primeiro agendamento para acompanhar seus leads interessados.
+          </p>
+          <Button
+            onClick={() => setShowCreate(true)}
+            className="bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/25 backdrop-blur-md hover:bg-emerald-500/20 hover:text-emerald-300 hover:border-emerald-500/40 hover:shadow-[0_0_25px_rgba(16,185,129,0.25)] hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 cursor-pointer"
+          >
             <Plus className="w-4 h-4 mr-2" />
             Criar Agendamento
           </Button>
@@ -241,7 +280,10 @@ export function AppointmentsClient({ initialAppointments, availableLeads }: Appo
   return (
     <>
       <div className="flex justify-end">
-        <Button onClick={() => setShowCreate(true)} className="bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/25 backdrop-blur-md hover:bg-emerald-500/20 hover:text-emerald-300 hover:border-emerald-500/40 hover:shadow-[0_0_25px_rgba(16,185,129,0.25)] hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 cursor-pointer">
+        <Button
+          onClick={() => setShowCreate(true)}
+          className="bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/25 backdrop-blur-md hover:bg-emerald-500/20 hover:text-emerald-300 hover:border-emerald-500/40 hover:shadow-[0_0_25px_rgba(16,185,129,0.25)] hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 cursor-pointer"
+        >
           <Plus className="w-4 h-4 mr-2" />
           Novo Agendamento
         </Button>
@@ -254,7 +296,10 @@ export function AppointmentsClient({ initialAppointments, availableLeads }: Appo
           const scheduledDate = apt.scheduledAt ? new Date(apt.scheduledAt) : null;
 
           return (
-            <Card key={apt.id} className="border-zinc-800/50 bg-zinc-950/40 hover:border-zinc-700/50 transition-colors">
+            <Card
+              key={apt.id}
+              className="border-zinc-800/50 bg-zinc-950/40 hover:border-zinc-700/50 transition-colors"
+            >
               <CardContent className="p-5 space-y-3">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-2">

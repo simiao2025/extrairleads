@@ -1,8 +1,8 @@
+import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
-import { auth } from "@/lib/auth";
 import { db } from "@/db";
 import { users } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { auth } from "@/lib/auth";
 import InfoForm from "./info-form";
 
 export default async function OnboardingInfoPage() {
@@ -12,10 +12,7 @@ export default async function OnboardingInfoPage() {
   }
 
   // Busca dados atuais do usuário no banco
-  const [dbUser] = await db
-    .select()
-    .from(users)
-    .where(eq(users.email, session.user.email));
+  const [dbUser] = await db.select().from(users).where(eq(users.email, session.user.email));
 
   if (!dbUser) {
     redirect("/login");
@@ -35,8 +32,14 @@ export default async function OnboardingInfoPage() {
       <div className="w-full max-w-xl relative z-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
         {/* Logo da Marca - Intacto */}
         <div className="flex items-center justify-center gap-3 mb-8">
-          <img src="/scraping.png" alt="Logo" className="w-12 h-12 object-contain filter drop-shadow-[0_0_8px_rgba(16,185,129,0.2)]" />
-          <span className="font-heading font-black text-2xl tracking-tight text-white">ExtrairLeads</span>
+          <img
+            src="/scraping.png"
+            alt="Logo"
+            className="w-12 h-12 object-contain filter drop-shadow-[0_0_8px_rgba(16,185,129,0.2)]"
+          />
+          <span className="font-heading font-black text-2xl tracking-tight text-white">
+            ExtrairLeads
+          </span>
         </div>
 
         {/* Card Principal de Onboarding */}
@@ -47,17 +50,18 @@ export default async function OnboardingInfoPage() {
             </span>
             <h2 className="text-2xl font-bold tracking-tight text-white">Complete seu cadastro</h2>
             <p className="text-zinc-400 text-sm leading-relaxed">
-              Olá, <strong className="text-zinc-200">{dbUser.name}</strong>! Preencha as informações adicionais para liberar sua conta.
+              Olá, <strong className="text-zinc-200">{dbUser.name}</strong>! Preencha as informações
+              adicionais para liberar sua conta.
             </p>
           </div>
 
           {/* Componente Client Form para pesquisa de CEP e submissão */}
-          <InfoForm 
+          <InfoForm
             initialData={{
               name: dbUser.name || "",
               email: dbUser.email || "",
               cpfCnpj: dbUser.cpfCnpj || "",
-            }} 
+            }}
           />
         </div>
 

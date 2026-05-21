@@ -1,10 +1,10 @@
 "use server";
 
-import { db } from "@/db";
-import { leads, campaignConfigs, outreachLogs, users, chatHistory } from "@/db/schema";
+import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import OpenAI from "openai";
-import { eq, and } from "drizzle-orm";
+import { db } from "@/db";
+import { campaignConfigs, chatHistory, leads, outreachLogs, users } from "@/db/schema";
 import { auth } from "@/lib/auth";
 
 const groq = new OpenAI({
@@ -27,32 +27,46 @@ export async function qualifyLeadsAction(leadIds: number[]) {
     const meta = (lead.metadata || {}) as any;
     const reviewsArr = Array.isArray(meta.reviews) ? meta.reviews : [];
     const reviewsText = reviewsArr
-      .map((r: any) => `- Nota ${r.rating}: "${r.snippet || r.text || ""}" (${r.date || "recente"})`)
+      .map(
+        (r: any) => `- Nota ${r.rating}: "${r.snippet || r.text || ""}" (${r.date || "recente"})`,
+      )
       .join("\n");
 
     const formattedPrompt = prompt
       .replace(/{nome}/g, lead.name || "")
       .replace(/{categoria}/g, lead.niche || meta.category || "")
-      .replace(/{categorias_adicionais}/g, Array.isArray(meta.additionalCategories) ? meta.additionalCategories.join(", ") : "")
+      .replace(
+        /{categorias_adicionais}/g,
+        Array.isArray(meta.additionalCategories) ? meta.additionalCategories.join(", ") : "",
+      )
       .replace(/{endereco}/g, meta.address || "")
       .replace(/{cidade}/g, lead.city || "")
       .replace(/{bairro}/g, meta.suburb || meta.neighborhood || "")
       .replace(/{site}/g, lead.website || "null")
-      .replace(/{redes}/g, Array.isArray(meta.socialMedia) ? meta.socialMedia.join(", ") : "Nenhuma")
+      .replace(
+        /{redes}/g,
+        Array.isArray(meta.socialMedia) ? meta.socialMedia.join(", ") : "Nenhuma",
+      )
       .replace(/{fotos}/g, meta.photosCount || "0")
       .replace(/{nota}/g, String(meta.rating || ""))
       .replace(/{total_avaliacoes}/g, String(meta.reviewsCount || "0"))
       .replace(/{texto, nota, data}/g, reviewsText || "Nenhuma avaliação recente")
       .replace(/{horario}/g, meta.operatingHours || "Não especificado")
       .replace(/{faixa_preco}/g, meta.priceRange || "Não especificado")
-      .replace(/{atributos}/g, Array.isArray(meta.attributes) ? meta.attributes.join(", ") : "Nenhum")
+      .replace(
+        /{atributos}/g,
+        Array.isArray(meta.attributes) ? meta.attributes.join(", ") : "Nenhum",
+      )
       .replace(/{data_criacao_perfil}/g, meta.profileAge || "Não especificado");
 
     try {
       const completion = await groq.chat.completions.create({
         messages: [
           { role: "system", content: formattedPrompt },
-          { role: "user", content: `Analise as informações do seguinte lead: ${JSON.stringify(lead)}` }
+          {
+            role: "user",
+            content: `Analise as informações do seguinte lead: ${JSON.stringify(lead)}`,
+          },
         ],
         model: "llama-3.3-70b-versatile",
         response_format: { type: "json_object" },
@@ -60,18 +74,19 @@ export async function qualifyLeadsAction(leadIds: number[]) {
       const result = JSON.parse(completion.choices[0].message.content || "{}");
       const scoreNum = Number(result.score) || 0;
       const parsedScore = Math.round(scoreNum);
-      const isQualified = scoreNum >= 7;
+      const _isQualified = scoreNum >= 7;
 
       await db
         .update(leads)
-        .set({ 
-          aiScore: parsedScore, 
-          aiAnalysis: result.analysis, 
+        .set({
+          aiScore: parsedScore,
+          aiAnalysis: result.analysis,
           status: "qualified",
-          updatedAt: new Date()
+          updatedAt: new Date(),
         })
         .where(eq(leads.id, id));
-    } catch (e) { console.error(e); }
+    } catch (_e) {
+    }
   }
 }
 
@@ -80,10 +95,14 @@ export async function qualifyPendingLeadsAction() {
   const userId = session?.user?.id ? parseInt(session.user.id, 10) : null;
   if (!userId) return { success: false, error: "Usuário não autenticado." };
 
-  const rawLeads = await db.select().from(leads).where(and(eq(leads.status, "raw"), eq(leads.userId, userId)));
-  if (rawLeads.length === 0) return { success: true, count: 0, message: "Nenhum lead pendente de análise." };
+  const rawLeads = await db
+    .select()
+    .from(leads)
+    .where(and(eq(leads.status, "raw"), eq(leads.userId, userId)));
+  if (rawLeads.length === 0)
+    return { success: true, count: 0, message: "Nenhum lead pendente de análise." };
 
-  await qualifyLeadsAction(rawLeads.map(l => l.id));
+  await qualifyLeadsAction(rawLeads.map((l) => l.id));
   revalidatePath("/");
   return { success: true, count: rawLeads.length };
 }
@@ -94,16 +113,19 @@ export async function startOutreachAction() {
   if (!userId) return { success: false, error: "Usuário não autenticado." };
 
   const [dbUser] = await db.select().from(users).where(eq(users.id, userId));
-  const [config] = await db.select().from(campaignConfigs).where(eq(campaignConfigs.userId, userId));
-  
+  const [config] = await db
+    .select()
+    .from(campaignConfigs)
+    .where(eq(campaignConfigs.userId, userId));
+
   const evolutionUrl = process.env.EVOLUTION_API_URL;
   const instanceName = dbUser?.whatsappInstanceName;
   const instanceToken = dbUser?.whatsappInstanceToken;
 
   if (!evolutionUrl || !instanceName || !instanceToken) {
-    return { 
-      success: false, 
-      error: "WhatsApp não configurado. Vá em Configurações para emparelhar seu WhatsApp primeiro." 
+    return {
+      success: false,
+      error: "WhatsApp não configurado. Vá em Configurações para emparelhar seu WhatsApp primeiro.",
     };
   }
 
@@ -118,37 +140,38 @@ export async function startOutreachAction() {
     try {
       const completion = await groq.chat.completions.create({
         messages: [
-          { role: "system", content: config?.agent2Prompt || "Abordagem curta e direta." }, 
-          { role: "user", content: `DADOS DO LEAD:
+          { role: "system", content: config?.agent2Prompt || "Abordagem curta e direta." },
+          {
+            role: "user",
+            content: `DADOS DO LEAD:
 Empresa: ${lead.name}
 Nicho: ${lead.niche}
 Localização: ${lead.city}, ${lead.state}
-Análise Técnica: ${lead.aiAnalysis}` }
+Análise Técnica: ${lead.aiAnalysis}`,
+          },
         ],
         model: "llama-3.3-70b-versatile",
       });
       const message = completion.choices[0].message.content;
-      
-      console.log(`[Outreach] Enviando mensagem via Evolution Go para lead ${lead.name} (${lead.phone}) usando instância ${instanceName}`);
-      
+
       const response = await fetch(`${evolutionUrl}/message/sendText/${instanceName}`, {
-        method: "POST", 
-        headers: { 
-          "Content-Type": "application/json", 
-          "apikey": instanceToken // Token individual da instância
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: instanceToken, // Token individual da instância
         },
         body: JSON.stringify({ number: lead.phone, text: message, delay: 1200, linkPreview: true }),
       });
 
       if (!response.ok) {
-        const errTxt = await response.text();
-        console.error(`Erro ao enviar mensagem para ${lead.phone}:`, errTxt);
+        const _errTxt = await response.text();
         continue;
       }
 
       await db.update(leads).set({ status: "contacted" }).where(eq(leads.id, lead.id));
       await db.insert(outreachLogs).values({ leadId: lead.id, status: "sent" });
-    } catch (e) { console.error(e); }
+    } catch (_e) {
+    }
   }
   revalidatePath("/");
   return { success: true };
@@ -160,8 +183,11 @@ export async function followUpLeadsAction() {
   if (!userId) return { success: false, error: "Usuário não autenticado." };
 
   const [dbUser] = await db.select().from(users).where(eq(users.id, userId));
-  const [config] = await db.select().from(campaignConfigs).where(eq(campaignConfigs.userId, userId));
-  
+  const [config] = await db
+    .select()
+    .from(campaignConfigs)
+    .where(eq(campaignConfigs.userId, userId));
+
   const evolutionUrl = process.env.EVOLUTION_API_URL;
   const instanceName = dbUser?.whatsappInstanceName;
   const instanceToken = dbUser?.whatsappInstanceToken;
@@ -183,28 +209,29 @@ export async function followUpLeadsAction() {
 
     // Verificar se o lead respondeu (se tem mensagens do usuário)
     const history = await db.select().from(chatHistory).where(eq(chatHistory.leadId, lead.id));
-    const hasUserReply = history.some(h => h.role === "user");
-    
+    const hasUserReply = history.some((h) => h.role === "user");
+
     // Só manda follow-up se o cliente ainda NÃO respondeu
     if (!hasUserReply) {
       try {
         const completion = await groq.chat.completions.create({
           messages: [
-            { role: "system", content: config?.agent2Prompt || "SDR focado em follow-up." }, 
-            { role: "user", content: `DADOS DO LEAD:
+            { role: "system", content: config?.agent2Prompt || "SDR focado em follow-up." },
+            {
+              role: "user",
+              content: `DADOS DO LEAD:
 Empresa: ${lead.name}
 Análise Técnica: ${lead.aiAnalysis}
-O cliente não respondeu nosso primeiro contato. Gere UMA MENSAGEM CURTA DE FOLLOW-UP (bump) para tentar reengajar, ex: "Oi [Nome], conseguiu ver a mensagem acima?". Seja natural e breve.` }
+O cliente não respondeu nosso primeiro contato. Gere UMA MENSAGEM CURTA DE FOLLOW-UP (bump) para tentar reengajar, ex: "Oi [Nome], conseguiu ver a mensagem acima?". Seja natural e breve.`,
+            },
           ],
           model: "llama-3.3-70b-versatile",
         });
         const message = completion.choices[0].message.content;
-        
-        console.log(`[Follow-up] Enviando follow-up via Evolution Go para lead ${lead.name}`);
-        
+
         const response = await fetch(`${evolutionUrl}/message/sendText/${instanceName}`, {
-          method: "POST", 
-          headers: { "Content-Type": "application/json", "apikey": instanceToken },
+          method: "POST",
+          headers: { "Content-Type": "application/json", apikey: instanceToken },
           body: JSON.stringify({ number: lead.phone, text: message, delay: 1200 }),
         });
 
@@ -217,7 +244,8 @@ O cliente não respondeu nosso primeiro contato. Gere UMA MENSAGEM CURTA DE FOLL
             type: "text",
           });
         }
-      } catch (e) { console.error(e); }
+      } catch (_e) {
+      }
     }
   }
   revalidatePath("/");

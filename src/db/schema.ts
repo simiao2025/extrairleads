@@ -1,4 +1,14 @@
-import { pgTable, serial, text, integer, timestamp, jsonb, pgEnum, index, customType } from "drizzle-orm/pg-core";
+import {
+  customType,
+  index,
+  integer,
+  jsonb,
+  pgEnum,
+  pgTable,
+  serial,
+  text,
+  timestamp,
+} from "drizzle-orm/pg-core";
 
 export const kanbanStageEnum = pgEnum("kanban_stage", [
   "raw",
@@ -59,26 +69,30 @@ export const verificationTokens = pgTable("verification_tokens", {
   expires: timestamp("expires").notNull(),
 });
 
-export const leads = pgTable("leads", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }),
-  name: text("name").notNull(),
-  phone: text("phone"),
-  website: text("website"),
-  niche: text("niche"),
-  city: text("city"),
-  state: text("state"),
-  aiScore: integer("ai_score"),
-  aiAnalysis: text("ai_analysis"),
-  status: kanbanStageEnum("status").default("raw"),
-  metadata: jsonb("metadata"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-}, (table) => [
-  index("leads_status_idx").on(table.status),
-  index("leads_created_idx").on(table.createdAt),
-  index("leads_user_idx").on(table.userId),
-]);
+export const leads = pgTable(
+  "leads",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    phone: text("phone"),
+    website: text("website"),
+    niche: text("niche"),
+    city: text("city"),
+    state: text("state"),
+    aiScore: integer("ai_score"),
+    aiAnalysis: text("ai_analysis"),
+    status: kanbanStageEnum("status").default("raw"),
+    metadata: jsonb("metadata"),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => [
+    index("leads_status_idx").on(table.status),
+    index("leads_created_idx").on(table.createdAt),
+    index("leads_user_idx").on(table.userId),
+  ],
+);
 
 export const campaignConfigs = pgTable("campaign_configs", {
   id: serial("id").primaryKey(),
@@ -135,4 +149,3 @@ export const knowledgeBase = pgTable("knowledge_base", {
   embedding: vector1536("embedding"),
   createdAt: timestamp("created_at").defaultNow(),
 });
-

@@ -1,18 +1,18 @@
 "use client";
 
 import {
-  AreaChart,
   Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -31,7 +31,15 @@ interface AnalyticsChartProps {
   height?: number;
 }
 
-function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: { value: number; name: string }[]; label?: string }) {
+function CustomTooltip({
+  active,
+  payload,
+  label,
+}: {
+  active?: boolean;
+  payload?: { value: number; name: string }[];
+  label?: string;
+}) {
   if (!active || !payload?.length) return null;
   return (
     <div className="rounded-lg border border-zinc-800 bg-zinc-950/95 p-3 shadow-xl">
@@ -130,7 +138,10 @@ export function AnalyticsChart({ title, type, data, height = 280 }: AnalyticsCha
           <div className="flex flex-wrap gap-3 mt-4 justify-center">
             {data.map((item, i) => (
               <div key={i} className="flex items-center gap-2">
-                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+                <div
+                  className="w-2.5 h-2.5 rounded-full"
+                  style={{ backgroundColor: COLORS[i % COLORS.length] }}
+                />
                 <span className="text-xs text-zinc-400">
                   {item.name} <span className="font-bold text-white">{item.value}</span>
                 </span>
@@ -152,25 +163,34 @@ interface MetricCardProps {
   color?: string;
 }
 
-export function MetricCard({ title, value, subtitle, trend, icon, color = "text-emerald-400" }: MetricCardProps) {
+export function MetricCard({
+  title,
+  value,
+  subtitle,
+  trend,
+  icon,
+  color = "text-emerald-400",
+}: MetricCardProps) {
   return (
     <Card className="border-zinc-800/50 bg-zinc-950/40 hover:border-zinc-700/50 transition-colors">
       <CardContent className="p-5">
         <div className="flex items-start justify-between">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-500">{title}</p>
-            <p className={`text-3xl font-black font-heading tracking-tight mt-1 ${color}`}>{value}</p>
+            <p className={`text-3xl font-black font-heading tracking-tight mt-1 ${color}`}>
+              {value}
+            </p>
             {subtitle && <p className="text-xs text-zinc-500 mt-1">{subtitle}</p>}
             {trend && (
-              <p className={`text-xs font-bold mt-1 ${trend.positive ? "text-emerald-400" : "text-red-400"}`}>
+              <p
+                className={`text-xs font-bold mt-1 ${trend.positive ? "text-emerald-400" : "text-red-400"}`}
+              >
                 {trend.positive ? "↑" : "↓"} {Math.abs(trend.value)}%
               </p>
             )}
           </div>
           {icon && (
-            <div className="p-2 rounded-xl bg-zinc-900/80 border border-zinc-800">
-              {icon}
-            </div>
+            <div className="p-2 rounded-xl bg-zinc-900/80 border border-zinc-800">{icon}</div>
           )}
         </div>
       </CardContent>
