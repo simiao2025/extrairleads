@@ -59,9 +59,9 @@ export async function saveOnboardingInfoAction(data: {
         });
 
         if (!response.ok) {
-          const _errText = await response.text();
+          await response.text(); // consume body
         } else {
-          const _resJson = await response.json();
+          await response.json(); // consume body
         }
       } catch (_err) {
       }

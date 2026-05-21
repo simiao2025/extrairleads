@@ -74,7 +74,6 @@ export async function qualifyLeadsAction(leadIds: number[]) {
       const result = JSON.parse(completion.choices[0].message.content || "{}");
       const scoreNum = Number(result.score) || 0;
       const parsedScore = Math.round(scoreNum);
-      const _isQualified = scoreNum >= 7;
 
       await db
         .update(leads)
@@ -164,7 +163,7 @@ Análise Técnica: ${lead.aiAnalysis}`,
       });
 
       if (!response.ok) {
-        const _errTxt = await response.text();
+        await response.text(); // consume body
         continue;
       }
 

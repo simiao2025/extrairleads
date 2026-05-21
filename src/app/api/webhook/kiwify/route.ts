@@ -55,7 +55,7 @@ async function sendOnboardingEmail(email: string, name: string, tempPassword: st
     });
 
     if (!response.ok) {
-      const _errText = await response.text();
+      await response.text(); // consume body
     }
   } catch (_error) {
   }

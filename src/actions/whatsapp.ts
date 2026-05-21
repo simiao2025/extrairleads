@@ -45,7 +45,7 @@ export async function checkWhatsAppConnectionAction() {
     });
 
     if (!response.ok) {
-      const _errText = await response.text();
+      await response.text(); // consume body
       return { success: false, error: "Erro ao ler status no servidor." };
     }
 
@@ -165,7 +165,7 @@ export async function getWhatsAppQrCodeAction() {
     });
 
     if (!response.ok) {
-      const _errText = await response.text();
+      await response.text(); // consume body
       return { success: false, error: "Não foi possível gerar o QR Code no servidor." };
     }
 
