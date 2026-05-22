@@ -174,6 +174,19 @@ export default function LoginPage() {
       <div className="flex flex-col justify-center items-center p-6 lg:p-12 relative min-h-screen lg:min-h-0 bg-background/50">
         <div className="absolute inset-0 bg-noise opacity-[0.2] mix-blend-overlay pointer-events-none z-0"></div>
 
+        {/* Robô Humanoide SDR Neural (Mobile Only Background) */}
+        <div className="lg:hidden absolute inset-0 w-full h-full pointer-events-none z-0 select-none opacity-40 animate-in fade-in duration-[1500ms] delay-300 fill-mode-both">
+          <div className="w-full h-full relative">
+            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/70 to-background/20 z-10"></div>
+            <div className="absolute inset-0 bg-gradient-to-b from-background/90 via-transparent to-transparent z-10"></div>
+            <img
+              src="/robot.png"
+              alt="Robô SDR Neural"
+              className="w-full h-full object-cover object-top filter brightness-[0.7] grayscale-[0.2]"
+            />
+          </div>
+        </div>
+
         {/* Mobile Header */}
         <div className="lg:hidden w-full max-w-[340px] mb-8 flex flex-col items-center gap-4 relative z-10 animate-in fade-in slide-in-from-top-4 duration-700">
           <Link href="/" className="inline-flex items-center justify-center">

@@ -20,6 +20,25 @@ export const kanbanStageEnum = pgEnum("kanban_stage", [
   "discarded",
 ]);
 
+export const scrapingJobStatusEnum = pgEnum("scraping_job_status", [
+  "scraping",
+  "qualifying",
+  "completed",
+  "failed",
+]);
+
+export const scrapingJobs = pgTable("scraping_jobs", {
+  id: serial("id").primaryKey(),
+  campaignId: integer("campaign_id").references(() => campaigns.id, { onDelete: "cascade" }),
+  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }),
+  status: scrapingJobStatusEnum("status").default("scraping"),
+  totalExpected: integer("total_expected").default(20),
+  currentProgress: integer("current_progress").default(0),
+  jobType: text("job_type").default("full"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   email: text("email").notNull().unique(),
@@ -37,6 +56,11 @@ export const users = pgTable("users", {
   isTemporaryPassword: integer("is_temporary_password").default(0), // 0 = false, 1 = true
   whatsappInstanceName: text("whatsapp_instance_name"),
   whatsappInstanceToken: text("whatsapp_instance_token"),
+  whatsappProvider: text("whatsapp_provider").default("evolution"), // 'evolution' | 'meta_official'
+  metaAccessToken: text("meta_access_token"),
+  metaPhoneNumberId: text("meta_phone_number_id"),
+  metaWabaId: text("meta_waba_id"),
+  notificationsEnabled: integer("notifications_enabled").default(1), // 1 = enabled, 0 = disabled
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -91,6 +115,7 @@ export const campaigns = pgTable(
     city: text("city"),
     state: text("state"),
     autoOutreach: text("auto_outreach").default("false"), // "true" ou "false"
+    metaTemplateName: text("meta_template_name"),
     status: text("status").default("active"), // "active", "paused", "completed"
     createdAt: timestamp("created_at").defaultNow(),
   },

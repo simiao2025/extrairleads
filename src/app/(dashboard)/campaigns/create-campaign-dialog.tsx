@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 
-export function CreateCampaignDialog() {
+export function CreateCampaignDialog({ provider = "evolution" }: { provider?: string }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -97,6 +97,18 @@ export function CreateCampaignDialog() {
               <div className="w-11 h-6 bg-zinc-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
             </label>
           </div>
+          {provider === "meta_official" && (
+            <div className="space-y-2 pt-2 border-t border-zinc-800/50 mt-2">
+              <label className="text-sm font-medium text-blue-400">Nome do Template Meta (Obrigatório)</label>
+              <p className="text-xs text-zinc-500">Digite exatamente o nome aprovado no gerenciador da Meta.</p>
+              <Input
+                name="metaTemplateName"
+                placeholder="Ex: hello_world_v2"
+                required
+                className="bg-zinc-900 border-zinc-800 text-white focus-visible:ring-blue-500"
+              />
+            </div>
+          )}
           <DialogFooter className="pt-4">
             <Button
               type="submit"

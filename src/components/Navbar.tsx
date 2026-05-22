@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import {
+  Bot,
   BookOpen,
   CalendarDays,
   Cpu,
@@ -189,8 +190,8 @@ export default function Navbar({ user }: NavbarProps) {
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
-              transition={{ type: "spring", bounce: 0.05, duration: 0.35 }}
-              className="fixed top-0 right-0 z-50 h-full w-[280px] bg-zinc-950 border-l border-zinc-900 p-6 shadow-2xl flex flex-col justify-between md:hidden"
+              transition={{ type: "spring", bounce: 0, duration: 0.3 }}
+              className="fixed top-0 right-0 z-50 h-full w-72 max-w-[85vw] bg-zinc-950 border-l border-zinc-900 p-6 shadow-2xl flex flex-col justify-between md:hidden overflow-y-auto overflow-x-hidden"
             >
               <div className="space-y-6">
                 {/* Logo / Header */}

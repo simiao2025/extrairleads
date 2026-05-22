@@ -1,7 +1,7 @@
 import { sql, eq } from "drizzle-orm";
 import { Layers, MapPin, Megaphone } from "lucide-react";
 import { db } from "@/db";
-import { campaigns, leads } from "@/db/schema";
+import { campaigns, leads, users } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { CreateCampaignDialog } from "./create-campaign-dialog";
 import { CampaignCardActions } from "./campaign-card-actions";
@@ -10,6 +10,10 @@ export default async function CampaignsPage() {
   const session = await auth();
   const userId = session?.user?.id ? parseInt(session.user.id, 10) : null;
   if (!userId) return null;
+
+  // Fetch user provider
+  const [user] = await db.select().from(users).where(eq(users.id, userId));
+  const provider = user?.whatsappProvider || "evolution";
 
   // Fetch campaigns from DB
   const userCampaigns = await db
@@ -49,7 +53,7 @@ export default async function CampaignsPage() {
               Visão geral das suas frentes de extração e prospecção.
             </p>
           </div>
-          <CreateCampaignDialog />
+          <CreateCampaignDialog provider={provider} />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

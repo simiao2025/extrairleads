@@ -18,6 +18,7 @@ export async function createCampaignAction(formData: FormData) {
   const city = formData.get("city") as string;
   const state = formData.get("state") as string;
   const autoOutreach = (formData.get("autoOutreach") as string) || "false";
+  const metaTemplateName = (formData.get("metaTemplateName") as string) || null;
 
   if (!name || !niche || !city) {
     throw new Error("Nome, nicho e cidade são obrigatórios.");
@@ -30,6 +31,7 @@ export async function createCampaignAction(formData: FormData) {
     city,
     state,
     autoOutreach,
+    metaTemplateName,
   });
 
   revalidatePath("/campaigns");

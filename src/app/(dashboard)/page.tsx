@@ -1,5 +1,6 @@
 import { and, asc, eq } from "drizzle-orm";
 import { Layers, MessageSquare, Star, User } from "lucide-react";
+import { checkWhatsAppConnectionAction } from "@/actions/whatsapp";
 import { AnalyzeButton, FollowUpButton, OutreachButton } from "@/components/ActionButtons";
 import { KanbanBoard } from "@/components/KanbanBoard";
 import { GlobalCampaignFilter } from "@/components/GlobalCampaignFilter";
@@ -10,6 +11,7 @@ import { campaigns, leads } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import { AnalyticsSection } from "./analytics-section";
+import { AutoRefresh } from "@/components/AutoRefresh";
 
 const ITEMS_PER_PAGE = 40;
 
@@ -110,9 +112,16 @@ export default async function Home({ searchParams }: PageProps) {
   const conversionRate =
     counts.total > 0 ? Math.round((counts.interested / counts.total) * 100) : 0;
 
+  const selectedCampaignObj = campaignId ? userCampaigns.find((c) => c.id === campaignId) : undefined;
+  const isAutoOutreach = selectedCampaignObj?.autoOutreach === "true";
+  
+  const whatsappStatus = await checkWhatsAppConnectionAction();
+  const isWhatsappConnected = whatsappStatus.success && !!whatsappStatus.connected;
+
   return (
-    <main className="min-h-screen bg-background text-foreground relative selection:bg-emerald-500/30">
-      {/* Background layers */}
+    <main className="min-h-screen bg-background text-foreground p-4 md:p-8 pt-12 relative overflow-hidden">
+      <AutoRefresh interval={5000} />
+      {/* Background Effect */}
       <div className="fixed inset-0 bg-cyber-grid pointer-events-none z-0" />
       <div className="fixed inset-0 bg-noise pointer-events-none z-0" />
 
@@ -122,16 +131,30 @@ export default async function Home({ searchParams }: PageProps) {
 
       <div className="mx-auto max-w-[1400px] space-y-10 px-4 py-10 md:px-8 relative z-10">
         {/* ── Hero Section ── */}
-        <section className="flex flex-col gap-8 md:flex-row md:items-end md:justify-between animate-in fade-in slide-in-from-bottom-8 duration-1000">
-          <div className="space-y-5 max-w-2xl">
+        <section className="relative flex flex-col gap-8 md:flex-row md:items-end md:justify-between animate-in fade-in slide-in-from-bottom-8 duration-1000">
+          
+          {/* Robô Humanoide SDR Neural (Decorativo) */}
+          <div className="absolute -top-32 -right-10 w-[600px] h-[600px] pointer-events-none hidden lg:block opacity-50 z-0 select-none">
+            {/* Máscaras de Gradiente para mesclar com o fundo */}
+            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent z-10" />
+            <div className="absolute inset-0 bg-gradient-to-l from-transparent via-background/20 to-background z-10" />
+            <div className="absolute inset-0 bg-gradient-to-b from-background via-transparent to-transparent z-10" />
+            <img
+              src="/robot.png"
+              alt="IA SDR"
+              className="w-full h-full object-contain filter brightness-[0.7] mix-blend-lighten -scale-x-100"
+            />
+          </div>
+
+          <div className="relative space-y-5 max-w-2xl z-10">
             <span className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-[11px] font-bold tracking-widest text-emerald-400 uppercase backdrop-blur-md">
               <span className="pulse-dot" />
               IA Neural Ativa
             </span>
 
-            <h1 className="font-heading text-5xl font-black leading-[1.08] tracking-tight md:text-6xl text-white">
+            <h1 className="font-heading text-5xl font-black leading-[1.08] tracking-tight md:text-6xl text-foreground">
               Extrair, Qualificar &amp;{" "}
-              <span className="bg-gradient-to-r from-emerald-400 via-cyan-400 to-emerald-300 bg-clip-text text-transparent">
+              <span className="text-[#25D366]">
                 Vender.
               </span>
             </h1>
@@ -144,10 +167,18 @@ export default async function Home({ searchParams }: PageProps) {
             </p>
           </div>
 
-          <div className="flex shrink-0 items-center gap-3">
-            <AnalyzeButton campaignId={campaignId} />
-            <FollowUpButton campaignId={campaignId} />
-            <OutreachButton campaignId={campaignId} />
+          <div className="relative flex flex-col sm:flex-row shrink-0 items-stretch sm:items-center gap-3 w-full md:w-auto z-10">
+            <AnalyzeButton campaignId={campaignId} rawLeadsCount={leadsByStatus.raw} />
+            <FollowUpButton 
+              campaignId={campaignId} 
+              hasContactedLeads={leadsByStatus.contacted > 0} 
+              isWhatsappConnected={isWhatsappConnected} 
+            />
+            <OutreachButton 
+              campaignId={campaignId} 
+              isAutoOutreach={isAutoOutreach} 
+              isWhatsappConnected={isWhatsappConnected} 
+            />
           </div>
         </section>
 

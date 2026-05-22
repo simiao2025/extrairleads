@@ -6,7 +6,7 @@ import { followUpLeadsAction, qualifyPendingLeadsAction, startOutreachAction } f
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 
-export function AnalyzeButton({ campaignId }: { campaignId?: number }) {
+export function AnalyzeButton({ campaignId, rawLeadsCount = 0 }: { campaignId?: number; rawLeadsCount?: number }) {
   const [loading, setLoading] = useState(false);
   const { success, error } = useToast();
 
@@ -27,23 +27,38 @@ export function AnalyzeButton({ campaignId }: { campaignId?: number }) {
   };
 
   return (
-    <Button
-      variant="outline"
-      className="rounded-xl h-12 px-6 bg-white/[0.02] border border-white/10 text-zinc-400 backdrop-blur-md hover:bg-white/5 hover:border-white/20 hover:text-white hover:shadow-[0_0_15px_rgba(255,255,255,0.05)] transition-all duration-300 active:scale-98 cursor-pointer"
-      onClick={handleClick}
-      disabled={loading}
-    >
-      {loading ? (
-        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-      ) : (
-        <ScanSearch className="mr-2 h-4 w-4" />
+    <div className="relative w-full sm:w-auto group">
+      <Button
+        variant="outline"
+        className={`w-full sm:w-auto rounded-xl h-12 px-6 backdrop-blur-md transition-all duration-300 ${!campaignId || rawLeadsCount === 0 ? "opacity-50 cursor-not-allowed bg-white/[0.01] border-white/5 text-zinc-600" : "bg-white/[0.02] border-white/10 text-zinc-400 hover:bg-white/5 hover:border-white/20 hover:text-white hover:shadow-[0_0_15px_rgba(255,255,255,0.05)] active:scale-98 cursor-pointer"}`}
+        onClick={handleClick}
+        disabled={!campaignId || rawLeadsCount === 0 || loading}
+      >
+        {loading ? (
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        ) : (
+          <ScanSearch className="mr-2 h-4 w-4" />
+        )}
+        {loading ? "Analisando..." : "Análise de Raspagem"}
+      </Button>
+      {rawLeadsCount > 0 && campaignId && (
+        <span className="absolute -top-2 -right-2 flex items-center justify-center min-w-[20px] h-5 px-1.5 text-[10px] font-bold text-white bg-red-500 rounded-full shadow-[0_0_10px_rgba(239,68,68,0.5)] animate-in zoom-in duration-300">
+          {rawLeadsCount}
+        </span>
       )}
-      {loading ? "Analisando..." : "Análise de Raspagem"}
-    </Button>
+    </div>
   );
 }
 
-export function OutreachButton({ campaignId }: { campaignId?: number }) {
+export function OutreachButton({ 
+  campaignId, 
+  isAutoOutreach = false, 
+  isWhatsappConnected = true 
+}: { 
+  campaignId?: number; 
+  isAutoOutreach?: boolean; 
+  isWhatsappConnected?: boolean; 
+}) {
   const [loading, setLoading] = useState(false);
   const { success, error } = useToast();
 
@@ -65,21 +80,29 @@ export function OutreachButton({ campaignId }: { campaignId?: number }) {
 
   return (
     <Button
-      className="rounded-xl h-12 px-8 bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/25 backdrop-blur-md hover:bg-emerald-500/20 hover:text-emerald-300 hover:border-emerald-500/40 hover:-translate-y-0.5 hover:shadow-[0_0_25px_rgba(16,185,129,0.25)] active:translate-y-0 active:scale-98 transition-all duration-300 cursor-pointer"
+      className={`w-full sm:w-auto rounded-xl h-12 px-8 font-bold backdrop-blur-md transition-all duration-300 ${!campaignId || isAutoOutreach || !isWhatsappConnected ? "opacity-50 cursor-not-allowed bg-emerald-900/10 border border-emerald-900/20 text-emerald-900/50" : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 hover:bg-emerald-500/20 hover:text-emerald-300 hover:border-emerald-500/40 hover:-translate-y-0.5 hover:shadow-[0_0_25px_rgba(16,185,129,0.25)] active:translate-y-0 active:scale-98 cursor-pointer"}`}
       onClick={handleClick}
-      disabled={loading}
+      disabled={!campaignId || isAutoOutreach || !isWhatsappConnected || loading}
     >
       {loading ? (
         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
       ) : (
         <Play className="mr-2 h-4 w-4 fill-current" />
       )}
-      {loading ? "Processando..." : "Ligar Motor IA"}
+      {loading ? "Processando..." : isAutoOutreach ? "Motor Automático" : !isWhatsappConnected ? "WhatsApp Offline" : "Ligar Motor IA"}
     </Button>
   );
 }
 
-export function FollowUpButton({ campaignId }: { campaignId?: number }) {
+export function FollowUpButton({ 
+  campaignId, 
+  hasContactedLeads = true, 
+  isWhatsappConnected = true 
+}: { 
+  campaignId?: number; 
+  hasContactedLeads?: boolean; 
+  isWhatsappConnected?: boolean; 
+}) {
   const [loading, setLoading] = useState(false);
   const { success, error } = useToast();
 
@@ -106,16 +129,16 @@ export function FollowUpButton({ campaignId }: { campaignId?: number }) {
   return (
     <Button
       variant="outline"
-      className="rounded-xl h-12 px-8 bg-orange-500/5 border border-orange-500/20 text-orange-400 backdrop-blur-sm hover:bg-orange-500/15 hover:border-orange-500/45 hover:text-orange-300 hover:shadow-[0_0_20px_rgba(249,115,22,0.15)] hover:-translate-y-0.5 active:translate-y-0 active:scale-98 transition-all duration-300 cursor-pointer"
+      className={`w-full sm:w-auto rounded-xl h-12 px-8 backdrop-blur-sm transition-all duration-300 ${!campaignId || !hasContactedLeads || !isWhatsappConnected ? "opacity-50 cursor-not-allowed bg-orange-900/5 border-orange-900/10 text-orange-900/50" : "bg-orange-500/5 border border-orange-500/20 text-orange-400 hover:bg-orange-500/15 hover:border-orange-500/45 hover:text-orange-300 hover:shadow-[0_0_20px_rgba(249,115,22,0.15)] hover:-translate-y-0.5 active:translate-y-0 active:scale-98 cursor-pointer"}`}
       onClick={handleClick}
-      disabled={loading}
+      disabled={!campaignId || !hasContactedLeads || !isWhatsappConnected || loading}
     >
       {loading ? (
         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
       ) : (
         <RefreshCw className="mr-2 h-4 w-4" />
       )}
-      {loading ? "Retomando..." : "Retomar Contatos"}
+      {loading ? "Retomando..." : !isWhatsappConnected ? "WhatsApp Offline" : "Retomar Contatos"}
     </Button>
   );
 }

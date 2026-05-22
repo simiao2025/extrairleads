@@ -193,39 +193,118 @@ export async function sendManualWhatsAppMessageAction(leadId: number, text: stri
     const user = await getCurrentUser();
     if (!user) return { success: false, error: "Usuário não autenticado." };
 
-    const instanceName = user.whatsappInstanceName;
-    const instanceToken = user.whatsappInstanceToken;
-    const evolutionUrl = process.env.EVOLUTION_API_URL;
-
-    if (!evolutionUrl || !instanceName || !instanceToken) {
-      return { success: false, error: "WhatsApp não configurado ou desconectado." };
-    }
-
     const [lead] = await db.select().from(leads).where(eq(leads.id, leadId));
     if (!lead || !lead.phone) {
       return { success: false, error: "Lead não encontrado ou sem número de telefone." };
     }
 
-    const response = await fetch(`${evolutionUrl}/message/sendText/${instanceName}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        apikey: instanceToken,
-      },
-      body: JSON.stringify({ number: lead.phone, text, delay: 1200 }),
-    });
+    const provider = user.whatsappProvider || "evolution";
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      return { success: false, error: `Falha na API do WhatsApp: ${errorText}` };
+    if (provider === "meta_official") {
+      const { metaAccessToken, metaPhoneNumberId } = user;
+      if (!metaAccessToken || !metaPhoneNumberId) {
+        return { success: false, error: "Credenciais da Meta não configuradas." };
+      }
+
+      const phoneStr = lead.phone.replace(/\D/g, "");
+
+      const metaResponse = await fetch(`https://graph.facebook.com/v19.0/${metaPhoneNumberId}/messages`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${metaAccessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          messaging_product: "whatsapp",
+          recipient_type: "individual",
+          to: phoneStr,
+          type: "text",
+          text: {
+            preview_url: false,
+            body: text
+          }
+        }),
+      });
+
+      if (!metaResponse.ok) {
+        const errorText = await metaResponse.text();
+        return { success: false, error: `Falha na API da Meta: ${errorText}` };
+      }
+    } else {
+      const instanceName = user.whatsappInstanceName;
+      const instanceToken = user.whatsappInstanceToken;
+      const evolutionUrl = process.env.EVOLUTION_API_URL;
+
+      if (!evolutionUrl || !instanceName || !instanceToken) {
+        return { success: false, error: "WhatsApp Evolution não configurado." };
+      }
+
+      const response = await fetch(`${evolutionUrl}/message/sendText/${instanceName}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: instanceToken,
+        },
+        body: JSON.stringify({ number: lead.phone, text, delay: 1200 }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        return { success: false, error: `Falha na API do WhatsApp: ${errorText}` };
+      }
     }
 
     await db.insert(chatHistory).values({
       leadId: lead.id,
-      role: "assistant", // Agent sending message
+      role: "assistant",
       content: text,
       type: "text",
     });
+
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function getWhatsAppSettingsAction() {
+  try {
+    const user = await getCurrentUser();
+    if (!user) return { success: false, error: "Não autenticado." };
+
+    return {
+      success: true,
+      provider: user.whatsappProvider || "evolution",
+      metaAccessToken: user.metaAccessToken,
+      metaPhoneNumberId: user.metaPhoneNumberId,
+      metaWabaId: user.metaWabaId,
+      notificationsEnabled: user.notificationsEnabled === 1,
+    };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function saveWhatsAppSettingsAction(data: {
+  provider: "evolution" | "meta_official";
+  metaAccessToken?: string;
+  metaPhoneNumberId?: string;
+  metaWabaId?: string;
+  notificationsEnabled?: boolean;
+}) {
+  try {
+    const user = await getCurrentUser();
+    if (!user) return { success: false, error: "Não autenticado." };
+
+    await db.update(users)
+      .set({
+        whatsappProvider: data.provider,
+        metaAccessToken: data.metaAccessToken || null,
+        metaPhoneNumberId: data.metaPhoneNumberId || null,
+        metaWabaId: data.metaWabaId || null,
+        notificationsEnabled: data.notificationsEnabled ? 1 : 0,
+      })
+      .where(eq(users.id, user.id));
 
     return { success: true };
   } catch (error: any) {

@@ -4,6 +4,7 @@ import { Bot, MessageSquare, User, Send, Loader2, Sparkles } from "lucide-react"
 import { useState, useRef, useEffect } from "react";
 import { getLeadChatAction } from "@/app/actions";
 import { sendManualWhatsAppMessageAction, generateAiSuggestionAction } from "@/app/actions";
+import { notify } from "@/lib/notify";
 import {
   Dialog,
   DialogContent,
@@ -46,13 +47,14 @@ export default function LeadDetailsDialog({ lead, children }: { lead: Lead; chil
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const loadChat = async () => {
-    setLoading(true);
+  const loadChat = async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     const data = await getLeadChatAction(lead.id);
     setHistory(data as ChatMessage[]);
-    setLoading(false);
+    if (showLoading) setLoading(false);
   };
 
   const scrollToBottom = () => {
@@ -64,6 +66,16 @@ export default function LeadDetailsDialog({ lead, children }: { lead: Lead; chil
   useEffect(() => {
     scrollToBottom();
   }, [history]);
+
+  useEffect(() => {
+    let interval: any;
+    if (isOpen) {
+      interval = setInterval(() => {
+        loadChat(false);
+      }, 3000);
+    }
+    return () => clearInterval(interval);
+  }, [isOpen, lead.id]);
 
   const handleSend = async () => {
     if (!input.trim()) return;
@@ -84,7 +96,7 @@ export default function LeadDetailsDialog({ lead, children }: { lead: Lead; chil
     const res = await sendManualWhatsAppMessageAction(lead.id, textToSend);
     if (!res.success) {
       setHistory((prev) => prev.filter((m) => m.id !== optimisticMsg.id));
-      alert("Erro ao enviar: " + res.error);
+      notify("Erro ao enviar: " + res.error, { type: "error" });
     } else {
       loadChat();
     }
@@ -97,13 +109,16 @@ export default function LeadDetailsDialog({ lead, children }: { lead: Lead; chil
     if (res.success && res.suggestion) {
       setInput(res.suggestion);
     } else {
-      alert("Erro ao gerar sugestão: " + res.error);
+      notify("Erro ao gerar sugestão: " + res.error, { type: "error" });
     }
     setGenerating(false);
   };
 
   return (
-    <Dialog onOpenChange={(open) => open && loadChat()}>
+    <Dialog open={isOpen} onOpenChange={(open) => {
+      setIsOpen(open);
+      if (open) loadChat(true);
+    }}>
       <DialogTrigger
         render={
           children ? (

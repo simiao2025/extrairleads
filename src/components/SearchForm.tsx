@@ -1,15 +1,17 @@
 "use client";
 
 import { Cpu, MapPin, Search } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { searchLeadsAction } from "@/app/actions";
+import { createScrapingJobAction, runScrapingJobAction } from "@/app/actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/toast";
+import { ProgressModal } from "@/components/ProgressModal";
 
 export default function SearchForm({ 
   campaigns = [], 
@@ -22,48 +24,57 @@ export default function SearchForm({
   const [city, setCity] = useState("");
   const [state, setState] = useState("");
   const [campaignId, setCampaignId] = useState(selectedCampaignId || "");
-  const [loading, setLoading] = useState(false);
+  const [limit, setLimit] = useState(20);
   const [onlyScrape, setOnlyScrape] = useState(false);
+  const [jobId, setJobId] = useState<number | null>(null);
   const { success, error } = useToast();
   const router = useRouter();
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+
+    if (!campaignId) {
+      error("Selecione uma campanha de destino!");
+      return;
+    }
 
     try {
-      if (!campaignId) {
-        error("Selecione uma campanha de destino!");
-        setLoading(false);
+      const jobRes = await createScrapingJobAction({
+        campaignId: parseInt(campaignId, 10),
+        limit,
+        onlyScrape
+      });
+
+      if (!jobRes.success || !jobRes.jobId) {
+        error(jobRes.error || "Erro ao criar tarefa de extração");
         return;
       }
 
-      const result = await searchLeadsAction({ 
-        niche, 
-        city, 
-        state, 
-        onlyScrape, 
-        campaignId: parseInt(campaignId, 10) 
-      });
-      
-      if (result.success) {
-        success(`${result.count} leads extraídos com sucesso!`);
-        router.refresh();
-      } else {
-        error(result.error || "Erro ao buscar leads.");
-      }
+      setJobId(jobRes.jobId);
+
+      // Inicia em background
+      runScrapingJobAction({
+        jobId: jobRes.jobId,
+        campaignId: parseInt(campaignId, 10),
+        niche,
+        city,
+        state,
+        limit,
+        onlyScrape
+      }).catch(console.error);
+
     } catch (_err) {
       error("Erro inesperado na busca.");
-    } finally {
-      setLoading(false);
     }
   };
 
   return (
-    <Card className="w-full max-w-4xl mx-auto border-zinc-800 bg-zinc-950/50 backdrop-blur-xl">
+    <>
+      <ProgressModal jobId={jobId} onClose={() => setJobId(null)} />
+      <Card className="w-full max-w-4xl mx-auto border-zinc-800 bg-zinc-950/50 backdrop-blur-xl">
       <CardHeader className="flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between">
         <div>
-          <CardTitle className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">
+          <CardTitle className="text-2xl font-bold text-[#25D366]">
             Capturar Novos Leads
           </CardTitle>
           <CardDescription>Defina o nicho e a localização para extrair contatos.</CardDescription>
@@ -74,7 +85,7 @@ export default function SearchForm({
             htmlFor="mode"
             className="text-xs font-bold text-zinc-400 uppercase tracking-tighter"
           >
-            {onlyScrape ? "Apenas Extração" : "Extração + IA"}
+            {onlyScrape ? "Apenas Raspagem" : "Raspagem + Qualificação"}
           </Label>
           <Switch
             id="mode"
@@ -135,6 +146,19 @@ export default function SearchForm({
             />
           </div>
 
+          <div className="md:col-span-1">
+            <label className="text-[10px] font-bold text-zinc-500 mb-1.5 block uppercase">Quantidade</label>
+            <select
+              value={limit}
+              onChange={(e) => setLimit(Number(e.target.value))}
+              className="w-full flex h-10 rounded-md border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/20 focus-visible:border-emerald-500/50 text-white"
+            >
+              <option value={20}>20 Leads</option>
+              <option value={40}>40 Leads</option>
+              <option value={60}>60 Leads</option>
+            </select>
+          </div>
+
           <div className="md:col-span-4 mt-2 mb-2">
             <label className="text-[10px] font-bold text-zinc-500 mb-1.5 block uppercase">Campanha de Destino</label>
             <select
@@ -149,25 +173,35 @@ export default function SearchForm({
               ))}
             </select>
             {campaigns.length === 0 && (
-              <p className="text-xs text-amber-500 mt-2">Você não possui campanhas. Crie uma na aba "Campanhas" antes de extrair.</p>
+              <div className="mt-3 animate-in fade-in zoom-in duration-500">
+                <Link 
+                  href="/campaigns" 
+                  className="flex items-center justify-center w-full h-10 rounded-lg bg-blue-500/10 text-blue-400 text-sm font-bold border border-blue-500/20 hover:bg-blue-500/20 hover:border-blue-500/40 hover:-translate-y-0.5 transition-all shadow-[0_0_15px_rgba(59,130,246,0.1)] hover:shadow-[0_0_20px_rgba(59,130,246,0.2)]"
+                >
+                  Criar Minha Primeira Campanha
+                </Link>
+              </div>
             )}
           </div>
 
           <div className="md:col-span-4 flex items-end">
             <Button
               type="submit"
-              className={`w-full font-bold transition-all backdrop-blur-md hover:-translate-y-0.5 active:translate-y-0 active:scale-98 cursor-pointer ${
-                onlyScrape
-                  ? "bg-white/5 text-zinc-300 border border-white/10 hover:bg-white/10 hover:text-white hover:border-white/20 hover:shadow-[0_0_15px_rgba(255,255,255,0.05)]"
-                  : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500 hover:text-black hover:border-emerald-500/50 hover:shadow-[0_0_25px_rgba(16,185,129,0.3)]"
+              className={`w-full font-bold transition-all backdrop-blur-md ${
+                !campaignId
+                  ? "opacity-50 cursor-not-allowed bg-zinc-800/50 text-zinc-500 border border-zinc-700/50"
+                  : onlyScrape
+                    ? "hover:-translate-y-0.5 active:translate-y-0 active:scale-98 cursor-pointer bg-white/5 text-zinc-300 border border-white/10 hover:bg-white/10 hover:text-white hover:border-white/20 hover:shadow-[0_0_15px_rgba(255,255,255,0.05)]"
+                    : "hover:-translate-y-0.5 active:translate-y-0 active:scale-98 cursor-pointer bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500 hover:text-black hover:border-emerald-500/50 hover:shadow-[0_0_25px_rgba(16,185,129,0.3)]"
               }`}
-              disabled={loading}
+              disabled={!!jobId || !campaignId}
             >
-              {loading ? "Processando..." : onlyScrape ? "Apenas Extrair" : "Extrair + Ativar IA"}
+              {!!jobId ? "Processando..." : onlyScrape ? "Apenas Raspagem" : "Raspagem + Qualificação"}
             </Button>
           </div>
         </form>
       </CardContent>
     </Card>
+    </>
   );
 }

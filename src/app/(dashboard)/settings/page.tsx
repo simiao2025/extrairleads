@@ -11,8 +11,15 @@ import {
   Sliders,
   Smartphone,
 } from "lucide-react";
-import { useEffect, useState } from "react";
-import { checkWhatsAppConnectionAction, getWhatsAppQrCodeAction } from "@/app/actions";
+import { Tooltip } from "@/components/ui/tooltip";
+import { useEffect, useState, useCallback } from "react";
+import {
+  checkWhatsAppConnectionAction,
+  getWhatsAppQrCodeAction,
+  getWhatsAppSettingsAction,
+  saveWhatsAppSettingsAction,
+} from "@/app/actions";
+import { notify } from "@/lib/notify";
 
 export default function SettingsPage() {
   const [whatsappStatus, setWhatsappStatus] = useState<{
@@ -25,6 +32,14 @@ export default function SettingsPage() {
   const [qrLoading, setQrLoading] = useState(false);
   const [qrError, setQrError] = useState("");
   const [pollingActive, setPollingActive] = useState(false);
+
+  // Novos states para Meta Official
+  const [provider, setProvider] = useState<"evolution" | "meta_official">("evolution");
+  const [metaAccessToken, setMetaAccessToken] = useState("");
+  const [metaPhoneNumberId, setMetaPhoneNumberId] = useState("");
+  const [metaWabaId, setMetaWabaId] = useState("");
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [savingSettings, setSavingSettings] = useState(false);
 
   // Status simulado das variáveis globais do .env (como estamos no client, usamos fallbacks simples)
   const envStatus = {
@@ -62,8 +77,42 @@ export default function SettingsPage() {
     },
   ];
 
+  // Carregar configurações iniciais
+  useEffect(() => {
+    const loadSettings = async () => {
+      const res = await getWhatsAppSettingsAction();
+      if (res.success) {
+        setProvider(res.provider as "evolution" | "meta_official");
+        setMetaAccessToken(res.metaAccessToken || "");
+        setMetaPhoneNumberId(res.metaPhoneNumberId || "");
+        setMetaWabaId(res.metaWabaId || "");
+        setNotificationsEnabled(res.notificationsEnabled !== false);
+        localStorage.setItem("soundEnabled", res.notificationsEnabled !== false ? "true" : "false");
+      }
+    };
+    loadSettings();
+  }, []);
+
+  const handleSaveSettings = async () => {
+    setSavingSettings(true);
+    const res = await saveWhatsAppSettingsAction({
+      provider,
+      metaAccessToken,
+      metaPhoneNumberId,
+      metaWabaId,
+      notificationsEnabled,
+    });
+    localStorage.setItem("soundEnabled", notificationsEnabled ? "true" : "false");
+    setSavingSettings(false);
+    if (!res.success) {
+      notify("Erro ao salvar: " + res.error, { type: "error" });
+    } else {
+      notify("Configurações salvas com sucesso!", { type: "success" });
+    }
+  };
+
   // Checar conexão do WhatsApp
-  const handleCheckConnection = async (showLoading = true) => {
+  const handleCheckConnection = useCallback(async (showLoading = true) => {
     if (showLoading) setChecking(true);
     try {
       const res = await checkWhatsAppConnectionAction();
@@ -82,7 +131,7 @@ export default function SettingsPage() {
     } finally {
       if (showLoading) setChecking(false);
     }
-  };
+  }, []);
 
   // Gerar QR Code
   const handleGenerateQr = async () => {
@@ -132,7 +181,7 @@ export default function SettingsPage() {
   }, [pollingActive, whatsappStatus, handleCheckConnection]);
 
   return (
-    <main className="min-h-screen bg-[#050505] text-zinc-100 p-4 md:p-8 pt-12 relative overflow-hidden">
+    <main className="min-h-screen bg-background text-foreground p-4 md:p-8 pt-12 relative overflow-hidden">
       {/* Grid de Efeito de Fundo - Extremamente Sutil B2B */}
       <div className="absolute inset-0 bg-cyber-grid opacity-10 pointer-events-none z-0"></div>
 
@@ -140,8 +189,8 @@ export default function SettingsPage() {
         {/* Cabeçalho */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zinc-900 pb-6">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-white flex items-center gap-3">
-              <Sliders className="w-8 h-8 text-white" />
+            <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-3">
+              <Sliders className="w-8 h-8 text-foreground" />
               Configurações
             </h1>
             <p className="text-zinc-400 text-sm mt-1">
@@ -154,14 +203,14 @@ export default function SettingsPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Coluna 1 e 2: Módulo de Conexão WhatsApp */}
           <div className="lg:col-span-2 space-y-6">
-            <div className="bg-[#0c0c0e] border border-zinc-800 rounded-2xl p-6 shadow-xl">
+            <div className="bg-card border border-zinc-800 rounded-2xl p-6 shadow-xl">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-300">
                     <Smartphone className="w-5 h-5" />
                   </div>
                   <div>
-                    <h2 className="text-lg font-bold text-white">Canal de Disparo WhatsApp</h2>
+                    <h2 className="text-lg font-bold text-foreground">Canal de Disparo WhatsApp</h2>
                     <p className="text-zinc-500 text-xs mt-0.5">
                       Emparelhe seu celular para realizar os envios dinâmicos das campanhas.
                     </p>
@@ -180,149 +229,268 @@ export default function SettingsPage() {
                 </button>
               </div>
 
-              {/* Status do Canal */}
-              <div className="bg-zinc-950 border border-zinc-900 rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-                <div>
-                  <span className="text-zinc-500 text-[11px] font-semibold uppercase tracking-wider">
-                    Status Atual
-                  </span>
-                  <div className="flex items-center gap-2.5 mt-1">
-                    {whatsappStatus?.connected ? (
-                      <>
-                        <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-                        <span className="text-emerald-400 font-bold text-sm bg-emerald-400/5 border border-emerald-400/10 px-3 py-0.5 rounded-full">
-                          🟢 CONECTADO
-                        </span>
-                      </>
-                    ) : (
-                      <>
-                        <div className="w-2.5 h-2.5 rounded-full bg-red-400" />
-                        <span className="text-red-400 font-bold text-sm bg-red-400/5 border border-red-500/10 px-3 py-0.5 rounded-full">
-                          🔴 DESCONECTADO
-                        </span>
-                      </>
-                    )}
-                  </div>
+              {/* Seletor de Provedor */}
+              <div className="mb-6 flex flex-col md:flex-row items-start md:items-center gap-4 p-4 bg-zinc-950 border border-zinc-900 rounded-xl">
+                <div className="flex-1">
+                  <h3 className="font-bold text-white text-sm">Provedor Padrão</h3>
+                  <p className="text-xs text-zinc-500">Escolha por onde o sistema enviará as mensagens.</p>
                 </div>
-
-                {whatsappStatus?.instanceName && (
-                  <div>
-                    <span className="text-zinc-500 text-[11px] font-semibold uppercase tracking-wider">
-                      Identificador da Instância
-                    </span>
-                    <p className="text-zinc-300 font-mono text-sm mt-1">
-                      {whatsappStatus.instanceName}
-                    </p>
-                  </div>
-                )}
+                <div className="flex bg-zinc-900 p-1 rounded-lg border border-zinc-800 shrink-0">
+                  <button
+                    onClick={() => { setProvider("evolution"); handleSaveSettings(); }}
+                    className={`px-4 py-2 rounded-md text-xs font-bold transition-all ${provider === "evolution" ? "bg-emerald-500 text-emerald-950 shadow-lg" : "text-zinc-400 hover:text-white"}`}
+                  >
+                    Evolution Go
+                  </button>
+                  <button
+                    onClick={() => { setProvider("meta_official"); handleSaveSettings(); }}
+                    className={`px-4 py-2 rounded-md text-xs font-bold transition-all ${provider === "meta_official" ? "bg-blue-500 text-white shadow-lg" : "text-zinc-400 hover:text-white"}`}
+                  >
+                    Meta Oficial API
+                  </button>
+                </div>
               </div>
 
-              {/* Lógica de QR Code / Conexão Ativa */}
-              <div className="border border-zinc-900 bg-zinc-950/40 rounded-xl p-6">
-                {whatsappStatus?.connected ? (
-                  <div className="text-center py-6 space-y-4">
-                    <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 mx-auto">
-                      <CheckCircle2 className="w-8 h-8" />
-                    </div>
-                    <div className="max-w-sm mx-auto space-y-2">
-                      <h3 className="font-bold text-white text-lg">WhatsApp Ativo!</h3>
-                      <p className="text-zinc-400 text-sm leading-relaxed">
-                        Sua conexão individual no Evolution Go v3 está operando perfeitamente. Todas
-                        as suas campanhas e fluxos de prospecção neural serão disparados por este
-                        canal de forma segura.
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
-                    <div className="space-y-4">
-                      <h3 className="font-bold text-white text-base">
-                        Como conectar seu WhatsApp?
-                      </h3>
-                      <ol className="text-zinc-400 text-xs space-y-2.5 list-decimal pl-4 leading-relaxed">
-                        <li>
-                          Clique no botão <strong className="text-zinc-200">"Gerar QR Code"</strong>{" "}
-                          ao lado.
-                        </li>
-                        <li>Abra o WhatsApp em seu aparelho celular.</li>
-                        <li>
-                          Toque em <strong className="text-zinc-200">Aparelhos Conectados</strong>{" "}
-                          &gt; <strong className="text-zinc-200">Conectar Aparelho</strong>.
-                        </li>
-                        <li>
-                          Aponte a câmera do seu celular para a tela para escanear o QR Code gerado.
-                        </li>
-                        <li>
-                          O sistema identificará e ativará o canal automaticamente em até 5 segundos
-                          após a leitura.
-                        </li>
-                      </ol>
-
-                      <button
-                        onClick={handleGenerateQr}
-                        disabled={qrLoading || checking}
-                        className="w-full md:w-auto bg-white hover:bg-zinc-200 text-black font-semibold text-xs py-2.5 px-5 rounded-lg flex items-center justify-center gap-2 cursor-pointer transition-all duration-200"
-                      >
-                        {qrLoading ? (
+              {provider === "evolution" ? (
+                <>
+                  {/* Status do Canal */}
+                  <div className="bg-zinc-950 border border-zinc-900 rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                    <div>
+                      <span className="text-zinc-500 text-[11px] font-semibold uppercase tracking-wider">
+                        Status Atual
+                      </span>
+                      <div className="flex items-center gap-2.5 mt-1">
+                        {whatsappStatus?.connected ? (
                           <>
-                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            Gerando...
+                            <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                            <span className="text-emerald-400 font-bold text-sm bg-emerald-400/5 border border-emerald-400/10 px-3 py-0.5 rounded-full">
+                              🟢 CONECTADO
+                            </span>
                           </>
                         ) : (
                           <>
-                            <QrCode className="w-4 h-4" />
-                            Gerar QR Code
+                            <div className="w-2.5 h-2.5 rounded-full bg-red-400" />
+                            <span className="text-red-400 font-bold text-sm bg-red-400/5 border border-red-500/10 px-3 py-0.5 rounded-full">
+                              🔴 DESCONECTADO
+                            </span>
                           </>
                         )}
-                      </button>
+                      </div>
+                    </div>
 
-                      {qrError && (
-                        <p className="text-red-400 text-xs mt-2 bg-red-400/5 border border-red-500/10 p-2 rounded-lg">
-                          {qrError}
+                    {whatsappStatus?.instanceName && (
+                      <div>
+                        <span className="text-zinc-500 text-[11px] font-semibold uppercase tracking-wider">
+                          Identificador da Instância
+                        </span>
+                        <p className="text-zinc-300 font-mono text-sm mt-1">
+                          {whatsappStatus.instanceName}
                         </p>
-                      )}
-                    </div>
-
-                    {/* QR Code Container */}
-                    <div className="flex flex-col items-center justify-center p-4 border border-zinc-800 bg-[#0c0c0e] rounded-xl min-h-[220px] relative">
-                      {qrLoading ? (
-                        <div className="text-center space-y-2 text-zinc-500">
-                          <Loader2 className="w-8 h-8 animate-spin text-emerald-500 mx-auto" />
-                          <p className="text-xs">Gerando canal...</p>
-                        </div>
-                      ) : qrCode ? (
-                        <div className="text-center space-y-3">
-                          <div className="bg-white p-2 rounded-lg inline-block">
-                            <img
-                              src={qrCode}
-                              alt="WhatsApp QR Code"
-                              className="w-[180px] h-[180px] object-contain"
-                            />
-                          </div>
-                          <p className="text-zinc-500 text-[10px] animate-pulse flex items-center gap-1.5 justify-center">
-                            <RefreshCw className="w-3 h-3 animate-spin text-emerald-500" />
-                            Aguardando leitura do celular...
-                          </p>
-                        </div>
-                      ) : (
-                        <div className="text-center space-y-2 text-zinc-600 max-w-[180px]">
-                          <QrCode className="w-10 h-10 mx-auto opacity-30" />
-                          <p className="text-[11px] leading-relaxed">
-                            Clique em gerar para exibir o código QR de sincronização.
-                          </p>
-                        </div>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
-                )}
+
+                  {/* Lógica de QR Code / Conexão Ativa */}
+                  <div className="border border-zinc-900 bg-zinc-950/40 rounded-xl p-6">
+                    {whatsappStatus?.connected ? (
+                      <div className="text-center py-6 space-y-4">
+                        <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 mx-auto">
+                          <CheckCircle2 className="w-8 h-8" />
+                        </div>
+                        <div className="max-w-sm mx-auto space-y-2">
+                          <h3 className="font-bold text-white text-lg">WhatsApp Ativo!</h3>
+                          <p className="text-zinc-400 text-sm leading-relaxed">
+                            Sua conexão individual no Evolution Go v3 está operando perfeitamente. Todas
+                            as suas campanhas e fluxos de prospecção neural serão disparados por este
+                            canal de forma segura.
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+                        <div className="space-y-4">
+                          <h3 className="font-bold text-white text-base">
+                            Como conectar seu WhatsApp?
+                          </h3>
+                          <ol className="text-zinc-400 text-xs space-y-2.5 list-decimal pl-4 leading-relaxed">
+                            <li>
+                              Clique no botão <strong className="text-zinc-200">"Gerar QR Code"</strong>{" "}
+                              ao lado.
+                            </li>
+                            <li>Abra o WhatsApp em seu aparelho celular.</li>
+                            <li>
+                              Toque em <strong className="text-zinc-200">Aparelhos Conectados</strong>{" "}
+                              &gt; <strong className="text-zinc-200">Conectar Aparelho</strong>.
+                            </li>
+                            <li>
+                              Aponte a câmera do seu celular para a tela para escanear o QR Code gerado.
+                            </li>
+                            <li>
+                              O sistema identificará e ativará o canal automaticamente em até 5 segundos
+                              após a leitura.
+                            </li>
+                          </ol>
+
+                          <button
+                            onClick={handleGenerateQr}
+                            disabled={qrLoading || checking}
+                            className="w-full md:w-auto bg-white hover:bg-zinc-200 text-black font-semibold text-xs py-2.5 px-5 rounded-lg flex items-center justify-center gap-2 cursor-pointer transition-all duration-200"
+                          >
+                            {qrLoading ? (
+                              <>
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                Gerando...
+                              </>
+                            ) : (
+                              <>
+                                <QrCode className="w-4 h-4" />
+                                Gerar QR Code
+                              </>
+                            )}
+                          </button>
+
+                          {qrError && (
+                            <p className="text-red-400 text-xs mt-2 bg-red-400/5 border border-red-500/10 p-2 rounded-lg">
+                              {qrError}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* QR Code Container */}
+                        <div className="flex flex-col items-center justify-center p-4 border border-zinc-800 bg-[#0c0c0e] rounded-xl min-h-[220px] relative">
+                          {qrLoading ? (
+                            <div className="text-center space-y-2 text-zinc-500">
+                              <Loader2 className="w-8 h-8 animate-spin text-emerald-500 mx-auto" />
+                              <p className="text-xs">Gerando canal...</p>
+                            </div>
+                          ) : qrCode ? (
+                            <div className="text-center space-y-3">
+                              <div className="bg-white p-2 rounded-lg inline-block">
+                                <img
+                                  src={qrCode}
+                                  alt="WhatsApp QR Code"
+                                  className="w-[180px] h-[180px] object-contain"
+                                />
+                              </div>
+                              <p className="text-zinc-500 text-[10px] animate-pulse flex items-center gap-1.5 justify-center">
+                                <RefreshCw className="w-3 h-3 animate-spin text-emerald-500" />
+                                Aguardando leitura do celular...
+                              </p>
+                            </div>
+                          ) : (
+                            <div className="text-center space-y-2 text-zinc-600 max-w-[180px]">
+                              <QrCode className="w-10 h-10 mx-auto opacity-30" />
+                              <p className="text-[11px] leading-relaxed">
+                                Clique em gerar para exibir o código QR de sincronização.
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <div className="border border-blue-900/30 bg-blue-950/10 rounded-xl p-6 space-y-5">
+                  <div>
+                    <h3 className="font-bold text-white text-base text-blue-400">Credenciais Meta Cloud API</h3>
+                    <p className="text-xs text-zinc-400 mt-1">Preencha com os dados do painel do Facebook Developers.</p>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <div>
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <label className="text-xs font-bold text-zinc-500 uppercase">Access Token</label>
+                        <Tooltip content="O Token Permanente gerado no portal Meta for Developers." />
+                      </div>
+                      <input 
+                        type="password" 
+                        value={metaAccessToken}
+                        onChange={(e) => setMetaAccessToken(e.target.value)}
+                        className="w-full bg-zinc-900 border border-zinc-800 rounded-md p-2 text-sm text-white focus:border-blue-500 outline-none" 
+                        placeholder="EAA..." 
+                      />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <label className="text-xs font-bold text-zinc-500 uppercase">Phone Number ID</label>
+                        <Tooltip content="Identificador Numérico do Telefone de Origem (diferente do WABA ID)." />
+                      </div>
+                      <input 
+                        type="text" 
+                        value={metaPhoneNumberId}
+                        onChange={(e) => setMetaPhoneNumberId(e.target.value)}
+                        className="w-full bg-zinc-900 border border-zinc-800 rounded-md p-2 text-sm text-white focus:border-blue-500 outline-none" 
+                        placeholder="Ex: 123456789012345" 
+                      />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <label className="text-xs font-bold text-zinc-500 uppercase">WABA ID</label>
+                        <Tooltip content="WhatsApp Business Account ID. Encontrado nas configurações da conta do Meta." />
+                      </div>
+                      <input 
+                        type="text" 
+                        value={metaWabaId}
+                        onChange={(e) => setMetaWabaId(e.target.value)}
+                        className="w-full bg-zinc-900 border border-zinc-800 rounded-md p-2 text-sm text-white focus:border-blue-500 outline-none" 
+                        placeholder="Ex: 123456789012345" 
+                      />
+                    </div>
+                    <button 
+                      onClick={handleSaveSettings}
+                      disabled={savingSettings}
+                      className="mt-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-2 px-6 rounded-md transition-all"
+                    >
+                      {savingSettings ? "Salvando..." : "Salvar Credenciais Meta"}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Preferências Gerais */}
+            <div className="bg-card border border-zinc-800 rounded-2xl p-6 shadow-xl mt-6">
+              <h2 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
+                <Sliders className="w-5 h-5 text-emerald-500" />
+                Preferências Gerais
+              </h2>
+              
+              <div className="flex items-center justify-between p-4 bg-zinc-900 rounded-xl border border-zinc-800">
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground">Efeitos Sonoros</h3>
+                  <p className="text-xs text-zinc-400">Tocar som ao receber novas notificações ou mensagens (via Toast).</p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="sr-only peer"
+                    checked={notificationsEnabled}
+                    onChange={(e) => {
+                      setNotificationsEnabled(e.target.checked);
+                      localStorage.setItem("soundEnabled", e.target.checked ? "true" : "false");
+                    }}
+                  />
+                  <div className="w-11 h-6 bg-zinc-700 rounded-full peer peer-checked:bg-emerald-500 peer-focus:ring-4 peer-focus:ring-emerald-500/20 transition-all after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full peer-checked:after:border-white"></div>
+                </label>
+              </div>
+
+              <div className="mt-4 flex justify-end">
+                <button
+                  onClick={handleSaveSettings}
+                  disabled={savingSettings}
+                  className="bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-xs py-2 px-6 rounded-md transition-all"
+                >
+                  {savingSettings ? "Salvando..." : "Salvar Preferências"}
+                </button>
               </div>
             </div>
           </div>
 
           {/* Coluna 3: Status das Integrações */}
           <div className="space-y-6">
-            <div className="bg-[#0c0c0e] border border-zinc-800 rounded-2xl p-6 shadow-xl">
-              <h2 className="text-lg font-bold text-white mb-1.5">Integrações Globais</h2>
+            <div className="bg-card border border-zinc-800 rounded-2xl p-6 shadow-xl">
+              <h2 className="text-lg font-bold text-foreground mb-1.5">Integrações Globais</h2>
               <p className="text-zinc-500 text-xs mb-6">
                 Status dos motores e credenciais de inteligência artificial de faturamento global do
                 app.

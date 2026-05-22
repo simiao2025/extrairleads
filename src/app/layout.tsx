@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { Inter, Outfit } from "next/font/google";
 import "./globals.css";
 import { SmoothScrollProvider } from "@/components/providers/smooth-scroll";
-import { ToastProvider } from "@/components/ui/toast";
-
+import { ThemeProvider } from "@/components/theme-provider";
+import { Toaster } from "sonner";
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
@@ -28,13 +28,21 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR" className="dark">
+    <html lang="pt-BR" suppressHydrationWarning>
       <body
-        className={`${inter.variable} ${outfit.variable} font-sans bg-background text-foreground selection:bg-emerald-500/20 antialiased`}
+        className={`${inter.variable} ${outfit.variable} font-sans bg-background text-foreground selection:bg-emerald-500/20 antialiased overflow-x-hidden`}
       >
-        <SmoothScrollProvider>
-          <ToastProvider>{children}</ToastProvider>
-        </SmoothScrollProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          forcedTheme="dark"
+          disableTransitionOnChange
+        >
+          <SmoothScrollProvider>
+            {children}
+            <Toaster richColors closeButton />
+          </SmoothScrollProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

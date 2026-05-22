@@ -24,10 +24,16 @@ interface ToastContextType {
 
 const ToastContext = createContext<ToastContextType | null>(null);
 
+import { notify } from "@/lib/notify";
+
 export function useToast() {
-  const ctx = useContext(ToastContext);
-  if (!ctx) throw new Error("useToast must be used within ToastProvider");
-  return ctx;
+  return {
+    toast: (type: ToastType, message: string, _duration?: number) => notify(message, { type }),
+    success: (message: string, _duration?: number) => notify(message, { type: "success" }),
+    error: (message: string, _duration?: number) => notify(message, { type: "error" }),
+    info: (message: string, _duration?: number) => notify(message, { type: "info" }),
+    warning: (message: string, _duration?: number) => notify(message, { type: "warning" }),
+  };
 }
 
 const icons = {

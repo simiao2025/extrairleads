@@ -28,9 +28,11 @@ export {
   startOutreachAction,
   generateAiSuggestionAction,
 } from "@/actions/outreach";
-export { searchLeadsAction } from "@/actions/scraping";
+export { createScrapingJobAction, runScrapingJobAction } from "@/actions/scraping";
 export {
   checkWhatsAppConnectionAction,
   getWhatsAppQrCodeAction,
   sendManualWhatsAppMessageAction,
+  getWhatsAppSettingsAction,
+  saveWhatsAppSettingsAction,
 } from "@/actions/whatsapp";

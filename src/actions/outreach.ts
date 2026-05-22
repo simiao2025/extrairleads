@@ -4,7 +4,7 @@ import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import OpenAI from "openai";
 import { db } from "@/db";
-import { campaignConfigs, chatHistory, leads, outreachLogs, users } from "@/db/schema";
+import { campaignConfigs, campaigns, chatHistory, leads, outreachLogs, users } from "@/db/schema";
 import { auth } from "@/lib/auth";
 
 const groq = new OpenAI({
@@ -120,14 +120,22 @@ export async function startOutreachAction(campaignId?: number) {
     .from(campaignConfigs)
     .where(eq(campaignConfigs.userId, userId));
 
+  const provider = dbUser?.whatsappProvider || "evolution";
   const evolutionUrl = process.env.EVOLUTION_API_URL;
   const instanceName = dbUser?.whatsappInstanceName;
   const instanceToken = dbUser?.whatsappInstanceToken;
 
-  if (!evolutionUrl || !instanceName || !instanceToken) {
+  if (provider === "evolution" && (!evolutionUrl || !instanceName || !instanceToken)) {
     return {
       success: false,
-      error: "WhatsApp não configurado. Vá em Configurações para emparelhar seu WhatsApp primeiro.",
+      error: "WhatsApp Evolution não configurado. Vá em Configurações para emparelhar seu WhatsApp primeiro.",
+    };
+  }
+
+  if (provider === "meta_official" && (!dbUser?.metaAccessToken || !dbUser?.metaPhoneNumberId)) {
+    return {
+      success: false,
+      error: "Credenciais da Meta não configuradas. Vá em Configurações.",
     };
   }
 
@@ -137,46 +145,90 @@ export async function startOutreachAction(campaignId?: number) {
   }
 
   const qualifiedLeads = await db
-    .select()
+    .select({
+      lead: leads,
+      campaignMetaTemplate: campaigns.metaTemplateName,
+    })
     .from(leads)
+    .leftJoin(campaigns, eq(leads.campaignId, campaigns.id))
     .where(and(...conditions))
     .limit(config?.weeklyLimit || 5);
 
-  for (const lead of qualifiedLeads) {
+  for (const { lead, campaignMetaTemplate } of qualifiedLeads) {
     if (!lead.phone) continue;
     try {
-      const completion = await groq.chat.completions.create({
-        messages: [
-          { role: "system", content: config?.agent2Prompt || "Abordagem curta e direta." },
-          {
-            role: "user",
-            content: `DADOS DO LEAD:
+      if (provider === "meta_official") {
+        if (!campaignMetaTemplate) {
+          console.error("Campanha sem Template Meta configurado");
+          continue;
+        }
+        const phoneStr = lead.phone.replace(/\D/g, "");
+        const metaResponse = await fetch(`https://graph.facebook.com/v19.0/${dbUser.metaPhoneNumberId}/messages`, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${dbUser.metaAccessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            messaging_product: "whatsapp",
+            recipient_type: "individual",
+            to: phoneStr,
+            type: "template",
+            template: {
+              name: campaignMetaTemplate,
+              language: { code: "pt_BR" }
+            }
+          }),
+        });
+
+        if (!metaResponse.ok) {
+          console.error(await metaResponse.text());
+          continue;
+        }
+
+        await db.insert(chatHistory).values({
+          leadId: lead.id,
+          role: "assistant",
+          content: `[Template Oficial Enviado: ${campaignMetaTemplate}]`,
+          type: "text",
+        });
+
+        await db.update(leads).set({ status: "contacted" }).where(eq(leads.id, lead.id));
+        await db.insert(outreachLogs).values({ leadId: lead.id, status: "sent" });
+      } else {
+        const completion = await groq.chat.completions.create({
+          messages: [
+            { role: "system", content: config?.agent2Prompt || "Abordagem curta e direta." },
+            {
+              role: "user",
+              content: `DADOS DO LEAD:
 Empresa: ${lead.name}
 Nicho: ${lead.niche}
 Localização: ${lead.city}, ${lead.state}
 Análise Técnica: ${lead.aiAnalysis}`,
+            },
+          ],
+          model: "llama-3.3-70b-versatile",
+        });
+        const message = completion.choices[0].message.content;
+
+        const response = await fetch(`${evolutionUrl}/message/sendText/${instanceName}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: instanceToken as string,
           },
-        ],
-        model: "llama-3.3-70b-versatile",
-      });
-      const message = completion.choices[0].message.content;
+          body: JSON.stringify({ number: lead.phone, text: message, delay: 1200, linkPreview: true }),
+        });
 
-      const response = await fetch(`${evolutionUrl}/message/sendText/${instanceName}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          apikey: instanceToken, // Token individual da instância
-        },
-        body: JSON.stringify({ number: lead.phone, text: message, delay: 1200, linkPreview: true }),
-      });
+        if (!response.ok) {
+          await response.text(); // consume body
+          continue;
+        }
 
-      if (!response.ok) {
-        await response.text(); // consume body
-        continue;
+        await db.update(leads).set({ status: "contacted" }).where(eq(leads.id, lead.id));
+        await db.insert(outreachLogs).values({ leadId: lead.id, status: "sent" });
       }
-
-      await db.update(leads).set({ status: "contacted" }).where(eq(leads.id, lead.id));
-      await db.insert(outreachLogs).values({ leadId: lead.id, status: "sent" });
     } catch (_e) {
     }
   }
