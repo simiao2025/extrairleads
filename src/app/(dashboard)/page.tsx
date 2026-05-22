@@ -76,7 +76,7 @@ export default async function Home({ searchParams }: PageProps) {
   const offset = (page - 1) * limit;
   const campaignId = params.campaignId ? parseInt(params.campaignId, 10) : undefined;
 
-  const conditions = [eq(leads.userId, userId)];
+  const conditions = userId ? [eq(leads.userId, userId)] : [];
   if (campaignId) conditions.push(eq(leads.campaignId, campaignId));
 
   const allLeads = userId

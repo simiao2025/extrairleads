@@ -1,6 +1,6 @@
 "use client";
 
-import { Bot, MessageSquare, User, Volume2, Send, Wand2, Loader2, Sparkles } from "lucide-react";
+import { Bot, MessageSquare, User, Send, Loader2, Sparkles } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { getLeadChatAction } from "@/app/actions";
 import { sendManualWhatsAppMessageAction, generateAiSuggestionAction } from "@/app/actions";
@@ -104,39 +104,41 @@ export default function LeadDetailsDialog({ lead, children }: { lead: Lead; chil
 
   return (
     <Dialog onOpenChange={(open) => open && loadChat()}>
-      <DialogTrigger asChild>
-        {children ? (
-          children
-        ) : (
-          <button className="w-full text-left p-4 rounded-xl bg-white/[0.02] backdrop-blur-xl border border-white/[0.05] hover:border-emerald-500/30 hover:bg-white/[0.04] transition-all cursor-pointer group shadow-lg shadow-black/20 hover:shadow-emerald-500/10 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-500/10 rounded-bl-full blur-xl group-hover:bg-emerald-500/20 transition-colors"></div>
-            <div className="flex justify-between items-start relative z-10">
-              <p className="font-bold text-sm truncate w-4/5 text-white/90 group-hover:text-emerald-400 transition-colors flex items-center gap-2">
-                {lead.name}
+      <DialogTrigger
+        render={
+          children ? (
+            children as React.ReactElement
+          ) : (
+            <button className="w-full text-left p-4 rounded-xl bg-white/[0.02] backdrop-blur-xl border border-white/[0.05] hover:border-emerald-500/30 hover:bg-white/[0.04] transition-all cursor-pointer group shadow-lg shadow-black/20 hover:shadow-emerald-500/10 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-500/10 rounded-bl-full blur-xl group-hover:bg-emerald-500/20 transition-colors"></div>
+              <div className="flex justify-between items-start relative z-10">
+                <p className="font-bold text-sm truncate w-4/5 text-white/90 group-hover:text-emerald-400 transition-colors flex items-center gap-2">
+                  {lead.name}
+                </p>
+                {lead.aiScore && (
+                  <span className="text-[10px] font-black text-emerald-950 bg-emerald-400/90 px-1.5 py-0.5 rounded-md shadow-[0_0_12px_rgba(52,211,153,0.4)]">
+                    {lead.aiScore}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-white/50 mt-1 truncate relative z-10">
+                {lead.city}, {lead.state}
               </p>
-              {lead.aiScore && (
-                <span className="text-[10px] font-black text-emerald-950 bg-emerald-400/90 px-1.5 py-0.5 rounded-md shadow-[0_0_12px_rgba(52,211,153,0.4)]">
-                  {lead.aiScore}
+              <div className="mt-4 flex items-center justify-between relative z-10">
+                <span className="text-[10px] font-medium bg-white/5 border border-white/10 px-2 py-0.5 rounded-full text-white/60">
+                  {lead.niche || "Sem Nicho"}
                 </span>
-              )}
-            </div>
-            <p className="text-xs text-white/50 mt-1 truncate relative z-10">
-              {lead.city}, {lead.state}
-            </p>
-            <div className="mt-4 flex items-center justify-between relative z-10">
-              <span className="text-[10px] font-medium bg-white/5 border border-white/10 px-2 py-0.5 rounded-full text-white/60">
-                {lead.niche || "Sem Nicho"}
-              </span>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-bold text-emerald-500/80 uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">Prospectar</span>
-                <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center group-hover:bg-emerald-500/30 group-hover:scale-110 transition-all shadow-lg shadow-emerald-500/10 border border-emerald-500/20">
-                  <MessageSquare className="w-4 h-4 text-emerald-400" />
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold text-emerald-500/80 uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">Prospectar</span>
+                  <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center group-hover:bg-emerald-500/30 group-hover:scale-110 transition-all shadow-lg shadow-emerald-500/10 border border-emerald-500/20">
+                    <MessageSquare className="w-4 h-4 text-emerald-400" />
+                  </div>
                 </div>
               </div>
-            </div>
-          </button>
-        )}
-      </DialogTrigger>
+            </button>
+          )
+        }
+      />
 
       <DialogContent className="bg-[#0b141a] border-zinc-800 text-[#e9edef] max-w-5xl w-[95vw] h-[90vh] flex flex-col shadow-2xl p-0 overflow-hidden sm:rounded-2xl">
         {/* Header - WhatsApp Web Style */}

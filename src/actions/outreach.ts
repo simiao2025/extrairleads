@@ -195,8 +195,8 @@ export async function followUpLeadsAction(campaignId?: number) {
     .from(campaignConfigs)
     .where(eq(campaignConfigs.userId, userId));
 
-  const instanceName = dbUser?.evolutionInstanceName;
-  const instanceToken = dbUser?.evolutionApiKey;
+  const instanceName = dbUser?.whatsappInstanceName;
+  const instanceToken = dbUser?.whatsappInstanceToken;
   const evolutionUrl = process.env.EVOLUTION_API_URL || "https://api.evolution.com";
 
   if (!instanceName || !instanceToken) {

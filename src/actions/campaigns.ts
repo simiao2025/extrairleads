@@ -3,7 +3,7 @@
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
-import { campaigns, leads } from "@/db/schema";
+import { campaigns } from "@/db/schema";
 import { auth } from "@/lib/auth";
 
 export async function createCampaignAction(formData: FormData) {

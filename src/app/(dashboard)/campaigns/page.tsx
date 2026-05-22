@@ -1,5 +1,5 @@
 import { sql, eq } from "drizzle-orm";
-import { Layers, MapPin, Megaphone, Plus } from "lucide-react";
+import { Layers, MapPin, Megaphone } from "lucide-react";
 import { db } from "@/db";
 import { campaigns, leads } from "@/db/schema";
 import { auth } from "@/lib/auth";
