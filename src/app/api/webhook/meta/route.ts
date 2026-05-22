@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { eq, desc, sql as drizzleSql } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import { db } from "@/db";
 import { users, leads, chatHistory, campaignConfigs, appointments } from "@/db/schema";
 import OpenAI from "openai";

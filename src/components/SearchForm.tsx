@@ -2,7 +2,7 @@
 
 import { Cpu, MapPin, Search } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+
 import { useState } from "react";
 import { createScrapingJobAction, runScrapingJobAction } from "@/app/actions";
 import { Button } from "@/components/ui/button";
@@ -27,8 +27,8 @@ export default function SearchForm({
   const [limit, setLimit] = useState(20);
   const [onlyScrape, setOnlyScrape] = useState(false);
   const [jobId, setJobId] = useState<number | null>(null);
-  const { success, error } = useToast();
-  const router = useRouter();
+  const { error } = useToast();
+
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();

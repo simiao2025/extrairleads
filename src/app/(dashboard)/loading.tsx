@@ -1,5 +1,3 @@
-import { Loader2 } from "lucide-react";
-
 export default function DashboardLoading() {
   return (
     <div className="min-h-screen bg-background p-4 md:p-8 pt-12 relative overflow-hidden">
