@@ -63,6 +63,17 @@ async function sendOnboardingEmail(email: string, name: string, tempPassword: st
 
 export async function POST(request: Request) {
   try {
+    // PROTEÇÃO CONTRA WEBHOOKS FALSOS (Cybersecurity)
+    // Exigir um token secreto na URL (ex: ?token=xyz123)
+    const url = new URL(request.url);
+    const token = url.searchParams.get("token");
+    
+    // Validar token (Configurar na Vercel e na Kiwify)
+    const SECRET = process.env.KIWIFY_WEBHOOK_TOKEN || "extrairleads_padrao_2026";
+    if (token !== SECRET) {
+      return NextResponse.json({ success: false, error: "Token inválido/Ausente" }, { status: 401 });
+    }
+
     const body = await request.json();
 
     const { order_status, customer } = body;

@@ -16,13 +16,13 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { moveLeadAction } from "@/app/actions";
 import { useToast } from "@/components/ui/toast";
 import { KanbanCard } from "./KanbanCard";
 import { KanbanColumn } from "./KanbanColumn";
 
-export type LeadStatus =
+type LeadStatus =
   | "raw"
   | "qualified"
   | "in_queue"
@@ -140,12 +140,12 @@ export function KanbanBoard({ initialLeads }: KanbanBoardProps) {
     [activeId, leads],
   );
 
-  function handleDragStart(event: DragStartEvent) {
+  const handleDragStart = useCallback((event: DragStartEvent) => {
     setActiveId(event.active.id as number);
     setDragging(true);
-  }
+  }, []);
 
-  async function handleDragEnd(event: DragEndEvent) {
+  const handleDragEnd = useCallback(async (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveId(null);
     setDragging(false);
@@ -183,7 +183,7 @@ export function KanbanBoard({ initialLeads }: KanbanBoardProps) {
       const stageLabel = STAGES.find((s) => s.key === targetStage)?.label || targetStage;
       success(`Lead movido para "${stageLabel}"`);
     }
-  }
+  }, [leads, error, success]);
 
   if (leads.length === 0) {
     return (

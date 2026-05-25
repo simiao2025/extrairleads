@@ -4,6 +4,7 @@ import "./globals.css";
 import { SmoothScrollProvider } from "@/components/providers/smooth-scroll";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "sonner";
+import VersionMonitor from "@/components/VersionMonitor";
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
@@ -40,6 +41,7 @@ export default function RootLayout({
         >
           <SmoothScrollProvider>
             {children}
+            <VersionMonitor />
             <Toaster richColors closeButton />
           </SmoothScrollProvider>
         </ThemeProvider>

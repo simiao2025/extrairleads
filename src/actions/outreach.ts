@@ -13,79 +13,87 @@ const groq = new OpenAI({
 });
 
 export async function qualifyLeadsAction(leadIds: number[]) {
-  for (const id of leadIds) {
-    const [lead] = await db.select().from(leads).where(eq(leads.id, id));
-    if (!lead) continue;
+  // Process leads in chunks of 5 to avoid API rate limits while improving performance
+  const CHUNK_SIZE = 5;
+  for (let i = 0; i < leadIds.length; i += CHUNK_SIZE) {
+    const chunk = leadIds.slice(i, i + CHUNK_SIZE);
+    
+    await Promise.all(
+      chunk.map(async (id) => {
+        const [lead] = await db.select().from(leads).where(eq(leads.id, id));
+        if (!lead) return;
 
-    // Load config specific to the lead's owner (userId)
-    const [config] = lead.userId
-      ? await db.select().from(campaignConfigs).where(eq(campaignConfigs.userId, lead.userId))
-      : [];
-    const prompt = config?.agent1Prompt || "Qualifique o lead.";
+        // Load config specific to the lead's owner (userId)
+        const [config] = lead.userId
+          ? await db.select().from(campaignConfigs).where(eq(campaignConfigs.userId, lead.userId))
+          : [];
+        const prompt = config?.agent1Prompt || "Qualifique o lead.";
 
-    // Mapear metadados adicionais para preencher o prompt de qualificação
-    const meta = (lead.metadata || {}) as any;
-    const reviewsArr = Array.isArray(meta.reviews) ? meta.reviews : [];
-    const reviewsText = reviewsArr
-      .map(
-        (r: any) => `- Nota ${r.rating}: "${r.snippet || r.text || ""}" (${r.date || "recente"})`,
-      )
-      .join("\n");
+        // Mapear metadados adicionais para preencher o prompt de qualificação
+        const meta = (lead.metadata || {}) as any;
+        const reviewsArr = Array.isArray(meta.reviews) ? meta.reviews : [];
+        const reviewsText = reviewsArr
+          .map(
+            (r: any) => `- Nota ${r.rating}: "${r.snippet || r.text || ""}" (${r.date || "recente"})`,
+          )
+          .join("\n");
 
-    const formattedPrompt = prompt
-      .replace(/{nome}/g, lead.name || "")
-      .replace(/{categoria}/g, lead.niche || meta.category || "")
-      .replace(
-        /{categorias_adicionais}/g,
-        Array.isArray(meta.additionalCategories) ? meta.additionalCategories.join(", ") : "",
-      )
-      .replace(/{endereco}/g, meta.address || "")
-      .replace(/{cidade}/g, lead.city || "")
-      .replace(/{bairro}/g, meta.suburb || meta.neighborhood || "")
-      .replace(/{site}/g, lead.website || "null")
-      .replace(
-        /{redes}/g,
-        Array.isArray(meta.socialMedia) ? meta.socialMedia.join(", ") : "Nenhuma",
-      )
-      .replace(/{fotos}/g, meta.photosCount || "0")
-      .replace(/{nota}/g, String(meta.rating || ""))
-      .replace(/{total_avaliacoes}/g, String(meta.reviewsCount || "0"))
-      .replace(/{texto, nota, data}/g, reviewsText || "Nenhuma avaliação recente")
-      .replace(/{horario}/g, meta.operatingHours || "Não especificado")
-      .replace(/{faixa_preco}/g, meta.priceRange || "Não especificado")
-      .replace(
-        /{atributos}/g,
-        Array.isArray(meta.attributes) ? meta.attributes.join(", ") : "Nenhum",
-      )
-      .replace(/{data_criacao_perfil}/g, meta.profileAge || "Não especificado");
+        const formattedPrompt = prompt
+          .replace(/{nome}/g, lead.name || "")
+          .replace(/{categoria}/g, lead.niche || meta.category || "")
+          .replace(
+            /{categorias_adicionais}/g,
+            Array.isArray(meta.additionalCategories) ? meta.additionalCategories.join(", ") : "",
+          )
+          .replace(/{endereco}/g, meta.address || "")
+          .replace(/{cidade}/g, lead.city || "")
+          .replace(/{bairro}/g, meta.suburb || meta.neighborhood || "")
+          .replace(/{site}/g, lead.website || "null")
+          .replace(
+            /{redes}/g,
+            Array.isArray(meta.socialMedia) ? meta.socialMedia.join(", ") : "Nenhuma",
+          )
+          .replace(/{fotos}/g, meta.photosCount || "0")
+          .replace(/{nota}/g, String(meta.rating || ""))
+          .replace(/{total_avaliacoes}/g, String(meta.reviewsCount || "0"))
+          .replace(/{texto, nota, data}/g, reviewsText || "Nenhuma avaliação recente")
+          .replace(/{horario}/g, meta.operatingHours || "Não especificado")
+          .replace(/{faixa_preco}/g, meta.priceRange || "Não especificado")
+          .replace(
+            /{atributos}/g,
+            Array.isArray(meta.attributes) ? meta.attributes.join(", ") : "Nenhum",
+          )
+          .replace(/{data_criacao_perfil}/g, meta.profileAge || "Não especificado");
 
-    try {
-      const completion = await groq.chat.completions.create({
-        messages: [
-          { role: "system", content: formattedPrompt },
-          {
-            role: "user",
-            content: `Analise as informações do seguinte lead: ${JSON.stringify(lead)}`,
-          },
-        ],
-        model: "llama-3.3-70b-versatile",
-        response_format: { type: "json_object" },
-      });
-      const result = JSON.parse(completion.choices[0].message.content || "{}");
-      const scoreNum = Number(result.score) || 0;
-      const parsedScore = Math.round(scoreNum);
+        try {
+          const completion = await groq.chat.completions.create({
+            messages: [
+              { role: "system", content: formattedPrompt },
+              {
+                role: "user",
+                content: `Analise as informações do seguinte lead: ${JSON.stringify(lead)}`,
+              },
+            ],
+            model: "llama-3.3-70b-versatile",
+            response_format: { type: "json_object" },
+          });
+          const result = JSON.parse(completion.choices[0].message.content || "{}");
+          const scoreNum = Number(result.score) || 0;
+          const parsedScore = Math.round(scoreNum);
 
-      await db
-        .update(leads)
-        .set({
-          aiScore: parsedScore,
-          aiAnalysis: result.analysis,
-          status: "qualified",
-          updatedAt: new Date(),
-        })
-        .where(eq(leads.id, id));
-    } catch (_e) {
-    }
+          await db
+            .update(leads)
+            .set({
+              aiScore: parsedScore,
+              aiAnalysis: result.analysis,
+              status: "qualified",
+              updatedAt: new Date(),
+            })
+            .where(eq(leads.id, id));
+        } catch (_e) {
+        }
+      })
+    );
   }
 }
 
