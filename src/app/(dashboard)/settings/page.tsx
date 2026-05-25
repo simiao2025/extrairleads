@@ -17,6 +17,7 @@ import {
 import { Tooltip } from "@/components/ui/tooltip";
 import { useEffect, useState, useCallback } from "react";
 import {
+  changePasswordAction,
   checkWhatsAppConnectionAction,
   getWhatsAppQrCodeAction,
   getWhatsAppSettingsAction,
@@ -47,6 +48,12 @@ export default function SettingsPage() {
   const [upgradeLoading, setUpgradeLoading] = useState(false);
   const [selectedPackIndex, setSelectedPackIndex] = useState(0);
   const [profileInfo, setProfileInfo] = useState({ name: "", email: "", plan: "Starter", leadsBalance: 0 });
+
+  // Password change states
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [changingPassword, setChangingPassword] = useState(false);
 
   // Status simulado das variáveis globais do .env (como estamos no client, usamos fallbacks simples)
   const envStatus = {
@@ -121,6 +128,39 @@ export default function SettingsPage() {
       notify("Erro ao salvar: " + res.error, { type: "error" });
     } else {
       notify("Configurações salvas com sucesso!", { type: "success" });
+    }
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      notify("Preencha todos os campos para alterar a senha.", { type: "error" });
+      return;
+    }
+    if (newPassword.length < 6) {
+      notify("A nova senha deve ter pelo menos 6 caracteres.", { type: "error" });
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      notify("A nova senha e a confirmação não coincidem.", { type: "error" });
+      return;
+    }
+
+    setChangingPassword(true);
+    try {
+      const res = await changePasswordAction(currentPassword, newPassword);
+      if (res.success) {
+        notify("Senha alterada com sucesso!", { type: "success" });
+        setCurrentPassword("");
+        setNewPassword("");
+        setConfirmPassword("");
+      } else {
+        notify(res.error || "Erro ao alterar a senha.", { type: "error" });
+      }
+    } catch (_err) {
+      notify("Erro de rede ao alterar a senha.", { type: "error" });
+    } finally {
+      setChangingPassword(false);
     }
   };
 
@@ -520,6 +560,72 @@ export default function SettingsPage() {
                   {savingSettings ? "Salvando..." : "Salvar Preferências"}
                 </button>
               </div>
+            </div>
+
+            {/* Alterar Senha */}
+            <div className="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-6 shadow-xl mt-6">
+              <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2 font-heading">
+                <Lock className="w-5 h-5 text-emerald-500" />
+                Alterar Senha
+              </h2>
+              
+              <form onSubmit={handleChangePassword} className="space-y-4">
+                <div>
+                  <label htmlFor="currentPassword" className="block text-xs font-bold text-zinc-500 uppercase mb-1">Senha Atual</label>
+                  <input
+                    id="currentPassword"
+                    type="password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    className="w-full bg-zinc-900 border border-zinc-800 rounded-md p-2.5 text-sm text-white focus:border-emerald-500 outline-none transition-all"
+                    placeholder="Sua senha atual"
+                    required
+                  />
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="newPassword" className="block text-xs font-bold text-zinc-500 uppercase mb-1">Nova Senha (mín. 6 dígitos)</label>
+                    <input
+                      id="newPassword"
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      className="w-full bg-zinc-900 border border-zinc-800 rounded-md p-2.5 text-sm text-white focus:border-emerald-500 outline-none transition-all"
+                      placeholder="Mínimo 6 caracteres"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="confirmPassword" className="block text-xs font-bold text-zinc-500 uppercase mb-1">Confirmar Nova Senha</label>
+                    <input
+                      id="confirmPassword"
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className="w-full bg-zinc-900 border border-zinc-800 rounded-md p-2.5 text-sm text-white focus:border-emerald-500 outline-none transition-all"
+                      placeholder="Repita a nova senha"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end pt-2">
+                  <button
+                    type="submit"
+                    disabled={changingPassword}
+                    className="bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-emerald-950 font-bold text-xs py-2.5 px-6 rounded-md transition-all cursor-pointer flex items-center gap-2"
+                  >
+                    {changingPassword ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" /> Alterando...
+                      </>
+                    ) : (
+                      "Alterar Senha"
+                    )}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
 

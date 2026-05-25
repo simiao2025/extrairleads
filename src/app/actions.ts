@@ -6,6 +6,7 @@ export {
   updateAppointmentAction,
 } from "@/actions/appointments";
 export {
+  changePasswordAction,
   forgotPasswordAction,
   registerAction,
   resetPasswordAction,

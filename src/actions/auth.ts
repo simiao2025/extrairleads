@@ -6,6 +6,7 @@ import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import { users, verificationTokens } from "@/db/schema";
+import { auth } from "@/lib/auth";
 
 const registerSchema = z.object({
   name: z
@@ -304,6 +305,61 @@ export async function resetPasswordAction(
 
     return { success: true };
   } catch (_error: unknown) {
+    return { success: false, error: "Serviço temporariamente indisponível. Tente novamente." };
+  }
+}
+
+export async function changePasswordAction(
+  currentPasswordRaw: string,
+  newPasswordRaw: string,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const session = await auth();
+    if (!session?.user?.email) {
+      return { success: false, error: "Usuário não autenticado." };
+    }
+
+    const currentPassword = currentPasswordRaw;
+    const newPassword = newPasswordRaw;
+
+    if (!currentPassword || !newPassword) {
+      return { success: false, error: "Preencha todos os campos obrigatórios." };
+    }
+
+    if (newPassword.length < 6) {
+      return { success: false, error: "A nova senha deve ter pelo menos 6 caracteres." };
+    }
+
+    // 1. Buscar usuário
+    const [user] = await db.select().from(users).where(eq(users.email, session.user.email));
+    if (!user || !user.password) {
+      return { success: false, error: "Usuário não encontrado." };
+    }
+
+    // 2. Verificar senha atual
+    let isCurrentValid = false;
+    try {
+      isCurrentValid = await argon2.verify(user.password, currentPassword);
+    } catch (_e) {
+      return { success: false, error: "Senha atual incorreta." };
+    }
+
+    if (!isCurrentValid) {
+      return { success: false, error: "Senha atual incorreta." };
+    }
+
+    // 3. Hash a nova senha
+    const hashedNewPassword = await argon2.hash(newPassword);
+
+    // 4. Atualizar no banco
+    await db
+      .update(users)
+      .set({ password: hashedNewPassword })
+      .where(eq(users.id, user.id));
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("Erro ao alterar senha:", error);
     return { success: false, error: "Serviço temporariamente indisponível. Tente novamente." };
   }
 }
