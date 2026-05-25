@@ -23,9 +23,12 @@ export async function checkWhatsAppConnectionAction() {
       return { success: false, error: "Usuário não autenticado." };
     }
 
-    const instanceName = user.whatsappInstanceName || user.cpfCnpj?.toString().replace(/\D/g, "");
+    // Se não tiver instanceName configurado nem CPF, geramos um fallback usando o ID do usuário
+    const instanceName = user.whatsappInstanceName || 
+                         (user.cpfCnpj ? user.cpfCnpj.toString().replace(/\D/g, "") : `extleads_${user.id}`);
+                         
     if (!instanceName) {
-      return { success: false, error: "Instância de WhatsApp não configurada no cadastro." };
+      return { success: false, error: "Falha catastrófica ao gerar nome da instância." };
     }
 
     const evolutionUrl = process.env.EVOLUTION_API_URL;

@@ -90,16 +90,21 @@ export async function registerAction(
     const activationLink = `${baseUrl}/api/auth/confirm?token=${token}&email=${encodeURIComponent(email)}`;
 
     const resendApiKey = process.env.RESEND_API_KEY;
-    if (resendApiKey) {
-      try {
-        const res = await fetch("https://api.resend.com/emails", {
+    if (!resendApiKey) {
+      console.warn("Aviso: RESEND_API_KEY não configurada. O e-mail não foi enviado.");
+      // Se não tem chave, avisamos o frontend para que o dev saiba, em vez de sucesso fantasma.
+      return { success: false, error: "Chave do serviço de e-mail não configurada no servidor." };
+    }
+
+    try {
+      const res = await fetch("https://api.resend.com/emails", {
           method: "POST",
           headers: {
             Authorization: `Bearer ${resendApiKey}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            from: process.env.EMAIL_FROM || "ExtrairLeads <onboarding@brasilonthebox.shop>",
+            from: process.env.EMAIL_FROM || "ExtrairLeads Onboarding <onboarding@resend.dev>",
             to: email,
             subject: "Ative sua conta - ExtrairLeads",
             html: `
@@ -144,7 +149,7 @@ export async function registerAction(
 
     return {
       success: true,
-      message: "E-mail de confirmação enviado! Verifique sua caixa de entrada.",
+      message: "E-mail de confirmação enviado! Verifique sua caixa de entrada ou Spam.",
     };
   } catch (_error: unknown) {
     return { success: false, error: "Serviço temporariamente indisponível. Tente novamente." };
