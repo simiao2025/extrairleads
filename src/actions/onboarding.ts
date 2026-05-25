@@ -66,6 +66,7 @@ export async function saveOnboardingInfoAction(data: {
         },
         body: JSON.stringify({
           instanceName: instanceName,
+          name: instanceName, // Evolution v3 requer o campo 'name'
           token: instanceToken,
           qrcode: true,
           integration: "WHATSAPP-BAILEYS",
