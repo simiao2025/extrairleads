@@ -12,7 +12,7 @@ export async function createScrapingJobAction({
   limit = 20,
   onlyScrape = false,
 }: {
-  campaignId: number;
+  campaignId?: number | null;
   limit?: number;
   onlyScrape?: boolean;
 }) {
@@ -23,7 +23,7 @@ export async function createScrapingJobAction({
   const [job] = await db
     .insert(scrapingJobs)
     .values({
-      campaignId,
+      campaignId: campaignId || null,
       userId,
       status: "scraping",
       totalExpected: limit,
@@ -45,7 +45,7 @@ export async function runScrapingJobAction({
   onlyScrape = false,
 }: {
   jobId: number;
-  campaignId: number;
+  campaignId?: number | null;
   niche: string;
   city: string;
   state: string;
@@ -64,7 +64,7 @@ export async function runScrapingJobAction({
 
   try {
     let currentCount = 0;
-    let leadsToInsert = [];
+    const leadsToInsert = [];
     let start = 0;
 
     // Loop for pagination
@@ -92,7 +92,7 @@ export async function runScrapingJobAction({
         }
 
         leadsToInsert.push({
-          campaignId,
+          campaignId: campaignId || null,
           userId,
           name: result.title,
           phone,
@@ -128,9 +128,11 @@ export async function runScrapingJobAction({
         // Qualify all at once for simplicity, or chunk it. Here we use the existing action.
         await qualifyLeadsAction(inserted.map((l) => l.id));
 
-        const [campaign] = await db.select().from(campaigns).where(eq(campaigns.id, campaignId));
-        if (campaign?.autoOutreach === "true") {
-          await startOutreachAction(campaignId);
+        if (campaignId) {
+          const [campaign] = await db.select().from(campaigns).where(eq(campaigns.id, campaignId));
+          if (campaign?.autoOutreach === "true") {
+            await startOutreachAction(campaignId);
+          }
         }
       }
     }

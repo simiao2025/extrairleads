@@ -1,7 +1,7 @@
 "use server";
 
-import argon2 from "@node-rs/argon2";
 import crypto from "node:crypto";
+import argon2 from "@node-rs/argon2";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
@@ -50,28 +50,30 @@ export async function registerAction(
     // Procuramos o usuário, mas se ele existir, disfarçamos.
     const [existingUser] = await db.select().from(users).where(eq(users.email, email));
 
-    if (existingUser) {
-      // Se existir, nós não criamos o usuário novamente nem enviamos erro.
-      // Apenas simulamos o mesmo fluxo externo de sucesso para evitar enumeração.
-      // Nota: Na vida real, poderíamos enviar um e-mail de "Você já tem conta, faça login".
-      return {
-        success: true,
-        message: "E-mail de confirmação enviado! Verifique sua caixa de entrada.",
-      };
-    }
-
     // 3. Argon2id para Hashing Forte (OWASP A05)
-    // Substitui o antigo bcrypt
     const hashedPassword = await argon2.hash(password);
 
-    // 4. Inserção Segura
-    await db.insert(users).values({
-      name,
-      email,
-      password: hashedPassword,
-      onboardingStatus: "PENDING_INFO",
-      emailVerified: null, // Forçar confirmação por e-mail
-    });
+    if (existingUser) {
+      if (existingUser.emailVerified) {
+        // Zero Account Enumeration para usuários já ativos.
+        return {
+          success: true,
+          message: "E-mail de confirmação enviado! Verifique sua caixa de entrada.",
+        };
+      }
+      // Se existe mas não foi verificado, NÃO alteramos a senha ou nome (evita hijacking de registro).
+      // Apenas limpamos os tokens antigos para gerar um novo e reenviar o e-mail de ativação.
+      await db.delete(verificationTokens).where(eq(verificationTokens.identifier, email));
+    } else {
+      // 4. Inserção Segura
+      await db.insert(users).values({
+        name,
+        email,
+        password: hashedPassword,
+        onboardingStatus: "PENDING_INFO",
+        emailVerified: null, // Forçar confirmação por e-mail
+      });
+    }
 
     // 5. Token criptograficamente seguro (OWASP A02)
     const token = crypto.randomBytes(32).toString("hex");
@@ -90,14 +92,14 @@ export async function registerAction(
     const resendApiKey = process.env.RESEND_API_KEY;
     if (resendApiKey) {
       try {
-        await fetch("https://api.resend.com/emails", {
+        const res = await fetch("https://api.resend.com/emails", {
           method: "POST",
           headers: {
             Authorization: `Bearer ${resendApiKey}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            from: "ExtrairLeads <onboarding@resend.dev>",
+            from: process.env.EMAIL_FROM || "ExtrairLeads <onboarding@brasilonthebox.shop>",
             to: email,
             subject: "Ative sua conta - ExtrairLeads",
             html: `
@@ -125,7 +127,18 @@ export async function registerAction(
             `,
           }),
         });
-      } catch (_err) {
+
+        if (!res.ok) {
+          const errText = await res.text();
+          console.error("Falha ao enviar e-mail via Resend:", res.status, errText);
+          return {
+            success: false,
+            error: "Erro ao enviar e-mail de ativação. Verifique a configuração de e-mail.",
+          };
+        }
+      } catch (err) {
+        console.error("Erro de rede no envio de e-mail:", err);
+        return { success: false, error: "Erro de comunicação ao enviar o e-mail." };
       }
     }
 
@@ -196,7 +209,7 @@ export async function forgotPasswordAction(
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            from: "ExtrairLeads <onboarding@resend.dev>",
+            from: process.env.EMAIL_FROM || "ExtrairLeads <onboarding@brasilonthebox.shop>",
             to: email,
             subject: "Recuperação de Senha - ExtrairLeads",
             html: `
@@ -227,8 +240,7 @@ export async function forgotPasswordAction(
 `,
           }),
         });
-      } catch (_err) {
-      }
+      } catch (_err) {}
     }
 
     return {
@@ -289,20 +301,5 @@ export async function resetPasswordAction(
     return { success: true };
   } catch (_error: unknown) {
     return { success: false, error: "Serviço temporariamente indisponível. Tente novamente." };
-  }
-}
-
-export async function checkEmailVerifiedAction(
-  email: string,
-): Promise<{ success: boolean; verified: boolean; error?: string }> {
-  try {
-    const cleanEmail = email.toLowerCase().trim();
-    const [user] = await db.select().from(users).where(eq(users.email, cleanEmail));
-    if (!user) {
-      return { success: false, verified: false, error: "Usuário não encontrado." };
-    }
-    return { success: true, verified: !!user.emailVerified };
-  } catch (_err) {
-    return { success: false, verified: false, error: "Erro ao verificar status do e-mail." };
   }
 }

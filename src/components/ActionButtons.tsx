@@ -6,7 +6,13 @@ import { followUpLeadsAction, qualifyPendingLeadsAction, startOutreachAction } f
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 
-export function AnalyzeButton({ campaignId, rawLeadsCount = 0 }: { campaignId?: number; rawLeadsCount?: number }) {
+export function AnalyzeButton({
+  campaignId,
+  rawLeadsCount = 0,
+}: {
+  campaignId?: number;
+  rawLeadsCount?: number;
+}) {
   const [loading, setLoading] = useState(false);
   const { success, error } = useToast();
 
@@ -30,9 +36,9 @@ export function AnalyzeButton({ campaignId, rawLeadsCount = 0 }: { campaignId?: 
     <div className="relative w-full sm:w-auto group">
       <Button
         variant="outline"
-        className={`w-full sm:w-auto rounded-xl h-12 px-6 backdrop-blur-md transition-all duration-300 ${!campaignId || rawLeadsCount === 0 ? "opacity-50 cursor-not-allowed bg-white/[0.01] border-white/5 text-zinc-600" : "bg-white/[0.02] border-white/10 text-zinc-400 hover:bg-white/5 hover:border-white/20 hover:text-white hover:shadow-[0_0_15px_rgba(255,255,255,0.05)] active:scale-98 cursor-pointer"}`}
+        className={`w-full sm:w-auto rounded-xl h-12 px-6 backdrop-blur-md transition-all duration-300 ${rawLeadsCount === 0 ? "opacity-50 cursor-not-allowed bg-white/[0.01] border-white/5 text-zinc-600" : "bg-white/[0.02] border-white/10 text-zinc-400 hover:bg-white/5 hover:border-white/20 hover:text-white hover:shadow-[0_0_15px_rgba(255,255,255,0.05)] active:scale-98 cursor-pointer"}`}
         onClick={handleClick}
-        disabled={!campaignId || rawLeadsCount === 0 || loading}
+        disabled={rawLeadsCount === 0 || loading}
       >
         {loading ? (
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -41,7 +47,7 @@ export function AnalyzeButton({ campaignId, rawLeadsCount = 0 }: { campaignId?: 
         )}
         {loading ? "Analisando..." : "Análise de Raspagem"}
       </Button>
-      {rawLeadsCount > 0 && campaignId && (
+      {rawLeadsCount > 0 && (
         <span className="absolute -top-2 -right-2 flex items-center justify-center min-w-[20px] h-5 px-1.5 text-[10px] font-bold text-white bg-red-500 rounded-full shadow-[0_0_10px_rgba(239,68,68,0.5)] animate-in zoom-in duration-300">
           {rawLeadsCount}
         </span>
@@ -50,14 +56,14 @@ export function AnalyzeButton({ campaignId, rawLeadsCount = 0 }: { campaignId?: 
   );
 }
 
-export function OutreachButton({ 
-  campaignId, 
-  isAutoOutreach = false, 
-  isWhatsappConnected = true 
-}: { 
-  campaignId?: number; 
-  isAutoOutreach?: boolean; 
-  isWhatsappConnected?: boolean; 
+export function OutreachButton({
+  campaignId,
+  isAutoOutreach = false,
+  isWhatsappConnected = true,
+}: {
+  campaignId?: number;
+  isAutoOutreach?: boolean;
+  isWhatsappConnected?: boolean;
 }) {
   const [loading, setLoading] = useState(false);
   const { success, error } = useToast();
@@ -89,19 +95,25 @@ export function OutreachButton({
       ) : (
         <Play className="mr-2 h-4 w-4 fill-current" />
       )}
-      {loading ? "Processando..." : isAutoOutreach ? "Motor Automático" : !isWhatsappConnected ? "WhatsApp Offline" : "Ligar Motor IA"}
+      {loading
+        ? "Processando..."
+        : isAutoOutreach
+          ? "Motor Automático"
+          : !isWhatsappConnected
+            ? "WhatsApp Offline"
+            : "Ligar Motor IA"}
     </Button>
   );
 }
 
-export function FollowUpButton({ 
-  campaignId, 
-  hasContactedLeads = true, 
-  isWhatsappConnected = true 
-}: { 
-  campaignId?: number; 
-  hasContactedLeads?: boolean; 
-  isWhatsappConnected?: boolean; 
+export function FollowUpButton({
+  campaignId,
+  hasContactedLeads = true,
+  isWhatsappConnected = true,
+}: {
+  campaignId?: number;
+  hasContactedLeads?: boolean;
+  isWhatsappConnected?: boolean;
 }) {
   const [loading, setLoading] = useState(false);
   const { success, error } = useToast();

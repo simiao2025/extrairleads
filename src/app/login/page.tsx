@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { useEffect, useState } from "react";
-import { checkEmailVerifiedAction, forgotPasswordAction, registerAction } from "@/app/actions";
+import { forgotPasswordAction, registerAction } from "@/app/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -66,16 +66,6 @@ export default function LoginPage() {
 
     try {
       if (isLogin) {
-        // ── Pre-check para e-mail verificado ──
-        const check = await checkEmailVerifiedAction(form.email);
-        if (check.success && !check.verified) {
-          setError(
-            "Sua conta ainda não foi ativada. Verifique a caixa de entrada do seu e-mail para confirmar seu cadastro.",
-          );
-          setLoading(false);
-          return;
-        }
-
         // ── Login ──
         const result = await signIn("credentials", {
           email: form.email,
@@ -84,7 +74,13 @@ export default function LoginPage() {
         });
 
         if (result?.error) {
-          setError("E-mail ou senha incorretos.");
+          if (result.error.includes("unverified_email")) {
+            setError(
+              "Sua conta ainda não foi ativada. Verifique a caixa de entrada do seu e-mail para confirmar seu cadastro.",
+            );
+          } else {
+            setError("E-mail ou senha incorretos.");
+          }
         } else {
           router.push("/");
           router.refresh();
@@ -217,12 +213,16 @@ export default function LoginPage() {
             {showForgot ? (
               <>
                 <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
+                  <label
+                    htmlFor="forgotEmail"
+                    className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider"
+                  >
                     Email Corporativo
                   </label>
                   <div className="relative group">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within:text-white transition-colors" />
                     <Input
+                      id="forgotEmail"
                       type="email"
                       placeholder="voce@empresa.com"
                       value={forgotEmail}
@@ -263,12 +263,16 @@ export default function LoginPage() {
               <>
                 {!isLogin && (
                   <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
+                    <label
+                      htmlFor="name"
+                      className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider"
+                    >
                       Nome Completo
                     </label>
                     <div className="relative group">
                       <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within:text-white transition-colors" />
                       <Input
+                        id="name"
                         placeholder="Seu nome"
                         value={form.name}
                         onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -280,12 +284,16 @@ export default function LoginPage() {
                 )}
 
                 <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
+                  <label
+                    htmlFor="email"
+                    className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider"
+                  >
                     Email Corporativo
                   </label>
                   <div className="relative group">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within:text-white transition-colors" />
                     <Input
+                      id="email"
                       type="email"
                       placeholder="voce@empresa.com"
                       value={form.email}
@@ -298,7 +306,10 @@ export default function LoginPage() {
 
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <label className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
+                    <label
+                      htmlFor="password"
+                      className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider"
+                    >
                       Senha
                     </label>
                     {isLogin && (
@@ -319,6 +330,7 @@ export default function LoginPage() {
                   <div className="relative group">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within:text-white transition-colors" />
                     <Input
+                      id="password"
                       type="password"
                       placeholder="••••••••"
                       value={form.password}

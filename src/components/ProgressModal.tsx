@@ -1,14 +1,17 @@
+import { AlertCircle, BrainCircuit, CheckCircle2, Search } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Search, BrainCircuit, CheckCircle2, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ProgressModalProps {
   jobId: number | null;
+  onlyScrape?: boolean;
   onClose: () => void;
 }
 
-export function ProgressModal({ jobId, onClose }: ProgressModalProps) {
-  const [status, setStatus] = useState<"scraping" | "qualifying" | "completed" | "failed">("scraping");
+export function ProgressModal({ jobId, onlyScrape = false, onClose }: ProgressModalProps) {
+  const [status, setStatus] = useState<"scraping" | "qualifying" | "completed" | "failed">(
+    "scraping",
+  );
   const [progress, setProgress] = useState(0);
   const [total, setTotal] = useState(20);
 
@@ -20,7 +23,7 @@ export function ProgressModal({ jobId, onClose }: ProgressModalProps) {
         const res = await fetch(`/api/jobs/progress?jobId=${jobId}`);
         if (!res.ok) throw new Error("Falha ao buscar progresso");
         const data = await res.json();
-        
+
         setStatus(data.status);
         setProgress(data.currentProgress);
         setTotal(data.totalExpected);
@@ -44,21 +47,26 @@ export function ProgressModal({ jobId, onClose }: ProgressModalProps) {
 
   if (!jobId) return null;
 
-  const scrapePercent = status === "scraping" ? Math.min(100, Math.round((progress / total) * 100)) : 100;
-  const qualifyPercent = status === "completed" ? 100 : (status === "qualifying" ? 50 : 0); // Simplified qualification progress
+  const scrapePercent =
+    status === "scraping" ? Math.min(100, Math.round((progress / total) * 100)) : 100;
+  const qualifyPercent = status === "completed" ? 100 : status === "qualifying" ? 50 : 0; // Simplified qualification progress
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
       <div className="bg-zinc-950 border border-zinc-800 p-8 rounded-2xl w-full max-w-md shadow-2xl relative overflow-hidden">
-        
         {/* Background glow */}
-        <div className={cn(
-          "absolute -top-20 -left-20 w-64 h-64 rounded-full blur-[100px] pointer-events-none transition-colors duration-1000",
-          status === "scraping" ? "bg-blue-500/20" : status === "qualifying" ? "bg-emerald-500/20" : "bg-zinc-500/20"
-        )} />
+        <div
+          className={cn(
+            "absolute -top-20 -left-20 w-64 h-64 rounded-full blur-[100px] pointer-events-none transition-colors duration-1000",
+            status === "scraping"
+              ? "bg-blue-500/20"
+              : status === "qualifying"
+                ? "bg-emerald-500/20"
+                : "bg-zinc-500/20",
+          )}
+        />
 
         <div className="relative z-10 flex flex-col items-center text-center">
-          
           {/* Animated Icon */}
           <div className="relative w-24 h-24 mb-6 flex items-center justify-center">
             {status === "scraping" && (
@@ -95,8 +103,10 @@ export function ProgressModal({ jobId, onClose }: ProgressModalProps) {
             {status === "failed" && "Erro no Processamento"}
           </h3>
           <p className="text-sm text-zinc-400 mb-8 max-w-[280px]">
-            {status === "scraping" && `Coletando contatos. Progresso: ${progress} de ${total} páginas mapeadas.`}
-            {status === "qualifying" && "Processando perfis no motor neural para identificar tomadores de decisão."}
+            {status === "scraping" &&
+              `Coletando contatos. Progresso: ${progress} de ${total} páginas mapeadas.`}
+            {status === "qualifying" &&
+              "Processando perfis no motor neural para identificar tomadores de decisão."}
             {status === "completed" && "Os leads validados já estão no seu pipeline."}
           </p>
 
@@ -105,38 +115,47 @@ export function ProgressModal({ jobId, onClose }: ProgressModalProps) {
             {/* Scraping Bar */}
             <div className="space-y-2">
               <div className="flex justify-between text-xs font-bold uppercase tracking-wider">
-                <span className={status === "scraping" ? "text-blue-400" : "text-zinc-500"}>1. Raspagem</span>
+                <span className={status === "scraping" ? "text-blue-400" : "text-zinc-500"}>
+                  1. Raspagem
+                </span>
                 <span className="text-zinc-400">{scrapePercent}%</span>
               </div>
               <div className="h-2 w-full bg-zinc-900 rounded-full overflow-hidden">
-                <div 
+                <div
                   className="h-full bg-gradient-to-r from-blue-600 to-blue-400 transition-all duration-700 ease-out"
                   style={{ width: `${scrapePercent}%` }}
                 />
               </div>
             </div>
 
-            {/* Qualifying Bar */}
-            <div className="space-y-2">
-              <div className="flex justify-between text-xs font-bold uppercase tracking-wider">
-                <span className={status === "qualifying" ? "text-emerald-400" : "text-zinc-500"}>2. Qualificação IA</span>
-                <span className="text-zinc-400">{qualifyPercent}%</span>
+            {/* Qualifying Bar - Render only if it's NOT just scraping */}
+            {!onlyScrape && (
+              <div className="space-y-2">
+                <div className="flex justify-between text-xs font-bold uppercase tracking-wider">
+                  <span className={status === "qualifying" ? "text-emerald-400" : "text-zinc-500"}>
+                    2. Qualificação IA
+                  </span>
+                  <span className="text-zinc-400">{qualifyPercent}%</span>
+                </div>
+                <div className="h-2 w-full bg-zinc-900 rounded-full overflow-hidden">
+                  <div
+                    className={cn(
+                      "h-full transition-all duration-1000 ease-out",
+                      status === "qualifying"
+                        ? "bg-gradient-to-r from-emerald-600 to-emerald-400 animate-pulse"
+                        : "bg-emerald-500",
+                    )}
+                    style={{ width: `${qualifyPercent}%` }}
+                  />
+                </div>
               </div>
-              <div className="h-2 w-full bg-zinc-900 rounded-full overflow-hidden">
-                <div 
-                  className={cn(
-                    "h-full transition-all duration-1000 ease-out",
-                    status === "qualifying" ? "bg-gradient-to-r from-emerald-600 to-emerald-400 animate-pulse" : "bg-emerald-500"
-                  )}
-                  style={{ width: `${qualifyPercent}%` }}
-                />
-              </div>
-            </div>
+            )}
           </div>
 
           {/* Close / Retry Button */}
           {(status === "completed" || status === "failed") && (
             <button
+              type="button"
               onClick={onClose}
               className="mt-8 px-6 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg transition-colors font-medium text-sm"
             >

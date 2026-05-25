@@ -2,9 +2,19 @@
 
 import crypto from "node:crypto";
 import { eq } from "drizzle-orm";
+import { z } from "zod";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { auth } from "@/lib/auth";
+
+const onboardingSchema = z.object({
+  phone: z.string().min(10, "Telefone inválido."),
+  address: z.string().min(5, "Endereço inválido."),
+  city: z.string().min(2, "Cidade inválida."),
+  uf: z.string().length(2, "UF deve ter 2 letras."),
+  cep: z.string().min(8, "CEP inválido."),
+  cpfCnpj: z.string().min(11, "CPF/CNPJ inválido."),
+});
 
 export async function saveOnboardingInfoAction(data: {
   phone: string;
@@ -20,55 +30,73 @@ export async function saveOnboardingInfoAction(data: {
       return { success: false, error: "Sessão expirada. Faça login novamente." };
     }
 
-    const { phone, address, city, uf, cep, cpfCnpj } = data;
-    if (!phone || !address || !city || !uf || !cep || !cpfCnpj) {
-      return { success: false, error: "Todos os campos obrigatórios devem ser preenchidos." };
+    const validation = onboardingSchema.safeParse(data);
+    if (!validation.success) {
+      return { success: false, error: validation.error.issues[0].message };
     }
 
-    // Busca o usuário logado para capturar dados
+    const { phone, address, city, uf, cep, cpfCnpj } = validation.data;
+
     const [dbUser] = await db.select().from(users).where(eq(users.email, session.user.email));
 
     if (!dbUser) {
       return { success: false, error: "Usuário não encontrado." };
     }
 
-    // CPF ou CNPJ limpo de caracteres especiais para nomear a instância do Evolution Go
     const instanceName = cpfCnpj.toString().replace(/\D/g, "");
-    const instanceToken = crypto.randomUUID
-      ? crypto.randomUUID()
-      : Math.random().toString(36).substring(2) + Date.now().toString(36);
+    const instanceToken = crypto.randomUUID();
 
     const evolutionUrl = process.env.EVOLUTION_API_URL;
-    const globalKey = process.env.EVOLUTION_GLOBAL_API_KEY || "abcslirm2026";
+    const globalKey = process.env.EVOLUTION_GLOBAL_API_KEY;
 
-    if (evolutionUrl) {
-      try {
-        const response = await fetch(`${evolutionUrl}/instance/create`, {
-          method: "POST",
-          headers: {
-            apikey: globalKey,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            instanceName: instanceName,
-            name: instanceName,
-            token: instanceToken,
-            qrcode: true,
-            integration: "WHATSAPP-BAILEYS",
-          }),
-        });
-
-        if (!response.ok) {
-          await response.text(); // consume body
-        } else {
-          await response.json(); // consume body
-        }
-      } catch (_err) {
-      }
-    } else {
+    if (!evolutionUrl || !globalKey) {
+      console.error("ERRO CRÍTICO: Configurações da Evolution API ausentes no servidor (.env)");
+      return {
+        success: false,
+        error: "Serviço de WhatsApp temporariamente indisponível (Erro de configuração).",
+      };
     }
 
-    // Atualiza dados cadastrais e conclui onboarding
+    try {
+      const response = await fetch(`${evolutionUrl}/instance/create`, {
+        method: "POST",
+        headers: {
+          apikey: globalKey,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          instanceName: instanceName,
+          token: instanceToken,
+          qrcode: true,
+          integration: "WHATSAPP-BAILEYS",
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Falha na Evolution API:", response.status, errorText);
+
+        // Se a instância já existir (ex: CPF já usado antes), o Evolution pode retornar 400/409
+        if (response.status === 409 || errorText.includes("already exists")) {
+          return {
+            success: false,
+            error: "Já existe uma instância para este CPF/CNPJ no sistema.",
+          };
+        }
+
+        return {
+          success: false,
+          error: `Falha ao criar instância no WhatsApp: ${response.statusText}`,
+        };
+      }
+    } catch (err: any) {
+      console.error("Erro de rede ao conectar com Evolution API:", err);
+      return {
+        success: false,
+        error: "Falha de comunicação com o servidor do WhatsApp. Tente novamente.",
+      };
+    }
+
     await db
       .update(users)
       .set({
@@ -86,7 +114,8 @@ export async function saveOnboardingInfoAction(data: {
 
     return { success: true };
   } catch (error: any) {
-    return { success: false, error: error.message };
+    console.error("Erro inesperado no saveOnboardingInfoAction:", error);
+    return { success: false, error: "Erro interno ao processar onboarding." };
   }
 }
 

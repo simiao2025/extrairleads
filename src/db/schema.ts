@@ -80,9 +80,7 @@ export const accounts = pgTable(
     id_token: text("id_token"),
     session_state: text("session_state"),
   },
-  (table) => [
-    index("accounts_user_idx").on(table.userId),
-  ],
+  (table) => [index("accounts_user_idx").on(table.userId)],
 );
 
 export const sessions = pgTable(
@@ -93,17 +91,22 @@ export const sessions = pgTable(
     userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }),
     expires: timestamp("expires").notNull(),
   },
-  (table) => [
-    index("sessions_user_idx").on(table.userId),
-  ],
+  (table) => [index("sessions_user_idx").on(table.userId)],
 );
 
-export const verificationTokens = pgTable("verification_tokens", {
-  id: serial("id").primaryKey(),
-  identifier: text("identifier").notNull(),
-  token: text("token").notNull(),
-  expires: timestamp("expires").notNull(),
-});
+export const verificationTokens = pgTable(
+  "verification_tokens",
+  {
+    id: serial("id").primaryKey(),
+    identifier: text("identifier").notNull(),
+    token: text("token").notNull().unique(),
+    expires: timestamp("expires").notNull(),
+  },
+  (table) => [
+    index("verification_tokens_token_idx").on(table.token),
+    index("verification_tokens_identifier_idx").on(table.identifier),
+  ],
+);
 
 export const campaigns = pgTable(
   "campaigns",
@@ -119,9 +122,7 @@ export const campaigns = pgTable(
     status: text("status").default("active"), // "active", "paused", "completed"
     createdAt: timestamp("created_at").defaultNow(),
   },
-  (table) => [
-    index("campaigns_user_idx").on(table.userId),
-  ]
+  (table) => [index("campaigns_user_idx").on(table.userId)],
 );
 
 export const leads = pgTable(
@@ -166,9 +167,7 @@ export const campaignConfigs = pgTable(
     messageTemplate: text("message_template"),
     createdAt: timestamp("created_at").defaultNow(),
   },
-  (table) => [
-    index("campaign_configs_user_idx").on(table.userId),
-  ],
+  (table) => [index("campaign_configs_user_idx").on(table.userId)],
 );
 
 export const chatHistory = pgTable(
@@ -181,9 +180,7 @@ export const chatHistory = pgTable(
     type: text("type").default("text"), // 'text' ou 'audio'
     createdAt: timestamp("created_at").defaultNow(),
   },
-  (table) => [
-    index("chat_history_lead_idx").on(table.leadId),
-  ],
+  (table) => [index("chat_history_lead_idx").on(table.leadId)],
 );
 
 export const appointments = pgTable(
@@ -196,9 +193,7 @@ export const appointments = pgTable(
     notes: text("notes"),
     createdAt: timestamp("created_at").defaultNow(),
   },
-  (table) => [
-    index("appointments_lead_idx").on(table.leadId),
-  ],
+  (table) => [index("appointments_lead_idx").on(table.leadId)],
 );
 
 export const outreachLogs = pgTable(
@@ -209,9 +204,7 @@ export const outreachLogs = pgTable(
     status: text("status"), // e.g., 'sent', 'failed'
     sentAt: timestamp("sent_at").defaultNow(),
   },
-  (table) => [
-    index("outreach_logs_lead_idx").on(table.leadId),
-  ],
+  (table) => [index("outreach_logs_lead_idx").on(table.leadId)],
 );
 
 // Tipo personalizado para pgvector (dimensão 1536 para OpenAI text-embedding-3-small)
@@ -231,7 +224,5 @@ export const knowledgeBase = pgTable(
     embedding: vector1536("embedding"),
     createdAt: timestamp("created_at").defaultNow(),
   },
-  (table) => [
-    index("knowledge_base_user_idx").on(table.userId),
-  ],
+  (table) => [index("knowledge_base_user_idx").on(table.userId)],
 );

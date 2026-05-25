@@ -1,10 +1,14 @@
 import argon2 from "@node-rs/argon2";
 import { eq } from "drizzle-orm";
-import NextAuth from "next-auth";
+import NextAuth, { CredentialsSignin } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { authConfig } from "./auth.config";
+
+class UnverifiedEmailError extends CredentialsSignin {
+  code = "unverified_email";
+}
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   ...authConfig,
@@ -31,11 +35,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           return null;
         }
 
-        // Impede login se o e-mail não estiver verificado
-        if (!user.emailVerified) {
-          throw new Error("unverified_email");
-        }
-
         let isValid = false;
         try {
           isValid = await argon2.verify(user.password, password);
@@ -45,6 +44,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         if (!isValid) {
           return null;
+        }
+
+        // Impede login se o e-mail não estiver verificado (só após validar a senha)
+        if (!user.emailVerified) {
+          throw new UnverifiedEmailError();
         }
 
         return {
