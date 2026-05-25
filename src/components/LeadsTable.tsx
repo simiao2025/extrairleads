@@ -1,6 +1,6 @@
 "use client";
 
-import { Globe, MapPin, Pencil, Phone, Search, Trash2, X, MessageSquare } from "lucide-react";
+import { Globe, MapPin, Pencil, Phone, Trash2, MessageSquare } from "lucide-react";
 import { useState } from "react";
 import { deleteLeadAction, updateLeadAction } from "@/app/actions";
 import type { Lead } from "@/components/KanbanBoard";
