@@ -15,7 +15,6 @@ import {
   Gem,
   HelpCircle,
   X,
-  Book,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -80,8 +79,7 @@ export default function Sidebar({ user }: SidebarProps) {
       icon: Cpu
     },
     { name: "Configurações", href: "/settings", icon: Sliders },
-    { name: "Manual", href: "/manual", icon: Book },
-    { name: "Suporte", href: "https://wa.me/5563985112006", icon: HelpCircle },
+    { name: "Suporte", href: "/support", icon: HelpCircle },
   ];
 
   const handleSignOut = async () => {
