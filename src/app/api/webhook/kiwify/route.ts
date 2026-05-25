@@ -78,6 +78,23 @@ export async function POST(request: Request) {
       // Verifica se o usuário já existe
       const [existingUser] = await db.select().from(users).where(eq(users.email, email));
 
+      // Lógica de Identificação de Produto/Pacote da Kiwify
+      // Baseado no nome do produto, ID, ou valor cobrado, definimos os créditos.
+      const productName = (body.product?.name || "").toLowerCase();
+      
+      let addedCredits = 1000; // Padrão
+      let newPlan = "Starter";
+
+      if (productName.includes("2.500") || productName.includes("2500")) {
+        addedCredits = 2500;
+      } else if (productName.includes("10.000") || productName.includes("10000")) {
+        addedCredits = 10000;
+        newPlan = "Scale";
+      } else if (productName.includes("5.000") || productName.includes("5000") || productName.includes("growth")) {
+        addedCredits = 5000;
+        newPlan = "Growth";
+      }
+
       if (!existingUser) {
         // Gera senha temporária de 12 caracteres hexadecimais
         const tempPassword = crypto.randomBytes(6).toString("hex");
@@ -91,6 +108,8 @@ export async function POST(request: Request) {
           cpfCnpj,
           onboardingStatus: "PENDING_INFO",
           isTemporaryPassword: 1,
+          leadsBalance: addedCredits,
+          plan: newPlan,
         });
 
         // Envia o e-mail de boas-vindas com o link de login
@@ -101,7 +120,16 @@ export async function POST(request: Request) {
           message: "Usuário criado com sucesso e e-mail enviado.",
         });
       } else {
-        return NextResponse.json({ success: true, message: "Usuário com este e-mail já existe." });
+        // Usuário já existe: vamos adicionar saldo (Top-up) ou atualizar plano
+        const currentBalance = existingUser.leadsBalance || 0;
+        const newBalance = currentBalance + addedCredits;
+        
+        await db.update(users).set({
+          leadsBalance: newBalance,
+          plan: newPlan,
+        }).where(eq(users.id, existingUser.id));
+
+        return NextResponse.json({ success: true, message: `Saldo adicionado: +${addedCredits}. Novo saldo: ${newBalance}` });
       }
     }
 

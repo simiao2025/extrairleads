@@ -62,6 +62,15 @@ export async function runScrapingJobAction({
     return { success: false, error: "SerpApi Key ausente." };
   }
 
+  // Verificar saldo do usuário
+  const [currentUser] = await db.select({ leadsBalance: users.leadsBalance }).from(users).where(eq(users.id, userId));
+  let currentBalance = currentUser?.leadsBalance || 0;
+
+  if (currentBalance <= 0) {
+    await db.update(scrapingJobs).set({ status: "failed" }).where(eq(scrapingJobs.id, jobId));
+    return { success: false, error: "Saldo de leads esgotado. Por favor, adquira mais créditos na página de Configurações." };
+  }
+
   try {
     let currentCount = 0;
     const leadsToInsert = [];
@@ -100,11 +109,17 @@ export async function runScrapingJobAction({
           niche,
           city,
           state,
+          imageUrl: result.thumbnail || null,
           status: "raw" as const,
           metadata: { rating: result.rating, reviews: result.reviews, address: result.address },
         });
 
         currentCount++;
+        currentBalance--;
+
+        if (currentBalance <= 0) {
+          break; // Saldo acabou durante a raspagem
+        }
       }
 
       await db
@@ -118,6 +133,9 @@ export async function runScrapingJobAction({
 
     if (leadsToInsert.length > 0) {
       const inserted = await db.insert(leads).values(leadsToInsert).returning();
+
+      // Desconta o saldo do usuário pelo número de leads inseridos com sucesso
+      await db.update(users).set({ leadsBalance: currentBalance }).where(eq(users.id, userId));
 
       if (!onlyScrape) {
         await db

@@ -2,19 +2,31 @@
 
 import { toast } from "sonner";
 
+let audioCtx: AudioContext | null = null;
+
 // Função para tocar um beep simples usando a Web Audio API
 const playBeep = () => {
   try {
-    const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+    
+    // Muitos navegadores iniciam o contexto de áudio em estado 'suspended' até a primeira interação real
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+
     const oscillator = audioCtx.createOscillator();
     const gainNode = audioCtx.createGain();
 
     oscillator.type = "sine";
-    oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); // 880 Hz (A5)
+    // Frequência inicial (A5) com rampa para (A6) para um efeito de "ding" agradável
+    oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); 
+    oscillator.frequency.exponentialRampToValueAtTime(1760, audioCtx.currentTime + 0.1);
     
-    // Envelope para um som curto e agradável de "notificação"
+    // Envelope para um som curto (Volume ajustado para 0.2 para ser mais audível)
     gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
-    gainNode.gain.linearRampToValueAtTime(0.1, audioCtx.currentTime + 0.05);
+    gainNode.gain.linearRampToValueAtTime(0.2, audioCtx.currentTime + 0.05);
     gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
 
     oscillator.connect(gainNode);
@@ -23,7 +35,7 @@ const playBeep = () => {
     oscillator.start(audioCtx.currentTime);
     oscillator.stop(audioCtx.currentTime + 0.3);
   } catch (e) {
-    console.error("Audio API not supported", e);
+    console.error("Audio API not supported or blocked", e);
   }
 };
 

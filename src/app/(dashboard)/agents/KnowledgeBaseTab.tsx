@@ -17,9 +17,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { deleteKnowledgeAction, getKnowledgeBaseAction, saveKnowledgeAction } from "./actions";
+import { deleteKnowledgeAction, getKnowledgeBaseAction, saveKnowledgeAction } from "./knowledge-actions";
 
-export default function KnowledgePage() {
+export default function KnowledgeBaseTab() {
   const [documents, setDocuments] = useState<
     { id: number; title: string; content: string; createdAt: Date | null }[]
   >([]);
@@ -89,14 +89,7 @@ export default function KnowledgePage() {
   };
 
   return (
-    <main className="min-h-screen bg-transparent text-white p-4 md:p-8">
-      {/* Glow de Fundo */}
-      <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[45%] h-[45%] rounded-full bg-emerald-950/15 blur-[130px]" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[35%] h-[35%] rounded-full bg-blue-950/10 blur-[130px]" />
-      </div>
-
-      <div className="max-w-[1400px] mx-auto space-y-8 pt-4">
+    <div className="space-y-8 pt-4">
         <FadeIn delay={0.1}>
           <header className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -264,6 +257,5 @@ export default function KnowledgePage() {
           </div>
         </div>
       </div>
-    </main>
   );
 }

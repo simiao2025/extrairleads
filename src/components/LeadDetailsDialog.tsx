@@ -35,6 +35,7 @@ interface Lead {
   state: string | null;
   aiScore: number | null;
   aiAnalysis: string | null;
+  imageUrl: string | null;
   status: LeadStatus | null;
   metadata: unknown;
   createdAt: Date | null;
@@ -127,9 +128,15 @@ export default function LeadDetailsDialog({ lead, children }: { lead: Lead; chil
             <button className="w-full text-left p-4 rounded-xl bg-white/[0.02] backdrop-blur-xl border border-white/[0.05] hover:border-emerald-500/30 hover:bg-white/[0.04] hover:-translate-y-1 transition-all duration-300 cursor-pointer group shadow-lg shadow-black/20 hover:shadow-[0_8px_30px_rgba(16,185,129,0.15)] relative overflow-hidden">
               <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-500/10 rounded-bl-full blur-xl group-hover:bg-emerald-500/20 transition-colors"></div>
               <div className="flex justify-between items-start relative z-10">
-                <p className="font-bold text-sm truncate w-4/5 text-white/90 group-hover:text-emerald-400 transition-colors flex items-center gap-2">
-                  {lead.name}
-                </p>
+                <div className="flex items-center gap-3 w-4/5">
+                  {lead.imageUrl && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={lead.imageUrl} alt={lead.name} className="w-8 h-8 rounded-full object-cover border border-emerald-500/20" />
+                  )}
+                  <p className="font-bold text-sm truncate text-white/90 group-hover:text-emerald-400 transition-colors flex items-center gap-2">
+                    {lead.name}
+                  </p>
+                </div>
                 {lead.aiScore && (
                   <span className="text-[10px] font-black text-emerald-950 bg-emerald-400/90 px-1.5 py-0.5 rounded-md shadow-[0_0_12px_rgba(52,211,153,0.4)]">
                     {lead.aiScore}
@@ -155,12 +162,17 @@ export default function LeadDetailsDialog({ lead, children }: { lead: Lead; chil
         }
       />
 
-      <DialogContent className="bg-[#0b141a] border-zinc-800 text-[#e9edef] max-w-5xl w-[95vw] h-[90vh] flex flex-col shadow-2xl p-0 overflow-hidden sm:rounded-2xl">
+      <DialogContent className="bg-[#0b141a] border-zinc-800 text-[#e9edef] max-w-7xl w-[98vw] h-[95vh] flex flex-col shadow-2xl p-0 overflow-hidden sm:rounded-2xl">
         {/* Header - WhatsApp Web Style */}
         <DialogHeader className="bg-[#202c33] px-4 py-3 flex flex-row items-center justify-between border-b border-zinc-800/50 shrink-0 m-0 space-y-0">
           <DialogTitle className="flex items-center gap-3 text-2xl w-full">
-            <div className="w-10 h-10 bg-zinc-700 rounded-full flex items-center justify-center text-sm text-white font-bold shrink-0 overflow-hidden">
-              <User className="w-6 h-6 text-zinc-400 mt-2" />
+            <div className="w-12 h-12 bg-zinc-700 rounded-full flex items-center justify-center text-sm text-white font-bold shrink-0 overflow-hidden shadow-lg border border-zinc-600/50">
+              {lead.imageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={lead.imageUrl} alt={lead.name} className="w-full h-full object-cover" />
+              ) : (
+                <User className="w-6 h-6 text-zinc-400" />
+              )}
             </div>
             <div className="flex flex-col items-start overflow-hidden w-full space-y-0.5">
               <p className="font-medium text-base truncate w-full text-left leading-none">{lead.name}</p>

@@ -25,6 +25,7 @@ interface Lead {
   state: string | null;
   aiScore: number | null;
   aiAnalysis: string | null;
+  imageUrl: string | null;
   status: LeadStatus | null;
   metadata: unknown;
   createdAt: Date | null;
@@ -80,7 +81,13 @@ function CardContent({ lead }: { lead: Lead }) {
   return (
     <>
       <div className="flex justify-between items-start">
-        <p className="font-bold text-sm truncate w-4/5">{lead.name}</p>
+        <div className="flex items-center gap-2 w-4/5">
+          {lead.imageUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={lead.imageUrl} alt={lead.name} className="w-6 h-6 rounded-full object-cover border border-emerald-500/20" />
+          )}
+          <p className="font-bold text-sm truncate w-full">{lead.name}</p>
+        </div>
         {lead.aiScore && (
           <span className="text-[10px] font-bold text-emerald-950 bg-emerald-400 px-1.5 py-0.5 rounded shadow-[0_0_10px_rgba(52,211,153,0.3)]">
             {lead.aiScore}

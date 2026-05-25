@@ -41,6 +41,7 @@ export interface Lead {
   state: string | null;
   aiScore: number | null;
   aiAnalysis: string | null;
+  imageUrl: string | null;
   status: LeadStatus | null;
   metadata: unknown;
   createdAt: Date | null;

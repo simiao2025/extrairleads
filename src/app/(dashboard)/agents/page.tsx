@@ -1,12 +1,14 @@
-import { ArrowLeft, Bot, MessageSquare, Save, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Bot, MessageSquare, Save, ShieldCheck, Cpu, BookOpen } from "lucide-react";
 import Link from "next/link";
 import { FadeIn, StaggerContainer, StaggerItem } from "@/components/FadeIn";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getAiConfig, saveAiConfigAction } from "./actions";
 import { PromptTemplates } from "./PromptTemplates";
+import KnowledgeBaseTab from "./KnowledgeBaseTab";
 
 export default async function ConfigPage() {
   const config = await getAiConfig();
@@ -42,8 +44,27 @@ export default async function ConfigPage() {
           </header>
         </FadeIn>
 
-        <form action={saveAiConfigAction}>
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <Tabs defaultValue="architecture" className="flex flex-col space-y-6">
+          <TabsList className="bg-white/[0.03] border border-white/[0.05] rounded-xl p-1 inline-flex self-start">
+            <TabsTrigger 
+              value="architecture" 
+              className="rounded-lg data-[state=active]:bg-emerald-500/20 data-[state=active]:text-emerald-300 text-zinc-400 font-bold flex items-center gap-2 px-4 py-2"
+            >
+              <Cpu className="w-4 h-4" />
+              Arquitetura Neural
+            </TabsTrigger>
+            <TabsTrigger 
+              value="rag" 
+              className="rounded-lg data-[state=active]:bg-emerald-500/20 data-[state=active]:text-emerald-300 text-zinc-400 font-bold flex items-center gap-2 px-4 py-2"
+            >
+              <BookOpen className="w-4 h-4" />
+              Base de Conhecimento (RAG)
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="architecture">
+            <form action={saveAiConfigAction}>
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             {/* Coluna Principal: Configurações */}
             <div className="lg:col-span-8 space-y-6">
               <StaggerContainer className="space-y-6">
@@ -207,7 +228,13 @@ export default async function ConfigPage() {
             </div>
           </FadeIn>
         </form>
-      </div>
-    </main>
+        </TabsContent>
+
+        <TabsContent value="rag">
+          <KnowledgeBaseTab />
+        </TabsContent>
+      </Tabs>
+    </div>
+  </main>
   );
 }

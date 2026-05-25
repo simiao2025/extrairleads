@@ -72,7 +72,7 @@ export default async function Home({ searchParams }: PageProps) {
   const isWhatsappConnected = whatsappStatus.success && !!whatsappStatus.connected;
 
   return (
-    <main className="min-h-screen bg-background text-foreground p-4 md:p-8 pt-12 relative overflow-hidden">
+    <div className="relative min-h-screen bg-background text-foreground p-4 md:p-8 overflow-hidden">
       <AutoRefresh interval={5000} />
       {/* Background Effect */}
       <div className="fixed inset-0 bg-cyber-grid pointer-events-none z-0" />
@@ -224,6 +224,6 @@ export default async function Home({ searchParams }: PageProps) {
           />
         </section>
       </div>
-    </main>
+    </div>
   );
 }

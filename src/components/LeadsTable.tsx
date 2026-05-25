@@ -239,141 +239,136 @@ export function LeadsTable({ leads, onRefresh }: LeadsTableProps) {
 
   return (
     <>
-      <div className="rounded-xl border border-zinc-800/50 w-full overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow className="border-zinc-800/50 hover:bg-zinc-900/50">
-              <TableHead className="text-zinc-400 font-bold uppercase text-[10px] tracking-widest">
-                Nome
-              </TableHead>
-              <TableHead className="text-zinc-400 font-bold uppercase text-[10px] tracking-widest">
-                Contato
-              </TableHead>
-              <TableHead className="text-zinc-400 font-bold uppercase text-[10px] tracking-widest">
-                Localização
-              </TableHead>
-              <TableHead className="text-zinc-400 font-bold uppercase text-[10px] tracking-widest">
-                Nicho
-              </TableHead>
-              <TableHead className="text-zinc-400 font-bold uppercase text-[10px] tracking-widest">
-                Score IA
-              </TableHead>
-              <TableHead className="text-zinc-400 font-bold uppercase text-[10px] tracking-widest">
-                Status
-              </TableHead>
-              <TableHead className="text-zinc-400 font-bold uppercase text-[10px] tracking-widest text-right">
-                Ações
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {leads.map((lead) => (
-              <TableRow key={lead.id} className="border-zinc-800/30 hover:bg-zinc-900/30">
-                <TableCell className="font-medium text-white">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-emerald-500 to-cyan-500 flex items-center justify-center text-xs text-black font-black">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 w-full">
+        {leads.map((lead) => (
+          <div
+            key={lead.id}
+            className="group relative flex flex-col justify-between rounded-2xl bg-zinc-900/40 border border-zinc-800/50 p-5 hover:-translate-y-1 hover:border-emerald-500/30 hover:shadow-[0_8px_30px_rgba(16,185,129,0.05)] transition-all duration-300 overflow-hidden"
+          >
+            {/* Background glow on hover */}
+            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/0 via-transparent to-emerald-500/0 group-hover:from-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+
+            <div className="relative z-10 space-y-4">
+              {/* Header: Avatar + Status */}
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                  {lead.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={lead.imageUrl} alt={lead.name} className="w-10 h-10 rounded-xl object-cover shadow-[0_0_15px_rgba(16,185,129,0.3)] shrink-0 border border-emerald-500/20" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-cyan-500 flex items-center justify-center text-black font-black text-lg shadow-[0_0_15px_rgba(16,185,129,0.3)] shrink-0">
                       {lead.name.substring(0, 2).toUpperCase()}
                     </div>
-                    <span className="truncate max-w-[200px]">{lead.name}</span>
-                  </div>
-                </TableCell>
-                <TableCell className="text-zinc-400">
-                  <div className="flex flex-col gap-1">
-                    {lead.phone && (
-                      <span className="flex items-center gap-1.5 text-xs">
-                        <Phone className="h-3 w-3" />
-                        {lead.phone}
-                      </span>
-                    )}
-                    {lead.website && (
-                      <span className="flex items-center gap-1.5 text-xs">
-                        <Globe className="h-3 w-3" />
-                        <a
-                          href={lead.website}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="hover:text-emerald-400 transition-colors truncate max-w-[150px]"
-                        >
-                          Website
-                        </a>
-                      </span>
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell className="text-zinc-400 text-sm">
-                  {lead.city && lead.state ? (
-                    <span className="flex items-center gap-1.5">
-                      <MapPin className="h-3 w-3" />
-                      {lead.city}, {lead.state}
-                    </span>
-                  ) : (
-                    <span className="text-zinc-600">—</span>
                   )}
-                </TableCell>
-                <TableCell>
-                  <Badge variant="outline" className="bg-zinc-900/50 border-zinc-800 text-zinc-300">
-                    {lead.niche || "—"}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  {lead.aiScore !== null && lead.aiScore !== undefined ? (
-                    <span
-                      className={`font-bold text-sm ${
-                        lead.aiScore >= 8
-                          ? "text-emerald-400"
-                          : lead.aiScore >= 5
-                            ? "text-yellow-400"
-                            : "text-red-400"
-                      }`}
+                  <div className="min-w-0">
+                    <h3 className="font-bold text-white leading-tight font-heading group-hover:text-emerald-400 transition-colors truncate">
+                      {lead.name}
+                    </h3>
+                    {lead.niche && <p className="text-xs text-zinc-500 truncate">{lead.niche}</p>}
+                  </div>
+                </div>
+              </div>
+
+              {/* Status Badge moved below header to save space on small cards */}
+              <div>
+                <Badge
+                  variant="outline"
+                  className={`border ${STATUS_COLORS[lead.status || "raw"]} text-[10px] uppercase font-bold px-2 py-0.5`}
+                >
+                  {STATUS_LABELS[lead.status || "raw"]}
+                </Badge>
+              </div>
+
+              {/* Info */}
+              <div className="space-y-2 pt-2 border-t border-zinc-800/50">
+                {lead.phone && (
+                  <div className="flex items-center gap-2 text-sm text-zinc-400">
+                    <Phone className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                    <span className="truncate">{lead.phone}</span>
+                  </div>
+                )}
+                {lead.website && (
+                  <div className="flex items-center gap-2 text-sm text-zinc-400">
+                    <Globe className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                    <a
+                      href={lead.website.startsWith("http") ? lead.website : `https://${lead.website}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:text-emerald-400 transition-colors truncate"
                     >
-                      {lead.aiScore}/10
+                      {lead.website.replace(/^https?:\/\//, "")}
+                    </a>
+                  </div>
+                )}
+                {(lead.city || lead.state) && (
+                  <div className="flex items-center gap-2 text-sm text-zinc-400">
+                    <MapPin className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                    <span className="truncate">
+                      {lead.city}
+                      {lead.city && lead.state ? ", " : ""}
+                      {lead.state}
                     </span>
-                  ) : (
-                    <span className="text-zinc-600 text-sm">—</span>
-                  )}
-                </TableCell>
-                <TableCell>
-                  <Badge
-                    variant="outline"
-                    className={`border ${STATUS_COLORS[lead.status || "raw"]}`}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Footer: AI Score + Actions */}
+            <div className="relative z-10 flex items-center justify-between pt-4 mt-4 border-t border-zinc-800/50">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">
+                  Score
+                </span>
+                {lead.aiScore !== null && lead.aiScore !== undefined ? (
+                  <span
+                    className={`font-black text-sm ${
+                      lead.aiScore >= 8
+                        ? "text-emerald-400 drop-shadow-[0_0_5px_rgba(16,185,129,0.5)]"
+                        : lead.aiScore >= 5
+                          ? "text-yellow-400"
+                          : "text-red-400"
+                    }`}
                   >
-                    {STATUS_LABELS[lead.status || "raw"]}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex items-center justify-end gap-1">
-                    <LeadDetailsDialog lead={lead}>
-                      <Button
-                        variant="ghost"
-                        size="icon-xs"
-                        className="text-zinc-500 hover:text-[#00a884]"
-                        title="Prospectar / Chat"
-                      >
-                        <MessageSquare className="h-3.5 w-3.5" />
-                      </Button>
-                    </LeadDetailsDialog>
-                    <Button
-                      variant="ghost"
-                      size="icon-xs"
-                      onClick={() => setEditLead(lead)}
-                      className="text-zinc-500 hover:text-white"
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon-xs"
-                      onClick={() => setDeleteLead(lead)}
-                      className="text-zinc-500 hover:text-red-400"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+                    {lead.aiScore}/10
+                  </span>
+                ) : (
+                  <span className="text-zinc-600 font-bold text-sm">—</span>
+                )}
+              </div>
+
+              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <LeadDetailsDialog lead={lead}>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    className="h-7 w-7 text-zinc-400 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-lg"
+                    title="Chat / Detalhes"
+                  >
+                    <MessageSquare className="h-3.5 w-3.5" />
+                  </Button>
+                </LeadDetailsDialog>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={() => setEditLead(lead)}
+                  className="h-7 w-7 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg"
+                  title="Editar Lead"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={() => setDeleteLead(lead)}
+                  className="h-7 w-7 text-zinc-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg"
+                  title="Deletar Lead"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
 
       {editLead && (

@@ -10,6 +10,10 @@ import {
   Server,
   Sliders,
   Smartphone,
+  CreditCard,
+  Gem,
+  Check,
+  User as UserIcon,
 } from "lucide-react";
 import { Tooltip } from "@/components/ui/tooltip";
 import { useEffect, useState, useCallback } from "react";
@@ -40,6 +44,10 @@ export default function SettingsPage() {
   const [metaWabaId, setMetaWabaId] = useState("");
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [savingSettings, setSavingSettings] = useState(false);
+  const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false);
+  const [upgradeLoading, setUpgradeLoading] = useState(false);
+  const [selectedPackIndex, setSelectedPackIndex] = useState(0);
+  const [profileInfo, setProfileInfo] = useState({ name: "", email: "", plan: "Starter", leadsBalance: 0 });
 
   // Status simulado das variáveis globais do .env (como estamos no client, usamos fallbacks simples)
   const envStatus = {
@@ -88,6 +96,12 @@ export default function SettingsPage() {
         setMetaWabaId(res.metaWabaId || "");
         setNotificationsEnabled(res.notificationsEnabled !== false);
         localStorage.setItem("soundEnabled", res.notificationsEnabled !== false ? "true" : "false");
+        setProfileInfo({ 
+          name: res.name || "Usuário", 
+          email: res.email || "",
+          plan: res.plan || "Starter",
+          leadsBalance: res.leadsBalance || 0
+        });
       }
     };
     loadSettings();
@@ -181,7 +195,7 @@ export default function SettingsPage() {
   }, [pollingActive, whatsappStatus, handleCheckConnection]);
 
   return (
-    <main className="min-h-screen bg-background text-foreground p-4 md:p-8 pt-12 relative overflow-hidden">
+    <div className="relative min-h-screen bg-background text-foreground p-4 md:p-8 overflow-hidden">
       {/* Grid de Efeito de Fundo - Extremamente Sutil B2B */}
       <div className="absolute inset-0 bg-cyber-grid opacity-10 pointer-events-none z-0"></div>
 
@@ -189,13 +203,36 @@ export default function SettingsPage() {
         {/* Cabeçalho */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zinc-900 pb-6">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-3">
-              <Sliders className="w-8 h-8 text-foreground" />
+            <h1 className="text-3xl font-bold tracking-tight text-white flex items-center gap-3 font-heading">
+              <Sliders className="w-8 h-8 text-white" />
               Configurações
             </h1>
             <p className="text-zinc-400 text-sm mt-1">
-              Gerencie a conexão de WhatsApp da sua conta e confira o status das integrações.
+              Gerencie sua assinatura, conexão de WhatsApp e status das integrações.
             </p>
+          </div>
+        </div>
+
+        {/* Profile Quick Header */}
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between p-6 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl gap-6">
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 rounded-2xl bg-zinc-800 flex items-center justify-center text-white border border-zinc-700 shadow-inner shrink-0 relative overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-tr from-emerald-500/10 to-transparent pointer-events-none" />
+              <UserIcon className="w-8 h-8 text-zinc-400" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-white font-heading">{profileInfo.name || "Carregando..."}</h2>
+              <p className="text-sm text-zinc-400">{profileInfo.email}</p>
+            </div>
+          </div>
+          <div className="flex flex-col items-start md:items-end gap-1">
+            <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Plano Atual</span>
+            <div className="flex items-center gap-2">
+              <span className="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-bold flex items-center gap-1.5">
+                <Gem className="w-3.5 h-3.5" />
+                {profileInfo.plan}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -203,14 +240,14 @@ export default function SettingsPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Coluna 1 e 2: Módulo de Conexão WhatsApp */}
           <div className="lg:col-span-2 space-y-6">
-            <div className="bg-card border border-zinc-800 rounded-2xl p-6 shadow-xl">
+            <div className="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-6 shadow-xl">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-300">
                     <Smartphone className="w-5 h-5" />
                   </div>
                   <div>
-                    <h2 className="text-lg font-bold text-foreground">Canal de Disparo WhatsApp</h2>
+                    <h2 className="text-lg font-bold text-white font-heading">Canal de Disparo WhatsApp</h2>
                     <p className="text-zinc-500 text-xs mt-0.5">
                       Emparelhe seu celular para realizar os envios dinâmicos das campanhas.
                     </p>
@@ -450,8 +487,8 @@ export default function SettingsPage() {
             </div>
 
             {/* Preferências Gerais */}
-            <div className="bg-card border border-zinc-800 rounded-2xl p-6 shadow-xl mt-6">
-              <h2 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
+            <div className="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-6 shadow-xl mt-6">
+              <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2 font-heading">
                 <Sliders className="w-5 h-5 text-emerald-500" />
                 Preferências Gerais
               </h2>
@@ -487,10 +524,52 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          {/* Coluna 3: Status das Integrações */}
+          {/* Coluna 3: Status das Integrações e Faturamento */}
           <div className="space-y-6">
-            <div className="bg-card border border-zinc-800 rounded-2xl p-6 shadow-xl">
-              <h2 className="text-lg font-bold text-foreground mb-1.5">Integrações Globais</h2>
+            {/* Billing / Usage Card */}
+            <div className="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-6 shadow-xl relative overflow-hidden group">
+              <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/5 to-transparent pointer-events-none" />
+              <div className="relative z-10">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    <CreditCard className="w-5 h-5" />
+                  </div>
+                  <h2 className="text-lg font-bold text-white font-heading">Seu Plano e Limites</h2>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <div className="flex justify-between text-sm mb-1.5">
+                      <span className="text-zinc-400 font-medium">Saldo de Leads (Créditos)</span>
+                      <span className="text-emerald-400 font-mono font-bold">{profileInfo.leadsBalance} Restantes</span>
+                    </div>
+                    <div className="w-full h-2 bg-zinc-800 rounded-full overflow-hidden shadow-inner">
+                      <div className="h-full bg-emerald-500 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.8)] transition-all duration-1000" style={{ width: `${Math.min(100, (profileInfo.leadsBalance / 500) * 100)}%` }} />
+                    </div>
+                    <p className="text-[11px] text-zinc-500 mt-2">Os créditos são consumidos a cada busca de leads realizada pelo robô.</p>
+                  </div>
+
+                  <div className="pt-4 mt-4 border-t border-zinc-800/80">
+                    <button 
+                      onClick={() => setIsSubscriptionModalOpen(true)}
+                      className="w-full bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-bold py-2.5 rounded-xl transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:shadow-[0_0_30px_rgba(16,185,129,0.5)] hover:-translate-y-0.5"
+                    >
+                      Comprar Mais Leads
+                    </button>
+                    <button 
+                      onClick={() => window.open("https://pay.kiwify.com.br/login", "_blank")}
+                      className="w-full mt-2 text-zinc-400 hover:text-white text-xs py-2 transition-colors font-medium"
+                    >
+                      Gerenciar Assinatura
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Integrations Card */}
+            <div className="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-6 shadow-xl">
+              <h2 className="text-lg font-bold text-white mb-1.5 font-heading">Integrações Globais</h2>
               <p className="text-zinc-500 text-xs mb-6">
                 Status dos motores e credenciais de inteligência artificial de faturamento global do
                 app.
@@ -539,6 +618,88 @@ export default function SettingsPage() {
           </p>
         </div>
       </div>
-    </main>
+
+      {/* Subscription Overlay Modal */}
+      {isSubscriptionModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div 
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm" 
+            onClick={() => setIsSubscriptionModalOpen(false)}
+          />
+          <div className="bg-zinc-950 border border-zinc-800 rounded-3xl p-8 max-w-lg w-full relative z-10 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <div className="text-center mb-8">
+              <div className="w-16 h-16 bg-emerald-500/10 rounded-2xl mx-auto flex items-center justify-center mb-4 border border-emerald-500/20 shadow-[0_0_30px_rgba(16,185,129,0.2)]">
+                <Gem className="w-8 h-8 text-emerald-400" />
+              </div>
+              <h2 className="text-2xl font-bold text-white font-heading mb-2">Desbloqueie Mais Leads</h2>
+              <p className="text-zinc-400 text-sm">
+                Adicione créditos avulsos que <strong className="text-zinc-200">não expiram</strong> e mantenha seu Motor de Vendas acelerando.
+              </p>
+            </div>
+
+            <div className="space-y-3 mb-8">
+              {[
+                { amount: "1.000", price: "R$ 79,00", link: "#" },
+                { amount: "2.500", price: "R$ 169,00", link: "#" },
+                { amount: "10.000", price: "R$ 497,00", link: "#" },
+              ].map((pack, idx) => (
+                <div 
+                  key={idx} 
+                  onClick={() => setSelectedPackIndex(idx)}
+                  className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-all group ${selectedPackIndex === idx ? 'bg-emerald-500/10 border-emerald-500' : 'bg-zinc-900/50 border-zinc-800 hover:bg-zinc-900 hover:border-emerald-500/50'}`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${selectedPackIndex === idx ? 'border-emerald-500' : 'border-zinc-700 group-hover:border-emerald-500'}`}>
+                       <div className={`w-2.5 h-2.5 rounded-full bg-emerald-500 transition-opacity ${selectedPackIndex === idx ? 'opacity-100' : 'opacity-0 group-hover:opacity-50'}`} />
+                    </div>
+                    <span className="font-bold text-white font-mono">{pack.amount} Leads</span>
+                  </div>
+                  <span className="font-bold text-emerald-400">{pack.price}</span>
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={() => {
+                setUpgradeLoading(true);
+                setTimeout(() => {
+                  setUpgradeLoading(false);
+                  const packs = [
+                    { link: "#1000" }, // Substituir pelo link real
+                    { link: "#2500" }, // Substituir pelo link real
+                    { link: "#10000" } // Substituir pelo link real
+                  ];
+                  const selectedLink = packs[selectedPackIndex].link;
+                  
+                  if (selectedLink.startsWith("#")) {
+                    notify("Aviso: O link de checkout da Kiwify ainda não foi configurado.", { type: "info" });
+                  } else {
+                    window.open(`${selectedLink}?email=${encodeURIComponent(profileInfo.email)}`, "_blank");
+                  }
+                  
+                  setIsSubscriptionModalOpen(false);
+                }, 800);
+              }}
+              disabled={upgradeLoading}
+              className="w-full bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-bold py-3.5 rounded-xl transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:shadow-[0_0_30px_rgba(16,185,129,0.5)] flex items-center justify-center gap-2"
+            >
+              {upgradeLoading ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" /> Redirecionando...
+                </>
+              ) : (
+                "Prosseguir para Pagamento"
+              )}
+            </button>
+            <button 
+              onClick={() => setIsSubscriptionModalOpen(false)}
+              className="w-full mt-3 text-zinc-500 hover:text-white text-sm py-2 transition-colors font-medium"
+            >
+              Cancelar e Fechar
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

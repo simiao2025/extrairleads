@@ -75,30 +75,30 @@ export function LeadsClient({
             className="pl-10 bg-zinc-900 border-zinc-800"
           />
         </div>
-        <select
-          value={status}
-          onChange={(e) => {
-            setStatus(e.target.value);
-            const params = new URLSearchParams();
-            if (search) params.set("search", search);
-            if (e.target.value) params.set("status", e.target.value);
-            router.push(`/leads?${params.toString()}`);
-          }}
-          className="h-10 rounded-xl border border-white/[0.08] bg-black/40 px-4 text-sm text-zinc-300 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20 transition-all cursor-pointer"
-        >
-          {STATUS_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value} className="bg-zinc-950 text-zinc-300">
-              {opt.label}
-            </option>
-          ))}
-        </select>
-        <Button
-          variant="ghost"
-          onClick={applyFilters}
-          className="bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/25 backdrop-blur-md hover:bg-emerald-500/20 hover:text-emerald-300 hover:border-emerald-500/40 hover:-translate-y-0.5 active:translate-y-0 active:scale-98 transition-all duration-300 cursor-pointer h-10 px-5 rounded-xl"
-        >
-          Filtrar
-        </Button>
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-none flex-nowrap">
+          {STATUS_OPTIONS.map((opt) => {
+            const isActive = status === opt.value;
+            return (
+              <button
+                key={opt.value}
+                onClick={() => {
+                  setStatus(opt.value);
+                  const params = new URLSearchParams();
+                  if (search) params.set("search", search);
+                  if (opt.value) params.set("status", opt.value);
+                  router.push(`/leads?${params.toString()}`);
+                }}
+                className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                  isActive
+                    ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-bold shadow-[0_0_10px_rgba(16,185,129,0.1)]"
+                    : "bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800"
+                }`}
+              >
+                {opt.label}
+              </button>
+            );
+          })}
+        </div>
         {(search || status) && (
           <Button variant="ghost" size="icon-sm" onClick={handleClear} className="text-zinc-500">
             <X className="h-4 w-4" />

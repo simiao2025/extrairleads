@@ -61,6 +61,8 @@ export const users = pgTable("users", {
   metaPhoneNumberId: text("meta_phone_number_id"),
   metaWabaId: text("meta_waba_id"),
   notificationsEnabled: integer("notifications_enabled").default(1), // 1 = enabled, 0 = disabled
+  plan: text("plan").default("Starter"),
+  leadsBalance: integer("leads_balance").default(500),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -137,6 +139,7 @@ export const leads = pgTable(
     niche: text("niche"),
     city: text("city"),
     state: text("state"),
+    imageUrl: text("image_url"),
     aiScore: integer("ai_score"),
     aiAnalysis: text("ai_analysis"),
     status: kanbanStageEnum("status").default("raw"),

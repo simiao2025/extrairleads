@@ -41,7 +41,7 @@ export default async function CampaignsPage() {
   }, {} as Record<number, { total: number; contacted: number }>);
 
   return (
-    <main className="min-h-screen bg-[#09090b] text-white p-4 md:p-8 pt-12">
+    <div className="min-h-screen bg-transparent text-white p-4 md:p-8">
       <div className="max-w-7xl mx-auto space-y-8">
         <div className="flex justify-between items-start">
           <div>
@@ -100,6 +100,6 @@ export default async function CampaignsPage() {
           )}
         </div>
       </div>
-    </main>
+    </div>
   );
 }

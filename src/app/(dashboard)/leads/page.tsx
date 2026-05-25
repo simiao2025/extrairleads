@@ -35,7 +35,7 @@ export default async function LeadsPage({ searchParams }: PageProps) {
   });
 
   return (
-    <main className="min-h-screen bg-[#09090b] text-white p-4 md:p-8 pt-12">
+    <div className="min-h-screen bg-transparent text-white p-4 md:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -63,6 +63,6 @@ export default async function LeadsPage({ searchParams }: PageProps) {
           currentPage={page}
         />
       </div>
-    </main>
+    </div>
   );
 }

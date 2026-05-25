@@ -279,6 +279,10 @@ export async function getWhatsAppSettingsAction() {
       metaPhoneNumberId: user.metaPhoneNumberId,
       metaWabaId: user.metaWabaId,
       notificationsEnabled: user.notificationsEnabled === 1,
+      name: user.name,
+      email: user.email,
+      plan: user.plan || "Starter",
+      leadsBalance: user.leadsBalance ?? 0,
     };
   } catch (error: any) {
     return { success: false, error: error.message };
