@@ -1,99 +1,74 @@
-# Manual de Uso - ExtrairLeads
+# Manual de Uso Básico - ExtrairLeads
 
-Bem-vindo ao **ExtrairLeads**, o seu motor neural de prospecção B2B. Este manual detalha todas as funcionalidades da plataforma, desde a configuração inicial até a operação diária das campanhas automáticas.
-
----
-
-## 1. Configurações Iniciais (Settings)
-
-Antes de iniciar a prospecção, é essencial conectar seus serviços e o WhatsApp.
-
-### 1.1. Conexão do WhatsApp (Evolution API)
-- Vá até a página de **Configurações**.
-- Clique na aba **Conexão WhatsApp**.
-- Escaneie o **QR Code** com o celular que será utilizado para enviar as mensagens aos leads.
-- Aguarde o status mudar para **"Conectado"**.
-
-### 1.2. Integrações de IA (LLMs)
-O sistema utiliza IA para gerar e analisar mensagens.
-- Na aba **Provedores de IA**, insira suas chaves de API (OpenAI, Groq, Anthropic).
-- Selecione o modelo padrão desejado para o motor de resposta inteligente.
+Bem-vindo ao **ExtrairLeads**, a sua plataforma neural de prospecção B2B. Este manual foi atualizado para detalhar todas as funcionalidades da interface web, explicando o que cada botão faz, as áreas do painel e as configurações globais.
 
 ---
 
-## 2. Base de Conhecimento (Knowledge)
+## 1. Menus de Navegação (Barra Lateral)
 
-Para que a inteligência artificial responda como um vendedor especialista da sua empresa, ela precisa aprender sobre o seu negócio.
+No lado esquerdo (ou no rodapé em dispositivos móveis), você encontrará a barra de navegação principal. 
 
-- Navegue até a aba **Base de Conhecimento**.
-- Insira informações detalhadas sobre a sua empresa: O que vocês vendem? Qual o preço? Quais os diferenciais? Como responder a objeções comuns?
-- A IA usará esses textos para **criar mensagens contextuais (RAG)** e contornar objeções automaticamente ao interagir com o lead.
-
----
-
-## 3. Gestão de Prompts (Agents)
-
-Os Prompts são as "personalidades" e roteiros do seu agente neural.
-
-- Em **Agentes / Prompts**, você pode configurar mensagens padronizadas.
-- Exemplo: Crie um prompt de "Primeiro Contato (Cold Outreach)" e outro para "Follow-up (Acompanhamento)".
-- Utilize variáveis como `{{nome}}`, `{{empresa}}` para tornar as mensagens hiperpersonalizadas.
+*   **Dashboard (Painel Principal):** Sua central de comando. Mostra as estatísticas gerais de conversão, o radar para nova extração de dados, atalhos de disparo e o funil visual em formato Kanban.
+*   **Leads:** Onde fica a sua base completa de contatos extraídos. É uma tabela massiva onde você pode visualizar os detalhes de cada empresa de forma crua.
+*   **Campanhas:** Permite criar pastas organizadas. Cada campanha pode agrupar uma busca específica (ex: "Clínicas de Estética em SP - Junho") e automatizar o tempo de disparo (Auto-Outreach).
+*   **Agendamentos:** Um calendário dedicado para gerenciar reuniões ou ligações agendadas com leads que passaram pelo funil e demonstraram interesse.
+*   **Agentes IA:** Central de inteligência onde você cadastra sua **Base de Conhecimento** (o que sua empresa vende, como vender e qual o preço) e edita os **Prompts** (a "personalidade" do robô) que respondem os clientes.
+*   **Configurações:** Onde você conecta o WhatsApp, define as chaves da OpenAI/Groq e verifica seu limite de uso e plano atual.
 
 ---
 
-## 4. Captura e Gestão de Leads
+## 2. Dashboard: O Coração do Sistema
 
-O coração do sistema é o módulo de Leads.
+O Dashboard foi projetado como um "Motor Neural" para velocidade. Eis os principais componentes da tela inicial:
 
-### 4.1. Busca no Google Maps (Scraping)
-- No painel de **Leads**, clique no botão para **Buscar no Maps**.
-- Digite o termo desejado (Ex: "Clínicas Odontológicas em São Paulo").
-- O sistema fará a varredura e extrairá nome, telefone, site e endereço.
-- Os leads extraídos cairão automaticamente no seu banco de dados na etapa "Pendente".
+### 2.1. Estatísticas Rápidas (Cards Superiores)
+Mostram a saúde da sua operação em tempo real:
+*   **Leads Totais:** Volume total de empresas extraídas do Google Maps.
+*   **Qualificados IA:** Quantidade de leads que o robô leu o site e considerou ser um perfil ideal de cliente.
+*   **Msgs Enviadas:** Quantos leads já receberam o contato inicial via WhatsApp.
+*   **Interessados:** A métrica mais importante — quantos responderam positivamente à abordagem.
 
-### 4.2. Kanban (Funil de Vendas)
-- Os leads capturados podem ser movidos livremente através do formato Kanban (arrastar e soltar).
-- Estágios comuns: *Pendente, Qualificado, Contatado, Em Negociação, Fechado.*
+### 2.2. Radar de Extração (Search Form)
+O campo de busca luminoso no centro da tela.
+*   **O que faz:** Ao digitar um segmento e localização (Ex: "Contabilidades em Brasília") e apertar **Buscar**, o ExtrairLeads vai varrer o Google Maps em tempo real e baixar os dados públicos (Telefone, Site, Endereço, Nome) diretamente para o funil "Novos".
+*   **Dica:** Sempre selecione uma Campanha no botão suspensivo acima dele antes de buscar, para não misturar leads de segmentos diferentes.
 
-### 4.3. Qualificação e Abordagem
-- **Qualificar (Robô):** O sistema pode varrer o site do lead para validar se ele é um bom cliente potencial.
-- **Iniciar Contato (Outreach):** Envia a primeira mensagem no WhatsApp do lead através da conexão da Evolution API, utilizando a IA para formular a abordagem ideal.
+### 2.3. Os Botões de Ação (Aceleradores)
+Logo abaixo do título "Extrair, Qualificar & Vender", existem 3 botões poderosos para uso em massa:
 
----
+1.  **🔍 Analisar Pendentes:** 
+    *   **Função:** Pega todos os leads da coluna "Novos" que possuem site e envia para a Inteligência Artificial visitar, ler e qualificar.
+2.  **💬 Disparo Frio (Outreach):** 
+    *   **Função:** Inicia a prospecção ativa. Pega os leads "Qualificados" e dispara a mensagem de introdução pelo seu WhatsApp conectado, de forma automática e hiperpersonalizada.
+3.  **🔄 Follow-up:** 
+    *   **Função:** Varre os leads que já foram contatados, mas não responderam após certo tempo, enviando uma segunda mensagem de acompanhamento ("Tudo bem? Chegou a ver a mensagem anterior?").
 
-## 5. Campanhas Automáticas (Campaigns)
-
-Se você precisa abordar centenas de leads, utilize o módulo de Campanhas.
-
-- Crie uma nova Campanha e defina os horários de envio.
-- Selecione a lista de leads ou um segmento específico.
-- A campanha rodará em segundo plano, disparando mensagens de tempo em tempo (respeitando os limites do WhatsApp para evitar bloqueios / banimentos).
-
----
-
-## 6. Agendamentos (Appointments)
-
-Quando um lead avança no funil e demonstra interesse, você pode marcar uma reunião.
-
-- Acesse o módulo de **Agendamentos** ou abra a ficha do Lead.
-- Insira a data e hora da reunião (Call / Presencial).
-- O sistema manterá o controle de reuniões futuras para que seu time de vendas não perca nenhum compromisso.
+### 2.4. Funil Inteligente (Kanban Board)
+Na base da tela, você verá o seu funil no formato de colunas.
+*   **Colunas:** `Novos` > `Qualificados` > `Contatados` > `Interessados` > `Intervenção`
+*   **Funcionalidade:** Você pode usar o mouse (ou 2 dedos no trackpad/toque celular) para **Arrastar e Soltar** o card do lead entre as colunas.
+*   **Automação:** Sempre que a Inteligência Artificial enviar mensagens com sucesso, ela moverá o card automaticamente pelo painel. Se um lead fizer uma pergunta que a IA não saiba responder, ele será jogado para a coluna de **Intervenção**, exigindo que um humano entre no chat.
 
 ---
 
-## 7. Chat e Histórico
+## 3. Configurações Globais (Settings e Onboarding)
 
-Toda interação no WhatsApp com o lead é espelhada no sistema.
-- Clicando no perfil de um Lead, você verá a aba **Chat**.
-- Acompanhe o histórico de mensagens enviadas e recebidas.
-- A IA sugere respostas baseadas na Base de Conhecimento, que você pode aprovar com um clique.
+Para que as automações e os disparos aconteçam perfeitamente, você deve completar a fundação do sistema:
+
+### 3.1. Conectando o WhatsApp (Evolution API)
+O ExtrairLeads possui uma infraestrutura dedicada de WhatsApp.
+*   Vá em **Configurações > WhatsApp**.
+*   Se for o seu primeiro acesso, o sistema exigirá o preenchimento de segurança do seu **CPF ou CNPJ**. O número da sua instância de envio fica bloqueado na Evolution API sem esse dado.
+*   Após o CPF, o sistema vai gerar um **QR Code**. Aponte a câmera do WhatsApp do celular que fará os disparos (WhatsApp Business recomendado).
+
+### 3.2. Créditos e Planos
+*   Cada Lead extraído consome 1 crédito.
+*   No canto esquerdo inferior, você pode observar uma **barra verde progressiva** com o seu limite atual (Ex: *340 leads restantes*). 
+*   Se os créditos acabarem, você não conseguirá mais extrair pelo botão de busca. Contate o suporte técnico no ícone `?` para solicitar uma recarga manual de créditos ou upgrade de plano.
+
+### 3.3. Segurança (Deslogar)
+Para proteger seus dados sensíveis e sua sessão do WhatsApp, clique sobre a sua foto/letra no rodapé inferior esquerdo do menu e clique no ícone vermelho de "Sair" (LogOut).
 
 ---
 
-## Dicas de Segurança e Boas Práticas
-
-- **Limite de Envios:** Ao rodar Campanhas, comece com envios espaçados para amadurecer o número do WhatsApp ("aquecimento de chip").
-- **Monitoramento:** Acompanhe o Dashboard Analytics na Home para verificar sua taxa de qualificação e conversão diária.
-- **Segurança da Conta:** Mantenha sua senha segura. Se esquecer, utilize o botão "Esqueceu a senha?" na tela de Login para redefini-la via e-mail corporativo.
-
-> Desenvolvido com tecnologia de ponta para automatizar sua prospecção B2B de ponta a ponta.
+> **Dica de Ouro:** Não faça varreduras aleatórias e extensas. Sempre planeje suas **Campanhas**, treine muito bem os seus **Agentes IA** na Base de Conhecimento e deixe o motor trabalhar em lotes menores para garantir um alto nível de agendamentos reais sem ser marcado como Spam.
