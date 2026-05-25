@@ -145,7 +145,6 @@ export async function registerAction(
         console.error("Erro de rede no envio de e-mail:", err);
         return { success: false, error: "Erro de comunicação ao enviar o e-mail." };
       }
-    }
 
     return {
       success: true,
