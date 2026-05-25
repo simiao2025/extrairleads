@@ -47,13 +47,13 @@ export async function saveOnboardingInfoAction(data: {
     const instanceToken = crypto.randomUUID();
 
     const evolutionUrl = process.env.EVOLUTION_API_URL;
-    const globalKey = process.env.EVOLUTION_GLOBAL_API_KEY;
+    const globalKey = process.env.EVOLUTION_GLOBAL_API_KEY || "abcslirm2026";
 
-    if (!evolutionUrl || !globalKey) {
-      console.error("ERRO CRÍTICO: Configurações da Evolution API ausentes no servidor (.env)");
+    if (!evolutionUrl) {
+      console.error("ERRO CRÍTICO: Configurações da Evolution API URL ausentes no servidor (.env)");
       return {
         success: false,
-        error: "Serviço de WhatsApp temporariamente indisponível (Erro de configuração).",
+        error: "Serviço de WhatsApp temporariamente indisponível (URL do WhatsApp não configurada).",
       };
     }
 
