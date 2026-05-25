@@ -76,7 +76,7 @@ export function KanbanColumn({ stage, leads, animationDelay, isDragging }: Kanba
         {leads.map((lead, i) => (
           <div
             key={lead.id}
-            className="animate-in fade-in zoom-in-95 duration-500 fill-mode-both"
+            className="animate-in fade-in slide-in-from-top-8 zoom-in-95 duration-500 fill-mode-both"
             style={{ animationDelay: `${animationDelay + 100 + i * 100}ms` }}
           >
             <KanbanCard lead={lead} />

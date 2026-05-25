@@ -86,22 +86,39 @@ export function OutreachButton({
 
   return (
     <Button
-      className={`w-full sm:w-auto rounded-xl h-12 px-8 font-bold backdrop-blur-md transition-all duration-300 ${!campaignId || isAutoOutreach || !isWhatsappConnected ? "opacity-50 cursor-not-allowed bg-emerald-900/10 border border-emerald-900/20 text-emerald-900/50" : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 hover:bg-emerald-500/20 hover:text-emerald-300 hover:border-emerald-500/40 hover:-translate-y-0.5 hover:shadow-[0_0_25px_rgba(16,185,129,0.25)] active:translate-y-0 active:scale-98 cursor-pointer"}`}
+      className={`relative overflow-hidden w-full sm:w-auto rounded-xl h-12 px-8 font-bold backdrop-blur-md transition-all duration-300 group ${!campaignId || isAutoOutreach || !isWhatsappConnected ? "opacity-50 cursor-not-allowed bg-emerald-900/10 border border-emerald-900/20 text-emerald-900/50" : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 hover:bg-emerald-500/20 hover:text-emerald-300 hover:border-emerald-500/40 hover:-translate-y-0.5 hover:shadow-[0_0_25px_rgba(16,185,129,0.25)] active:translate-y-0 active:scale-98 cursor-pointer"}`}
       onClick={handleClick}
       disabled={!campaignId || isAutoOutreach || !isWhatsappConnected || loading}
     >
-      {loading ? (
-        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-      ) : (
-        <Play className="mr-2 h-4 w-4 fill-current" />
+      <style>{`
+        @keyframes shimmer {
+          0% { transform: translateX(-150%) skewX(-15deg); }
+          50% { transform: translateX(-150%) skewX(-15deg); }
+          60% { transform: translateX(150%) skewX(-15deg); }
+          100% { transform: translateX(150%) skewX(-15deg); }
+        }
+      `}</style>
+      {/* 4. Brilho Metálico (Shimmer) */}
+      {!(!campaignId || isAutoOutreach || !isWhatsappConnected) && (
+        <div className="absolute inset-0 z-0 pointer-events-none">
+          <div className="w-12 h-full bg-gradient-to-r from-transparent via-emerald-300/30 to-transparent shadow-[0_0_15px_rgba(110,231,183,0.5)]" style={{ animation: 'shimmer 5s infinite' }} />
+        </div>
       )}
-      {loading
-        ? "Processando..."
-        : isAutoOutreach
-          ? "Motor Automático"
-          : !isWhatsappConnected
-            ? "WhatsApp Offline"
-            : "Ligar Motor IA"}
+
+      <span className="relative z-10 flex items-center">
+        {loading ? (
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        ) : (
+          <Play className="mr-2 h-4 w-4 fill-current" />
+        )}
+        {loading
+          ? "Processando..."
+          : isAutoOutreach
+            ? "Motor Automático"
+            : !isWhatsappConnected
+              ? "WhatsApp Offline"
+              : "Ligar Motor IA"}
+      </span>
     </Button>
   );
 }

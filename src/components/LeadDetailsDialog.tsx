@@ -124,7 +124,7 @@ export default function LeadDetailsDialog({ lead, children }: { lead: Lead; chil
           children ? (
             children as React.ReactElement
           ) : (
-            <button className="w-full text-left p-4 rounded-xl bg-white/[0.02] backdrop-blur-xl border border-white/[0.05] hover:border-emerald-500/30 hover:bg-white/[0.04] transition-all cursor-pointer group shadow-lg shadow-black/20 hover:shadow-emerald-500/10 relative overflow-hidden">
+            <button className="w-full text-left p-4 rounded-xl bg-white/[0.02] backdrop-blur-xl border border-white/[0.05] hover:border-emerald-500/30 hover:bg-white/[0.04] hover:-translate-y-1 transition-all duration-300 cursor-pointer group shadow-lg shadow-black/20 hover:shadow-[0_8px_30px_rgba(16,185,129,0.15)] relative overflow-hidden">
               <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-500/10 rounded-bl-full blur-xl group-hover:bg-emerald-500/20 transition-colors"></div>
               <div className="flex justify-between items-start relative z-10">
                 <p className="font-bold text-sm truncate w-4/5 text-white/90 group-hover:text-emerald-400 transition-colors flex items-center gap-2">

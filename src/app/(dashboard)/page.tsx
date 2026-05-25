@@ -9,60 +9,13 @@ import { Pagination } from "@/components/ui/pagination";
 import { db } from "@/db";
 import { campaigns, leads } from "@/db/schema";
 import { auth } from "@/lib/auth";
-import { cn } from "@/lib/utils";
 import { AnalyticsSection } from "./analytics-section";
 import { AutoRefresh } from "@/components/AutoRefresh";
+import { MatrixRain } from "@/components/MatrixRain";
 
 const ITEMS_PER_PAGE = 40;
 
-function StatCard({
-  label,
-  value,
-  icon: Icon,
-  colorClass,
-  accentGlow,
-  delay,
-}: {
-  label: string;
-  value: string;
-  icon: React.ElementType;
-  colorClass: string;
-  accentGlow: string;
-  delay: number;
-}) {
-  return (
-    <div
-      className="group relative flex items-center gap-4 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5 backdrop-blur-xl transition-all duration-500 hover:bg-white/[0.05] hover:border-white/[0.12] overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-both"
-      style={{ animationDelay: `${delay}ms` }}
-    >
-      {/* Hover glow effect */}
-      <div
-        className={cn(
-          "absolute -bottom-4 -right-4 w-24 h-24 rounded-full blur-[40px] opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none",
-          accentGlow,
-        )}
-      />
-      <div className="absolute inset-0 bg-gradient-to-tr from-white/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-
-      <div
-        className={cn(
-          "relative flex h-11 w-11 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.04] group-hover:scale-110 transition-transform duration-300",
-          colorClass,
-        )}
-      >
-        <Icon className="h-5 w-5" />
-      </div>
-      <div className="relative">
-        <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground">
-          {label}
-        </p>
-        <p className={cn("font-heading text-3xl font-black tracking-tight mt-0.5", colorClass)}>
-          {value}
-        </p>
-      </div>
-    </div>
-  );
-}
+import { StatCard } from "@/components/StatCard";
 
 interface PageProps {
   searchParams: Promise<{ page?: string; limit?: string; period?: string; campaignId?: string }>;
@@ -133,16 +86,25 @@ export default async function Home({ searchParams }: PageProps) {
         {/* ── Hero Section ── */}
         <section className="relative flex flex-col gap-8 md:flex-row md:items-end md:justify-between animate-in fade-in slide-in-from-bottom-8 duration-1000">
           
+          {/* Efeito Matrix Background Full Width */}
+          <div className="absolute -inset-y-20 -inset-x-4 md:-inset-x-20 -z-10 overflow-hidden opacity-40 pointer-events-none">
+            {/* Gradientes para suavizar as bordas da Matrix */}
+            <div className="absolute inset-0 bg-gradient-to-r from-background via-transparent to-transparent z-10" />
+            <div className="absolute inset-0 bg-gradient-to-l from-transparent via-transparent to-background z-10" />
+            <div className="absolute inset-0 bg-gradient-to-b from-background via-transparent to-background z-10" />
+            <MatrixRain />
+          </div>
+
           {/* Robô Humanoide SDR Neural (Decorativo) */}
-          <div className="absolute -top-32 -right-10 w-[600px] h-[600px] pointer-events-none hidden lg:block opacity-50 z-0 select-none">
+          <div className="absolute -top-32 -right-10 w-[600px] h-[600px] pointer-events-none hidden lg:block opacity-[0.85] z-0 select-none">
             {/* Máscaras de Gradiente para mesclar com o fundo */}
-            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent z-10" />
-            <div className="absolute inset-0 bg-gradient-to-l from-transparent via-background/20 to-background z-10" />
+            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/20 to-transparent z-10" />
+            <div className="absolute inset-0 bg-gradient-to-l from-transparent via-background/10 to-background z-10" />
             <div className="absolute inset-0 bg-gradient-to-b from-background via-transparent to-transparent z-10" />
             <img
               src="/robot.png"
               alt="IA SDR"
-              className="w-full h-full object-contain filter brightness-[0.7] mix-blend-lighten -scale-x-100"
+              className="w-full h-full object-contain filter brightness-[0.7] mix-blend-lighten -scale-x-100 relative z-0"
             />
           </div>
 
@@ -183,8 +145,19 @@ export default async function Home({ searchParams }: PageProps) {
         </section>
 
         {/* ── Search Form ── */}
-        <div className="animate-in fade-in zoom-in-95 duration-1000 delay-200 fill-mode-both rounded-2xl border border-white/[0.08] bg-white/[0.02] backdrop-blur-sm overflow-hidden">
-          <SearchForm campaigns={userCampaigns} selectedCampaignId={params.campaignId} />
+        <div className="relative animate-in fade-in zoom-in-95 duration-1000 delay-200 fill-mode-both rounded-2xl p-[1px] overflow-hidden group">
+          {/* Fio luminoso (Border Beam) animado */}
+          <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none rounded-2xl">
+            <div 
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300%] aspect-square bg-[conic-gradient(from_0deg,transparent_0_340deg,#10b981_360deg)] animate-spin" 
+              style={{ animationDuration: '4s', animationDirection: 'reverse' }}
+            />
+          </div>
+          
+          {/* Fundo escuro interno para mascarar o gradiente, deixando só a borda viva */}
+          <div className="relative z-10 w-full h-full bg-[#050505] rounded-2xl border border-white/[0.04]">
+            <SearchForm campaigns={userCampaigns} selectedCampaignId={params.campaignId} />
+          </div>
         </div>
 
         {/* ── Stats ── */}
@@ -192,7 +165,7 @@ export default async function Home({ searchParams }: PageProps) {
           <StatCard
             label="Leads Totais"
             value={counts.total.toString()}
-            icon={Layers}
+            icon={<Layers className="h-5 w-5" />}
             colorClass="text-sky-400"
             accentGlow="bg-sky-500/20"
             delay={300}
@@ -200,7 +173,7 @@ export default async function Home({ searchParams }: PageProps) {
           <StatCard
             label="Qualificados IA"
             value={counts.qualified.toString()}
-            icon={User}
+            icon={<User className="h-5 w-5" />}
             colorClass="text-emerald-400"
             accentGlow="bg-emerald-500/20"
             delay={400}
@@ -208,7 +181,7 @@ export default async function Home({ searchParams }: PageProps) {
           <StatCard
             label="Msgs Enviadas"
             value={counts.contacted.toString()}
-            icon={MessageSquare}
+            icon={<MessageSquare className="h-5 w-5" />}
             colorClass="text-violet-400"
             accentGlow="bg-violet-500/20"
             delay={500}
@@ -216,7 +189,7 @@ export default async function Home({ searchParams }: PageProps) {
           <StatCard
             label="Interessados"
             value={counts.interested.toString()}
-            icon={Star}
+            icon={<Star className="h-5 w-5" />}
             colorClass="text-amber-400"
             accentGlow="bg-amber-500/20"
             delay={600}
