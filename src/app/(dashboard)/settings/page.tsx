@@ -12,7 +12,6 @@ import {
   Smartphone,
   CreditCard,
   Gem,
-  Check,
   User as UserIcon,
 } from "lucide-react";
 import { Tooltip } from "@/components/ui/tooltip";

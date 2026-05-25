@@ -1,14 +1,12 @@
 "use client";
 
 import {
-  BookOpen,
   CalendarDays,
   Cpu,
   LayoutGrid,
   LogOut,
   Sliders,
   Target,
-  User,
   Workflow,
   Menu,
   CreditCard,
@@ -38,7 +36,6 @@ interface SidebarProps {
 export default function Sidebar({ user }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [whatsappStatus, setWhatsappStatus] = useState<{
     connected: boolean;
@@ -86,7 +83,6 @@ export default function Sidebar({ user }: SidebarProps) {
   ];
 
   const handleSignOut = async () => {
-    setLoading(true);
     await signOut({ redirect: false });
     router.push("/login");
   };
@@ -96,9 +92,6 @@ export default function Sidebar({ user }: SidebarProps) {
     if (email) return email.charAt(0).toUpperCase();
     return "U";
   };
-
-  const leadsBalance = user?.leadsBalance ?? 0;
-  const planName = user?.plan || "Starter";
 
   return (
     <>
@@ -117,7 +110,7 @@ export default function Sidebar({ user }: SidebarProps) {
                   ExtrairLeads
                 </span>
                 <p className="mt-1 text-[10px] uppercase tracking-[0.15em] text-emerald-500 font-bold">
-                  {leadsBalance} Créditos
+                  {liveBalance} Créditos
                 </p>
               </div>
             </div>

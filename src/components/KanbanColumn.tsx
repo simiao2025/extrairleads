@@ -18,6 +18,7 @@ interface Lead {
   name: string;
   phone: string | null;
   website: string | null;
+  imageUrl: string | null;
   niche: string | null;
   city: string | null;
   state: string | null;
