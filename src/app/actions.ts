@@ -13,6 +13,7 @@ export {
 } from "@/actions/auth";
 export {
   deleteLeadAction,
+  getConversationsAction,
   getLeadChatAction,
   moveLeadAction,
   updateLeadAction,

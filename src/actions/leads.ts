@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { chatHistory, leads } from "@/db/schema";
@@ -12,6 +12,7 @@ const VALID_STAGES = [
   "in_queue",
   "contacted",
   "interested",
+  "human_intervention",
   "discarded",
 ] as const;
 type KanbanStage = (typeof VALID_STAGES)[number];
@@ -115,5 +116,38 @@ export async function updateLeadAction(
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
     return { success: false, error: message };
+  }
+}
+
+export async function getConversationsAction() {
+  const session = await auth();
+  const userId = session?.user?.id ? parseInt(session.user.id, 10) : null;
+  if (!userId) return [];
+
+  try {
+    const results = await db
+      .select({
+        lead: leads,
+        lastMessage: {
+          content: chatHistory.content,
+          createdAt: chatHistory.createdAt,
+          role: chatHistory.role,
+        },
+      })
+      .from(leads)
+      .innerJoin(chatHistory, eq(leads.id, chatHistory.leadId))
+      .where(eq(leads.userId, userId))
+      .orderBy(desc(chatHistory.createdAt));
+
+    const uniqueConversationsMap = new Map<number, any>();
+    for (const row of results) {
+      if (!uniqueConversationsMap.has(row.lead.id)) {
+        uniqueConversationsMap.set(row.lead.id, row);
+      }
+    }
+
+    return Array.from(uniqueConversationsMap.values());
+  } catch (_error) {
+    return [];
   }
 }

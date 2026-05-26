@@ -1,6 +1,6 @@
 "use client";
 
-import { Globe, MapPin, Pencil, Phone, Trash2, MessageSquare } from "lucide-react";
+import { Globe, MapPin, MessageCircle, MessageSquare, Pencil, Phone, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { deleteLeadAction, updateLeadAction } from "@/app/actions";
 import type { Lead } from "@/components/KanbanBoard";
@@ -247,7 +247,11 @@ export function LeadsTable({ leads, onRefresh }: LeadsTableProps) {
                 <div className="flex items-center gap-3">
                   {lead.imageUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={lead.imageUrl} alt={lead.name} className="w-10 h-10 rounded-xl object-cover shadow-[0_0_15px_rgba(16,185,129,0.3)] shrink-0 border border-emerald-500/20" />
+                    <img
+                      src={lead.imageUrl}
+                      alt={lead.name}
+                      className="w-10 h-10 rounded-xl object-cover shadow-[0_0_15px_rgba(16,185,129,0.3)] shrink-0 border border-emerald-500/20"
+                    />
                   ) : (
                     <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-cyan-500 flex items-center justify-center text-black font-black text-lg shadow-[0_0_15px_rgba(16,185,129,0.3)] shrink-0">
                       {lead.name.substring(0, 2).toUpperCase()}
@@ -275,16 +279,31 @@ export function LeadsTable({ leads, onRefresh }: LeadsTableProps) {
               {/* Info */}
               <div className="space-y-2 pt-2 border-t border-zinc-800/50">
                 {lead.phone && (
-                  <div className="flex items-center gap-2 text-sm text-zinc-400">
-                    <Phone className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-                    <span className="truncate">{lead.phone}</span>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-2 text-sm text-zinc-400">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Phone className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                        <span className="truncate">{lead.phone}</span>
+                      </div>
+                    </div>
+                    <a
+                      href={`https://wa.me/${lead.phone.replace(/\D/g, "")}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full flex items-center justify-center gap-1.5 rounded-xl py-2 px-3 text-xs font-black bg-[#25D366] text-[#075E54] hover:bg-[#128C7E] hover:text-white transition-all shadow-[0_0_15px_rgba(37,211,102,0.1)] hover:shadow-[0_0_20px_rgba(37,211,102,0.25)] hover:-translate-y-0.5 active:translate-y-0 duration-300 font-heading cursor-pointer border border-[#25D366]/20"
+                    >
+                      <MessageCircle className="w-4 h-4 shrink-0 fill-current" />
+                      Chamar no WhatsApp
+                    </a>
                   </div>
                 )}
                 {lead.website && (
                   <div className="flex items-center gap-2 text-sm text-zinc-400">
                     <Globe className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
                     <a
-                      href={lead.website.startsWith("http") ? lead.website : `https://${lead.website}`}
+                      href={
+                        lead.website.startsWith("http") ? lead.website : `https://${lead.website}`
+                      }
                       target="_blank"
                       rel="noopener noreferrer"
                       className="hover:text-emerald-400 transition-colors truncate"
@@ -384,4 +403,3 @@ export function LeadsTable({ leads, onRefresh }: LeadsTableProps) {
     </>
   );
 }
-
