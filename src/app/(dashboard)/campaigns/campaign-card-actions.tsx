@@ -1,7 +1,7 @@
 "use client";
 
-import { useTransition } from "react";
 import { Trash2 } from "lucide-react";
+import { useTransition } from "react";
 import { deleteCampaignAction, toggleCampaignAutomationAction } from "@/actions/campaigns";
 import { Button } from "@/components/ui/button";
 
@@ -21,7 +21,11 @@ export function CampaignCardActions({
   };
 
   const handleDelete = () => {
-    if (confirm("Tem certeza que deseja excluir esta campanha? Os leads não serão excluídos, apenas a campanha.")) {
+    if (
+      confirm(
+        "Tem certeza que deseja excluir esta campanha? Os leads não serão excluídos, apenas a campanha.",
+      )
+    ) {
       startTransition(() => {
         deleteCampaignAction(campaignId);
       });

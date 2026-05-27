@@ -12,6 +12,12 @@ export {
   resetPasswordAction,
 } from "@/actions/auth";
 export {
+  createCampaignAction,
+  deleteCampaignAction,
+  getCampaignDetailsAction,
+  toggleCampaignAutomationAction,
+} from "@/actions/campaigns";
+export {
   deleteLeadAction,
   getConversationsAction,
   getLeadChatAction,

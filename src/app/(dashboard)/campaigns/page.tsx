@@ -1,10 +1,11 @@
-import { sql, eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { Layers, MapPin, Megaphone } from "lucide-react";
+import Link from "next/link";
 import { db } from "@/db";
 import { campaigns, leads, users } from "@/db/schema";
 import { auth } from "@/lib/auth";
-import { CreateCampaignDialog } from "./create-campaign-dialog";
 import { CampaignCardActions } from "./campaign-card-actions";
+import { CreateCampaignDialog } from "./create-campaign-dialog";
 
 export default async function CampaignsPage() {
   const session = await auth();
@@ -33,12 +34,15 @@ export default async function CampaignsPage() {
     .where(eq(leads.userId, userId))
     .groupBy(leads.campaignId);
 
-  const statsMap = leadStats.reduce((acc, curr) => {
-    if (curr.campaignId) {
-      acc[curr.campaignId] = curr;
-    }
-    return acc;
-  }, {} as Record<number, { total: number; contacted: number }>);
+  const statsMap = leadStats.reduce(
+    (acc, curr) => {
+      if (curr.campaignId) {
+        acc[curr.campaignId] = curr;
+      }
+      return acc;
+    },
+    {} as Record<number, { total: number; contacted: number }>,
+  );
 
   return (
     <div className="min-h-screen bg-transparent text-white p-4 md:p-8">
@@ -77,10 +81,12 @@ export default async function CampaignsPage() {
                       {stats.contacted} / {stats.total} Contatados
                     </span>
                   </div>
-                  
-                  <h3 className="text-xl font-bold mb-1 truncate group-hover:text-blue-400 transition-colors">
-                    {camp.name}
-                  </h3>
+
+                  <Link href={`/campaigns/${camp.id}`} className="group/title">
+                    <h3 className="text-xl font-bold mb-1 truncate group-hover/title:text-blue-400 hover:underline transition-colors cursor-pointer">
+                      {camp.name}
+                    </h3>
+                  </Link>
                   <p className="text-sm text-zinc-500 font-medium">
                     {camp.niche} em {camp.city}, {camp.state}
                   </p>
@@ -91,7 +97,10 @@ export default async function CampaignsPage() {
                         <Layers className="w-4 h-4" />
                         <span>Automação: {camp.autoOutreach === "true" ? "Ativa" : "Pausada"}</span>
                       </div>
-                      <CampaignCardActions campaignId={camp.id} autoOutreach={camp.autoOutreach || "false"} />
+                      <CampaignCardActions
+                        campaignId={camp.id}
+                        autoOutreach={camp.autoOutreach || "false"}
+                      />
                     </div>
                   </div>
                 </div>
