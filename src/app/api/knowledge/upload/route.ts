@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
+import PDFParser from "pdf2json";
 import { db } from "@/db";
 import { documents, knowledgeBase } from "@/db/schema";
 import { auth } from "@/lib/auth";
@@ -44,13 +45,18 @@ export async function POST(req: Request) {
     }
 
     const formData = await req.formData();
-    const file = formData.get("file") as File | null;
+    const file = formData.get("file") as File;
 
     if (!file) {
-      return new NextResponse("File is required", { status: 400 });
+      return new NextResponse("No file uploaded", { status: 400 });
     }
 
-    // 1. Inserir documento com status 'processing'
+    // Lê o conteúdo do arquivo
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    let extractedText = "";
+
+    // Adiciona o documento no banco com status 'processing'
     const [documentRecord] = await db
       .insert(documents)
       .values({
@@ -61,17 +67,16 @@ export async function POST(req: Request) {
       })
       .returning();
 
-    // 2. Extrair texto do arquivo (Simples suporte a TXT aqui, e placeholder para PDF)
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-    let extractedText = "";
-
     if (file.type === "application/pdf") {
       try {
-        const pdfParse = require("pdf-parse");
-        const pdfData = await pdfParse(buffer);
-        extractedText = pdfData.text;
+        const pdfParser = new (PDFParser as any)(null, 1);
+        extractedText = await new Promise<string>((resolve, reject) => {
+          pdfParser.on("pdfParser_dataError", (errData: any) => reject(errData.parserError));
+          pdfParser.on("pdfParser_dataReady", () => resolve(pdfParser.getRawTextContent()));
+          pdfParser.parseBuffer(buffer);
+        });
       } catch (_err) {
+        console.error("PDF Parsing Error:", _err);
         await db
           .update(documents)
           .set({ status: "error" })
