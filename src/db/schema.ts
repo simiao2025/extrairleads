@@ -210,10 +210,22 @@ export const outreachLogs = pgTable(
   (table) => [index("outreach_logs_lead_idx").on(table.leadId)],
 );
 
-// Tipo personalizado para pgvector (dimensão 1536 para OpenAI text-embedding-3-small)
-const vector1536 = customType<{ data: number[] }>({
+const vector1536 = customType<{ data: number[]; driverData: string }>({
   dataType() {
     return "vector(1536)";
+  },
+  toDriver(value: number[]): string {
+    return JSON.stringify(value);
+  },
+  fromDriver(value: unknown): number[] {
+    if (typeof value === "string") {
+      try {
+        return JSON.parse(value);
+      } catch {
+        return [];
+      }
+    }
+    return value as number[];
   },
 });
 
