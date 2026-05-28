@@ -1,3 +1,4 @@
+import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { db } from "@/db";
@@ -71,18 +72,27 @@ export async function POST(req: Request) {
         const pdfData = await pdfParse(buffer);
         extractedText = pdfData.text;
       } catch (_err) {
-        await db.update(documents).set({ status: "error" }).where({ id: documentRecord.id });
+        await db
+          .update(documents)
+          .set({ status: "error" })
+          .where(eq(documents.id, documentRecord.id));
         return new NextResponse("Error parsing PDF", { status: 500 });
       }
     } else if (file.type === "text/plain") {
       extractedText = buffer.toString("utf-8");
     } else {
-      await db.update(documents).set({ status: "error" }).where({ id: documentRecord.id });
+      await db
+        .update(documents)
+        .set({ status: "error" })
+        .where(eq(documents.id, documentRecord.id));
       return new NextResponse("Unsupported file type", { status: 400 });
     }
 
     if (!extractedText.trim()) {
-      await db.update(documents).set({ status: "error" }).where({ id: documentRecord.id });
+      await db
+        .update(documents)
+        .set({ status: "error" })
+        .where(eq(documents.id, documentRecord.id));
       return new NextResponse("No text could be extracted", { status: 400 });
     }
 
@@ -109,7 +119,10 @@ export async function POST(req: Request) {
     }
 
     // 5. Atualizar status para completado
-    await db.update(documents).set({ status: "completed" }).where({ id: documentRecord.id });
+    await db
+      .update(documents)
+      .set({ status: "completed" })
+      .where(eq(documents.id, documentRecord.id));
 
     return NextResponse.json({ success: true, document: documentRecord });
   } catch (_error) {
