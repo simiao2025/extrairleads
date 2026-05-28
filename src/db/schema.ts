@@ -217,15 +217,32 @@ const vector1536 = customType<{ data: number[] }>({
   },
 });
 
+export const documents = pgTable(
+  "documents",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }),
+    fileName: text("file_name").notNull(),
+    fileType: text("file_type"),
+    status: text("status").default("processing"), // 'processing', 'completed', 'error'
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (table) => [index("documents_user_idx").on(table.userId)],
+);
+
 export const knowledgeBase = pgTable(
   "knowledge_base",
   {
     id: serial("id").primaryKey(),
     userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }),
+    documentId: integer("document_id").references(() => documents.id, { onDelete: "cascade" }),
     title: text("title").notNull(),
     content: text("content").notNull(),
     embedding: vector1536("embedding"),
     createdAt: timestamp("created_at").defaultNow(),
   },
-  (table) => [index("knowledge_base_user_idx").on(table.userId)],
+  (table) => [
+    index("knowledge_base_user_idx").on(table.userId),
+    index("knowledge_base_document_idx").on(table.documentId),
+  ],
 );
