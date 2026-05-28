@@ -272,7 +272,7 @@ export default function KnowledgeBaseTab() {
           {/* Formulário de Cadastro Manual */}
           <FadeIn delay={0.2}>
             <Card className="border-white/[0.06] bg-white/[0.02] backdrop-blur-xl relative overflow-hidden group">
-              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/[0.01] to-transparent opacity-100 transition-opacity" />
+              <div className="absolute inset-0 pointer-events-none bg-gradient-to-br from-emerald-500/[0.01] to-transparent opacity-100 transition-opacity" />
               <CardHeader>
                 <CardTitle className="text-lg font-bold flex items-center gap-2">
                   <Plus className="w-5 h-5 text-emerald-400" /> Inserção Manual
@@ -367,8 +367,8 @@ export default function KnowledgeBaseTab() {
               {documents.map((doc) => (
                 <StaggerItem key={doc.id}>
                   <Card className="border-white/[0.04] bg-white/[0.01] hover:bg-white/[0.02] hover:border-emerald-500/20 backdrop-blur-xl transition-all group duration-300 relative overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/[0.005] to-transparent" />
-                    <CardContent className="p-5 flex flex-col gap-4">
+                    <div className="absolute inset-0 pointer-events-none bg-gradient-to-br from-emerald-500/[0.005] to-transparent" />
+                    <CardContent className="p-5 flex flex-col gap-4 relative z-10">
                       {editingId === doc.id ? (
                         <div className="space-y-4">
                           <Input
