@@ -406,7 +406,7 @@ export default function KnowledgeBaseTab() {
                           {/* biome-ignore lint/a11y/useKeyWithClickEvents: clickable area */}
                           {/* biome-ignore lint/a11y/noStaticElementInteractions: clickable area */}
                           <div
-                            className="space-y-2 flex-1 cursor-text"
+                            className="space-y-2 flex-1 cursor-pointer relative z-10 hover:bg-white/[0.02] p-2 -m-2 rounded-lg transition-colors"
                             onClick={() => {
                               setEditingId(doc.id);
                               setEditTitle(doc.title);
