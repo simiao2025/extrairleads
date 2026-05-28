@@ -70,3 +70,32 @@ export async function deleteKnowledgeAction(id: number) {
   revalidatePath("/knowledge");
   revalidatePath("/");
 }
+
+export async function updateKnowledgeAction(id: number, title: string, content: string) {
+  const session = await auth();
+  const userId = session?.user?.id ? parseInt(session.user.id, 10) : null;
+  if (!userId) throw new Error("Usuário não autenticado.");
+
+  if (!title || !content) {
+    throw new Error("Título e conteúdo são obrigatórios.");
+  }
+
+  const embeddingResponse = await openai.embeddings.create({
+    model: "text-embedding-3-small",
+    input: content,
+  });
+
+  const embedding = embeddingResponse.data[0].embedding;
+
+  await db
+    .update(knowledgeBase)
+    .set({
+      title,
+      content,
+      embedding,
+    })
+    .where(and(eq(knowledgeBase.id, id), eq(knowledgeBase.userId, userId)));
+
+  revalidatePath("/knowledge");
+  revalidatePath("/");
+}

@@ -22,6 +22,7 @@ import {
   deleteKnowledgeAction,
   getKnowledgeBaseAction,
   saveKnowledgeAction,
+  updateKnowledgeAction,
 } from "./knowledge-actions";
 
 export default function KnowledgeBaseTab() {
@@ -32,6 +33,9 @@ export default function KnowledgeBaseTab() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [isPending, startTransition] = useTransition();
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editContent, setEditContent] = useState("");
 
   // Carregar documentos
   const fetchDocuments = useCallback(async () => {
@@ -95,6 +99,31 @@ export default function KnowledgeBaseTab() {
     } catch (_err) {
       setError("Erro ao excluir o documento.");
     }
+  };
+
+  // Atualizar documento
+  const handleUpdate = async (id: number) => {
+    if (!editTitle.trim() || !editContent.trim()) {
+      setError("Título e conteúdo não podem ficar vazios.");
+      return;
+    }
+    setError("");
+    setSuccess("");
+
+    startTransition(async () => {
+      try {
+        await updateKnowledgeAction(id, editTitle, editContent);
+        setSuccess("Documento atualizado com sucesso!");
+        setEditingId(null);
+        await fetchDocuments();
+      } catch (err: unknown) {
+        if (err instanceof Error) {
+          setError(err.message || "Erro ao atualizar documento.");
+        } else {
+          setError("Erro ao atualizar documento.");
+        }
+      }
+    });
   };
 
   return (
@@ -339,29 +368,74 @@ export default function KnowledgeBaseTab() {
                 <StaggerItem key={doc.id}>
                   <Card className="border-white/[0.04] bg-white/[0.01] hover:bg-white/[0.02] hover:border-emerald-500/20 backdrop-blur-xl transition-all group duration-300 relative overflow-hidden">
                     <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/[0.005] to-transparent" />
-                    <CardContent className="p-5 flex items-start justify-between gap-4">
-                      <div className="space-y-2">
-                        <h3 className="font-bold text-white text-base tracking-tight">
-                          {doc.title}
-                        </h3>
-                        <p className="text-zinc-400 text-xs leading-relaxed line-clamp-3 font-mono whitespace-pre-wrap">
-                          {doc.content}
-                        </p>
-                        <p className="text-[10px] text-zinc-600 font-medium">
-                          Adicionado em:{" "}
-                          {doc.createdAt
-                            ? new Date(doc.createdAt).toLocaleDateString("pt-BR")
-                            : "N/A"}
-                        </p>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDelete(doc.id)}
-                        className="text-zinc-600 hover:text-red-400 hover:bg-red-500/10 shrink-0"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </Button>
+                    <CardContent className="p-5 flex flex-col gap-4">
+                      {editingId === doc.id ? (
+                        <div className="space-y-4">
+                          <Input
+                            value={editTitle}
+                            onChange={(e) => setEditTitle(e.target.value)}
+                            className="bg-black/40 border-white/[0.08] focus:border-emerald-500/50 text-white font-bold h-10"
+                          />
+                          <Textarea
+                            value={editContent}
+                            onChange={(e) => setEditContent(e.target.value)}
+                            rows={8}
+                            className="bg-black/40 border-white/[0.08] focus:border-emerald-500/50 text-zinc-200 leading-relaxed font-mono text-[13px]"
+                          />
+                          <div className="flex items-center gap-2">
+                            <Button
+                              onClick={() => handleUpdate(doc.id)}
+                              disabled={isPending}
+                              className="bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20"
+                            >
+                              {isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                              Salvar
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              onClick={() => setEditingId(null)}
+                              disabled={isPending}
+                              className="text-zinc-400 hover:text-white"
+                            >
+                              Cancelar
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-start justify-between gap-4">
+                          {/* biome-ignore lint/a11y/useKeyWithClickEvents: clickable area */}
+                          {/* biome-ignore lint/a11y/noStaticElementInteractions: clickable area */}
+                          <div
+                            className="space-y-2 flex-1 cursor-text"
+                            onClick={() => {
+                              setEditingId(doc.id);
+                              setEditTitle(doc.title);
+                              setEditContent(doc.content);
+                            }}
+                          >
+                            <h3 className="font-bold text-white text-base tracking-tight hover:text-emerald-400 transition-colors">
+                              {doc.title}
+                            </h3>
+                            <p className="text-zinc-400 text-xs leading-relaxed line-clamp-3 font-mono whitespace-pre-wrap hover:text-zinc-300 transition-colors">
+                              {doc.content}
+                            </p>
+                            <p className="text-[10px] text-zinc-600 font-medium">
+                              Adicionado em:{" "}
+                              {doc.createdAt
+                                ? new Date(doc.createdAt).toLocaleDateString("pt-BR")
+                                : "N/A"}
+                            </p>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDelete(doc.id)}
+                            className="text-zinc-600 hover:text-red-400 hover:bg-red-500/10 shrink-0"
+                          >
+                            <Trash2 className="w-5 h-5" />
+                          </Button>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 </StaggerItem>
