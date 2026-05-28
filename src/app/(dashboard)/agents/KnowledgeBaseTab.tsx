@@ -383,22 +383,25 @@ export default function KnowledgeBaseTab() {
                             className="bg-black/40 border-white/[0.08] focus:border-emerald-500/50 text-zinc-200 leading-relaxed font-mono text-[13px]"
                           />
                           <div className="flex items-center gap-2">
-                            <Button
+                            <button
+                              type="button"
                               onClick={() => handleUpdate(doc.id)}
                               disabled={isPending}
-                              className="bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20"
+                              className="bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 hover:border-emerald-500/30 transition-all font-medium py-1.5 px-3 rounded-lg text-sm flex items-center justify-center disabled:opacity-50 disabled:pointer-events-none"
                             >
-                              {isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                              {isPending ? (
+                                <Loader2 className="w-4 h-4 animate-spin mr-2 inline" />
+                              ) : null}
                               Salvar
-                            </Button>
-                            <Button
-                              variant="ghost"
+                            </button>
+                            <button
+                              type="button"
                               onClick={() => setEditingId(null)}
                               disabled={isPending}
-                              className="text-zinc-400 hover:text-white"
+                              className="text-zinc-400 hover:text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-all hover:bg-white/5 disabled:opacity-50 disabled:pointer-events-none"
                             >
                               Cancelar
-                            </Button>
+                            </button>
                           </div>
                         </div>
                       ) : (
