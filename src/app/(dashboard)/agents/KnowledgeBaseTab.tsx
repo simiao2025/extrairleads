@@ -179,8 +179,8 @@ export default function KnowledgeBaseTab() {
                   <FileUp className="w-5 h-5 text-emerald-400" /> Upload de Documento
                 </CardTitle>
                 <CardDescription className="text-xs">
-                  Faça upload de um PDF ou TXT. O sistema extrairá o texto e adicionará à base
-                  vetorial.
+                  Faça upload de um arquivo PDF, TXT, MD ou Planilha Excel (.xls, .xlsx). O sistema
+                  extrairá o texto e adicionará à base vetorial.
                 </CardDescription>
               </CardHeader>
               <CardContent className="relative space-y-4">
@@ -235,13 +235,13 @@ export default function KnowledgeBaseTab() {
                       htmlFor="file-upload"
                       className="text-xs font-bold text-zinc-400 uppercase tracking-wider"
                     >
-                      Arquivo (PDF / TXT)
+                      Arquivo (PDF / TXT / MD / EXCEL)
                     </label>
                     <Input
                       id="file-upload"
                       name="file"
                       type="file"
-                      accept=".pdf,.txt"
+                      accept=".pdf,.txt,.md,.xls,.xlsx"
                       required
                       className="bg-black/40 border-white/[0.08] focus:border-emerald-500/50 text-white placeholder:text-zinc-600 h-12 pt-2.5"
                     />
