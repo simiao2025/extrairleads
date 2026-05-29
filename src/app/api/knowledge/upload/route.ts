@@ -5,6 +5,7 @@ import PDFParser from "pdf2json";
 import { db } from "@/db";
 import { documents, knowledgeBase } from "@/db/schema";
 import { auth } from "@/lib/auth";
+import { parseDocument } from "@/lib/document-parsers";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -54,7 +55,6 @@ export async function POST(req: Request) {
     // Lê o conteúdo do arquivo
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
-    let extractedText = "";
 
     // Adiciona o documento no banco com status 'processing'
     const [documentRecord] = await db
@@ -67,14 +67,43 @@ export async function POST(req: Request) {
       })
       .returning();
 
-    if (file.type === "application/pdf") {
+    let chunks: { title: string; content: string }[] = [];
+    const extension = file.name.split(".").pop()?.toLowerCase();
+
+    if (
+      extension === "md" ||
+      extension === "xls" ||
+      extension === "xlsx" ||
+      file.type === "text/markdown" ||
+      file.type === "text/x-markdown" ||
+      file.type === "application/vnd.ms-excel" ||
+      file.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    ) {
+      try {
+        chunks = await parseDocument(buffer, file.name, file.type);
+      } catch (err) {
+        console.error("Document Parsing Error:", err);
+        await db
+          .update(documents)
+          .set({ status: "error" })
+          .where(eq(documents.id, documentRecord.id));
+        return new NextResponse("Error parsing document", { status: 500 });
+      }
+    } else if (file.type === "application/pdf" || extension === "pdf") {
       try {
         const pdfParser = new (PDFParser as any)(null, 1);
-        extractedText = await new Promise<string>((resolve, reject) => {
+        const extractedText = await new Promise<string>((resolve, reject) => {
           pdfParser.on("pdfParser_dataError", (errData: any) => reject(errData.parserError));
           pdfParser.on("pdfParser_dataReady", () => resolve(pdfParser.getRawTextContent()));
           pdfParser.parseBuffer(buffer);
         });
+
+        if (!extractedText.trim()) {
+          throw new Error("No text extracted from PDF");
+        }
+
+        const textChunks = chunkText(extractedText);
+        chunks = textChunks.map((c) => ({ title: file.name, content: c }));
       } catch (_err) {
         console.error("PDF Parsing Error:", _err);
         await db
@@ -83,8 +112,17 @@ export async function POST(req: Request) {
           .where(eq(documents.id, documentRecord.id));
         return new NextResponse("Error parsing PDF", { status: 500 });
       }
-    } else if (file.type === "text/plain") {
-      extractedText = buffer.toString("utf-8");
+    } else if (file.type === "text/plain" || extension === "txt") {
+      const extractedText = buffer.toString("utf-8");
+      if (!extractedText.trim()) {
+        await db
+          .update(documents)
+          .set({ status: "error" })
+          .where(eq(documents.id, documentRecord.id));
+        return new NextResponse("No text could be extracted", { status: 400 });
+      }
+      const textChunks = chunkText(extractedText);
+      chunks = textChunks.map((c) => ({ title: file.name, content: c }));
     } else {
       await db
         .update(documents)
@@ -93,7 +131,7 @@ export async function POST(req: Request) {
       return new NextResponse("Unsupported file type", { status: 400 });
     }
 
-    if (!extractedText.trim()) {
+    if (chunks.length === 0) {
       await db
         .update(documents)
         .set({ status: "error" })
@@ -101,26 +139,37 @@ export async function POST(req: Request) {
       return new NextResponse("No text could be extracted", { status: 400 });
     }
 
-    // 3. Chunking
-    const chunks = chunkText(extractedText);
+    // 4. Gerar Embeddings e Salvar (com rollback em caso de falha)
+    try {
+      for (const chunk of chunks) {
+        const response = await openai.embeddings.create({
+          model: "text-embedding-3-small",
+          input: chunk.content,
+          encoding_format: "float",
+        });
 
-    // 4. Gerar Embeddings e Salvar
-    for (const chunk of chunks) {
-      const response = await openai.embeddings.create({
-        model: "text-embedding-3-small",
-        input: chunk,
-        encoding_format: "float",
-      });
+        const embedding = response.data[0].embedding;
 
-      const embedding = response.data[0].embedding;
+        await db.insert(knowledgeBase).values({
+          userId,
+          documentId: documentRecord.id,
+          title: chunk.title,
+          content: chunk.content,
+          embedding: embedding,
+        });
+      }
+    } catch (embeddingError) {
+      console.error("Embedding Generation Error:", embeddingError);
 
-      await db.insert(knowledgeBase).values({
-        userId,
-        documentId: documentRecord.id,
-        title: file.name,
-        content: chunk,
-        embedding: embedding,
-      });
+      // Rollback: Deleta chunks inseridos parcialmente
+      await db.delete(knowledgeBase).where(eq(knowledgeBase.documentId, documentRecord.id));
+
+      await db
+        .update(documents)
+        .set({ status: "error" })
+        .where(eq(documents.id, documentRecord.id));
+
+      return new NextResponse("Error generating embeddings", { status: 500 });
     }
 
     // 5. Atualizar status para completado
