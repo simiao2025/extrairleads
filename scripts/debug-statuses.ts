@@ -6,7 +6,8 @@ async function main() {
   console.log("Status counts:");
   const counts: Record<string, number> = {};
   for (const l of allLeads) {
-    counts[l.status] = (counts[l.status] || 0) + 1;
+    const status = l.status || "unknown";
+    counts[status] = (counts[status] || 0) + 1;
   }
   console.log(counts);
 }
