@@ -9,19 +9,19 @@ import { users, verificationTokens } from "@/db/schema";
 import { auth } from "@/lib/auth";
 
 const registerSchema = z.object({
-  name: z
-    .string()
-    .trim()
-    .min(2, "Nome muito curto.")
-    .regex(/^[A-Za-zÀ-ÖØ-öø-ÿ\s]+$/, "Nome inválido."),
-  email: z.string().trim().toLowerCase().email("Email inválido."),
-  password: z.string().min(8, "A senha deve ter pelo menos 8 caracteres."),
+	name: z
+		.string()
+		.trim()
+		.min(2, "Nome muito curto.")
+		.regex(/^[A-Za-zÀ-ÖØ-öø-ÿ\s]+$/, "Nome inválido."),
+	email: z.string().trim().toLowerCase().email("Email inválido."),
+	password: z.string().min(8, "A senha deve ter pelo menos 8 caracteres."),
 });
 
 interface RegisterResult {
-  success: boolean;
-  error?: string;
-  message?: string;
+	success: boolean;
+	error?: string;
+	message?: string;
 }
 
 // Em memória: Rate limiting muito básico por IP/sessão não é ideal em server action puro sem o request,
@@ -29,86 +29,99 @@ interface RegisterResult {
 // Para rate limit real distribuído, a recomendação é usar @upstash/ratelimit com headers no Middleware.
 
 export async function registerAction(
-  nameRaw: string,
-  emailRaw: string,
-  passwordRaw: string,
+	nameRaw: string,
+	emailRaw: string,
+	passwordRaw: string,
 ): Promise<RegisterResult> {
-  try {
-    // 1. Sanitização estrita (Zod) OWASP A06
-    const validation = registerSchema.safeParse({
-      name: nameRaw,
-      email: emailRaw,
-      password: passwordRaw,
-    });
-    if (!validation.success) {
-      // Fail-closed sem vazar detalhes excessivos
-      return { success: false, error: validation.error.issues[0].message };
-    }
+	try {
+		// 1. Sanitização estrita (Zod) OWASP A06
+		const validation = registerSchema.safeParse({
+			name: nameRaw,
+			email: emailRaw,
+			password: passwordRaw,
+		});
+		if (!validation.success) {
+			// Fail-closed sem vazar detalhes excessivos
+			return { success: false, error: validation.error.issues[0].message };
+		}
 
-    const { name, email, password } = validation.data;
+		const { name, email, password } = validation.data;
 
-    // 2. Zero Account Enumeration (OWASP A07)
-    // Procuramos o usuário, mas se ele existir, disfarçamos.
-    const [existingUser] = await db.select().from(users).where(eq(users.email, email));
+		// 2. Zero Account Enumeration (OWASP A07)
+		// Procuramos o usuário, mas se ele existir, disfarçamos.
+		const [existingUser] = await db
+			.select()
+			.from(users)
+			.where(eq(users.email, email));
 
-    // 3. Argon2id para Hashing Forte (OWASP A05)
-    const hashedPassword = await argon2.hash(password);
+		// 3. Argon2id para Hashing Forte (OWASP A05)
+		const hashedPassword = await argon2.hash(password);
 
-    if (existingUser) {
-      if (existingUser.emailVerified) {
-        // Zero Account Enumeration para usuários já ativos.
-        return {
-          success: true,
-          message: "E-mail de confirmação enviado! Verifique sua caixa de entrada.",
-        };
-      }
-      // Se existe mas não foi verificado, NÃO alteramos a senha ou nome (evita hijacking de registro).
-      // Apenas limpamos os tokens antigos para gerar um novo e reenviar o e-mail de ativação.
-      await db.delete(verificationTokens).where(eq(verificationTokens.identifier, email));
-    } else {
-      // 4. Inserção Segura
-      await db.insert(users).values({
-        name,
-        email,
-        password: hashedPassword,
-        onboardingStatus: "PENDING_INFO",
-        emailVerified: null, // Forçar confirmação por e-mail
-      });
-    }
+		if (existingUser) {
+			if (existingUser.emailVerified) {
+				// Zero Account Enumeration para usuários já ativos.
+				return {
+					success: true,
+					message:
+						"E-mail de confirmação enviado! Verifique sua caixa de entrada.",
+				};
+			}
+			// Se existe mas não foi verificado, NÃO alteramos a senha ou nome (evita hijacking de registro).
+			// Apenas limpamos os tokens antigos para gerar um novo e reenviar o e-mail de ativação.
+			await db
+				.delete(verificationTokens)
+				.where(eq(verificationTokens.identifier, email));
+		} else {
+			// 4. Inserção Segura
+			await db.insert(users).values({
+				name,
+				email,
+				password: hashedPassword,
+				onboardingStatus: "PENDING_INFO",
+				emailVerified: null, // Forçar confirmação por e-mail
+			});
+		}
 
-    // 5. Token criptograficamente seguro (OWASP A02)
-    const token = crypto.randomBytes(32).toString("hex");
-    const expires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h
+		// 5. Token criptograficamente seguro (OWASP A02)
+		const token = crypto.randomBytes(32).toString("hex");
+		const expires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h
 
-    await db.insert(verificationTokens).values({
-      identifier: email,
-      token: token,
-      expires: expires,
-    });
+		await db.insert(verificationTokens).values({
+			identifier: email,
+			token: token,
+			expires: expires,
+		});
 
-    // Enviar e-mail de ativação via Resend API
-    const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
-    const activationLink = `${baseUrl}/api/auth/confirm?token=${token}&email=${encodeURIComponent(email)}`;
+		// Enviar e-mail de ativação via Resend API
+		const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+		const activationLink = `${baseUrl}/api/auth/confirm?token=${token}&email=${encodeURIComponent(email)}`;
 
-    const resendApiKey = process.env.RESEND_API_KEY;
-    if (!resendApiKey) {
-      console.warn("Aviso: RESEND_API_KEY não configurada. O e-mail não foi enviado.");
-      // Se não tem chave, avisamos o frontend para que o dev saiba, em vez de sucesso fantasma.
-      return { success: false, error: "Chave do serviço de e-mail não configurada no servidor." };
-    }
+		const resendApiKey = process.env.RESEND_API_KEY;
+		if (!resendApiKey) {
+			console.warn(
+				"Aviso: RESEND_API_KEY não configurada. O e-mail não foi enviado.",
+			);
+			// Se não tem chave, avisamos o frontend para que o dev saiba, em vez de sucesso fantasma.
+			return {
+				success: false,
+				error: "Chave do serviço de e-mail não configurada no servidor.",
+			};
+		}
 
-    try {
-      const res = await fetch("https://api.resend.com/emails", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${resendApiKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            from: process.env.EMAIL_FROM || "ExtrairLeads Onboarding <onboarding@resend.dev>",
-            to: email,
-            subject: "Ative sua conta - ExtrairLeads",
-            html: `
+		try {
+			const res = await fetch("https://api.resend.com/emails", {
+				method: "POST",
+				headers: {
+					Authorization: `Bearer ${resendApiKey}`,
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({
+					from:
+						process.env.EMAIL_FROM ||
+						"ExtrairLeads Onboarding <onboarding@resend.dev>",
+					to: email,
+					subject: "Ative sua conta - ExtrairLeads",
+					html: `
               <div style="font-family: sans-serif; background-color: #050505; color: #f4f4f5; padding: 40px; border-radius: 16px; max-width: 600px; margin: 0 auto; border: 1px solid #27272a;">
                 <h2 style="color: #ffffff; font-size: 24px; font-weight: bold; margin-bottom: 20px;">Ative sua conta de prospecção</h2>
                 <p style="color: #a1a1aa; font-size: 14px; line-height: 1.6;">
@@ -131,93 +144,117 @@ export async function registerAction(
                 </p>
               </div>
             `,
-          }),
-        });
+				}),
+			});
 
-        if (!res.ok) {
-          const errText = await res.text();
-          console.error("Falha ao enviar e-mail via Resend:", res.status, errText);
-          return {
-            success: false,
-            error: "Erro ao enviar e-mail de ativação. Verifique a configuração de e-mail.",
-          };
-        }
-      } catch (err) {
-        console.error("Erro de rede no envio de e-mail:", err);
-        return { success: false, error: "Erro de comunicação ao enviar o e-mail." };
-      }
+			if (!res.ok) {
+				const errText = await res.text();
+				console.error(
+					"Falha ao enviar e-mail via Resend:",
+					res.status,
+					errText,
+				);
+				return {
+					success: false,
+					error:
+						"Erro ao enviar e-mail de ativação. Verifique a configuração de e-mail.",
+				};
+			}
+		} catch (err) {
+			console.error("Erro de rede no envio de e-mail:", err);
+			return {
+				success: false,
+				error: "Erro de comunicação ao enviar o e-mail.",
+			};
+		}
 
-    return {
-      success: true,
-      message: "E-mail de confirmação enviado! Verifique sua caixa de entrada ou Spam.",
-    };
-  } catch (_error: unknown) {
-    return { success: false, error: "Serviço temporariamente indisponível. Tente novamente." };
-  }
+		return {
+			success: true,
+			message:
+				"E-mail de confirmação enviado! Verifique sua caixa de entrada ou Spam.",
+		};
+	} catch (_error: unknown) {
+		return {
+			success: false,
+			error: "Serviço temporariamente indisponível. Tente novamente.",
+		};
+	}
 }
 
-const forgotPasswordRateLimit = new Map<string, { count: number; resetAt: number }>();
+const forgotPasswordRateLimit = new Map<
+	string,
+	{ count: number; resetAt: number }
+>();
 
 function checkForgotRateLimit(email: string): boolean {
-  const now = Date.now();
-  const entry = forgotPasswordRateLimit.get(email);
-  if (!entry || now > entry.resetAt) {
-    forgotPasswordRateLimit.set(email, { count: 1, resetAt: now + 15 * 60 * 1000 });
-    return true;
-  }
-  if (entry.count >= 3) return false;
-  entry.count++;
-  return true;
+	const now = Date.now();
+	const entry = forgotPasswordRateLimit.get(email);
+	if (!entry || now > entry.resetAt) {
+		forgotPasswordRateLimit.set(email, {
+			count: 1,
+			resetAt: now + 15 * 60 * 1000,
+		});
+		return true;
+	}
+	if (entry.count >= 3) return false;
+	entry.count++;
+	return true;
 }
 
 export async function forgotPasswordAction(
-  emailRaw: string,
+	emailRaw: string,
 ): Promise<{ success: boolean; error?: string; message?: string }> {
-  try {
-    if (!checkForgotRateLimit(emailRaw.toLowerCase().trim())) {
-      return { success: false, error: "Muitas tentativas. Tente novamente em 15 minutos." };
-    }
+	try {
+		if (!checkForgotRateLimit(emailRaw.toLowerCase().trim())) {
+			return {
+				success: false,
+				error: "Muitas tentativas. Tente novamente em 15 minutos.",
+			};
+		}
 
-    const email = emailRaw.toLowerCase().trim();
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return { success: false, error: "E-mail inválido." };
-    }
+		const email = emailRaw.toLowerCase().trim();
+		if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+			return { success: false, error: "E-mail inválido." };
+		}
 
-    const [user] = await db.select().from(users).where(eq(users.email, email));
+		const [user] = await db.select().from(users).where(eq(users.email, email));
 
-    if (!user) {
-      return {
-        success: true,
-        message: "Se o e-mail estiver cadastrado, você receberá um link de recuperação.",
-      };
-    }
+		if (!user) {
+			return {
+				success: true,
+				message:
+					"Se o e-mail estiver cadastrado, você receberá um link de recuperação.",
+			};
+		}
 
-    const token = crypto.randomBytes(32).toString("hex");
-    const expires = new Date(Date.now() + 60 * 60 * 1000);
+		const token = crypto.randomBytes(32).toString("hex");
+		const expires = new Date(Date.now() + 60 * 60 * 1000);
 
-    await db.insert(verificationTokens).values({
-      identifier: `reset:${email}`,
-      token,
-      expires,
-    });
+		await db.insert(verificationTokens).values({
+			identifier: `reset:${email}`,
+			token,
+			expires,
+		});
 
-    const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
-    const resetLink = `${baseUrl}/reset-password?token=${token}&email=${encodeURIComponent(email)}`;
+		const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+		const resetLink = `${baseUrl}/reset-password?token=${token}&email=${encodeURIComponent(email)}`;
 
-    const resendApiKey = process.env.RESEND_API_KEY;
-    if (resendApiKey) {
-      try {
-        await fetch("https://api.resend.com/emails", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${resendApiKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            from: process.env.EMAIL_FROM || "ExtrairLeads <onboarding@brasilonthebox.shop>",
-            to: email,
-            subject: "Recuperação de Senha - ExtrairLeads",
-            html: `
+		const resendApiKey = process.env.RESEND_API_KEY;
+		if (resendApiKey) {
+			try {
+				await fetch("https://api.resend.com/emails", {
+					method: "POST",
+					headers: {
+						Authorization: `Bearer ${resendApiKey}`,
+						"Content-Type": "application/json",
+					},
+					body: JSON.stringify({
+						from:
+							process.env.EMAIL_FROM ||
+							"ExtrairLeads <onboarding@brasilonthebox.shop>",
+						to: email,
+						subject: "Recuperação de Senha - ExtrairLeads",
+						html: `
 <div style="font-family: sans-serif; background-color: #050505; color: #f4f4f5; padding: 40px; border-radius: 16px; max-width: 600px; margin: 0 auto; border: 1px solid #27272a;">
   <h2 style="color: #ffffff; font-size: 24px; font-weight: bold; margin-bottom: 20px;">Recuperação de Senha</h2>
   <p style="color: #a1a1aa; font-size: 14px; line-height: 1.6;">
@@ -243,123 +280,153 @@ export async function forgotPasswordAction(
   </p>
 </div>
 `,
-          }),
-        });
-      } catch (_err) {}
-    }
+					}),
+				});
+			} catch (_err) {}
+		}
 
-    return {
-      success: true,
-      message: "Se o e-mail estiver cadastrado, você receberá um link de recuperação.",
-    };
-  } catch (_error: unknown) {
-    return { success: false, error: "Serviço temporariamente indisponível. Tente novamente." };
-  }
+		return {
+			success: true,
+			message:
+				"Se o e-mail estiver cadastrado, você receberá um link de recuperação.",
+		};
+	} catch (_error: unknown) {
+		return {
+			success: false,
+			error: "Serviço temporariamente indisponível. Tente novamente.",
+		};
+	}
 }
 
 export async function resetPasswordAction(
-  tokenRaw: string,
-  emailRaw: string,
-  newPasswordRaw: string,
+	tokenRaw: string,
+	emailRaw: string,
+	newPasswordRaw: string,
 ): Promise<{ success: boolean; error?: string }> {
-  try {
-    const token = tokenRaw?.trim();
-    const email = emailRaw?.toLowerCase().trim();
-    const newPassword = newPasswordRaw;
+	try {
+		const token = tokenRaw?.trim();
+		const email = emailRaw?.toLowerCase().trim();
+		const newPassword = newPasswordRaw;
 
-    if (!token || !email || !newPassword) {
-      return { success: false, error: "Dados insuficientes para redefinir a senha." };
-    }
+		if (!token || !email || !newPassword) {
+			return {
+				success: false,
+				error: "Dados insuficientes para redefinir a senha.",
+			};
+		}
 
-    if (newPassword.length < 8) {
-      return { success: false, error: "A nova senha deve ter pelo menos 8 caracteres." };
-    }
+		if (newPassword.length < 8) {
+			return {
+				success: false,
+				error: "A nova senha deve ter pelo menos 8 caracteres.",
+			};
+		}
 
-    const [dbToken] = await db
-      .select()
-      .from(verificationTokens)
-      .where(
-        and(
-          eq(verificationTokens.token, token),
-          eq(verificationTokens.identifier, `reset:${email}`),
-        ),
-      );
+		const [dbToken] = await db
+			.select()
+			.from(verificationTokens)
+			.where(
+				and(
+					eq(verificationTokens.token, token),
+					eq(verificationTokens.identifier, `reset:${email}`),
+				),
+			);
 
-    if (!dbToken || new Date() > new Date(dbToken.expires)) {
-      return {
-        success: false,
-        error: "Link de recuperação expirado ou inválido. Solicite um novo.",
-      };
-    }
+		if (!dbToken || new Date() > new Date(dbToken.expires)) {
+			return {
+				success: false,
+				error: "Link de recuperação expirado ou inválido. Solicite um novo.",
+			};
+		}
 
-    const [user] = await db.select().from(users).where(eq(users.email, email));
-    if (!user) {
-      return { success: false, error: "Conta não encontrada." };
-    }
+		const [user] = await db.select().from(users).where(eq(users.email, email));
+		if (!user) {
+			return { success: false, error: "Conta não encontrada." };
+		}
 
-    const hashedPassword = await argon2.hash(newPassword);
+		const hashedPassword = await argon2.hash(newPassword);
 
-    await db.update(users).set({ password: hashedPassword }).where(eq(users.email, email));
+		await db
+			.update(users)
+			.set({ password: hashedPassword })
+			.where(eq(users.email, email));
 
-    await db.delete(verificationTokens).where(eq(verificationTokens.id, dbToken.id));
+		await db
+			.delete(verificationTokens)
+			.where(eq(verificationTokens.id, dbToken.id));
 
-    return { success: true };
-  } catch (_error: unknown) {
-    return { success: false, error: "Serviço temporariamente indisponível. Tente novamente." };
-  }
+		return { success: true };
+	} catch (_error: unknown) {
+		return {
+			success: false,
+			error: "Serviço temporariamente indisponível. Tente novamente.",
+		};
+	}
 }
 
 export async function changePasswordAction(
-  currentPasswordRaw: string,
-  newPasswordRaw: string,
+	currentPasswordRaw: string,
+	newPasswordRaw: string,
 ): Promise<{ success: boolean; error?: string }> {
-  try {
-    const session = await auth();
-    if (!session?.user?.email) {
-      return { success: false, error: "Usuário não autenticado." };
-    }
+	try {
+		const session = await auth();
+		if (!session?.user?.email) {
+			return { success: false, error: "Usuário não autenticado." };
+		}
 
-    const currentPassword = currentPasswordRaw;
-    const newPassword = newPasswordRaw;
+		const currentPassword = currentPasswordRaw;
+		const newPassword = newPasswordRaw;
 
-    if (!currentPassword || !newPassword) {
-      return { success: false, error: "Preencha todos os campos obrigatórios." };
-    }
+		if (!currentPassword || !newPassword) {
+			return {
+				success: false,
+				error: "Preencha todos os campos obrigatórios.",
+			};
+		}
 
-    if (newPassword.length < 6) {
-      return { success: false, error: "A nova senha deve ter pelo menos 6 caracteres." };
-    }
+		if (newPassword.length < 6) {
+			return {
+				success: false,
+				error: "A nova senha deve ter pelo menos 6 caracteres.",
+			};
+		}
 
-    // 1. Buscar usuário
-    const [user] = await db.select().from(users).where(eq(users.email, session.user.email));
-    if (!user || !user.password) {
-      return { success: false, error: "Usuário não encontrado." };
-    }
+		// 1. Buscar usuário
+		const [user] = await db
+			.select()
+			.from(users)
+			.where(eq(users.email, session.user.email));
+		if (!user || !user.password) {
+			return { success: false, error: "Usuário não encontrado." };
+		}
 
-    // 2. Verificar senha atual
-    let isCurrentValid = false;
-    try {
-      isCurrentValid = await argon2.verify(user.password, currentPassword);
-    } catch (_e) {
-      return { success: false, error: "Senha atual incorreta." };
-    }
+		// 2. Verificar senha atual
+		let isCurrentValid = false;
+		try {
+			isCurrentValid = await argon2.verify(user.password, currentPassword);
+		} catch (_e) {
+			return { success: false, error: "Senha atual incorreta." };
+		}
 
-    if (!isCurrentValid) {
-      return { success: false, error: "Senha atual incorreta." };
-    }
+		if (!isCurrentValid) {
+			return { success: false, error: "Senha atual incorreta." };
+		}
 
-    // 3. Hash a nova senha
-    const hashedNewPassword = await argon2.hash(newPassword);
+		// 3. Hash a nova senha
+		const hashedNewPassword = await argon2.hash(newPassword);
 
-    // 4. Atualizar no banco
-    await db
-      .update(users)
-      .set({ password: hashedNewPassword })
-      .where(eq(users.id, user.id));
+		// 4. Atualizar no banco
+		await db
+			.update(users)
+			.set({ password: hashedNewPassword })
+			.where(eq(users.id, user.id));
 
-    return { success: true };
-  } catch (error: any) {
-    console.error("Erro ao alterar senha:", error);
-    return { success: false, error: "Serviço temporariamente indisponível. Tente novamente." };
-  }
+		return { success: true };
+	} catch (error: any) {
+		console.error("Erro ao alterar senha:", error);
+		return {
+			success: false,
+			error: "Serviço temporariamente indisponível. Tente novamente.",
+		};
+	}
 }

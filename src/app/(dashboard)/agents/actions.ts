@@ -7,16 +7,19 @@ import { campaignConfigs } from "@/db/schema";
 import { auth } from "@/lib/auth";
 
 export async function getAiConfig() {
-  const session = await auth();
-  const userId = session?.user?.id ? parseInt(session.user.id, 10) : null;
+	const session = await auth();
+	const userId = session?.user?.id ? parseInt(session.user.id, 10) : null;
 
-  const [config] = userId
-    ? await db.select().from(campaignConfigs).where(eq(campaignConfigs.userId, userId))
-    : [];
+	const [config] = userId
+		? await db
+				.select()
+				.from(campaignConfigs)
+				.where(eq(campaignConfigs.userId, userId))
+		: [];
 
-  return (
-    config || {
-      agent1Prompt: `Você é um Agente Especialista em Qualificação de Leads para Soluções de Tecnologia, Automação e Presença Digital. Sua missão é analisar dados extraídos do Google Maps via SerpAPI e gerar um score de oportunidade comercial preciso, acionável e estratificado.
+	return (
+		config || {
+			agent1Prompt: `Você é um Agente Especialista em Qualificação de Leads para Soluções de Tecnologia, Automação e Presença Digital. Sua missão é analisar dados extraídos do Google Maps via SerpAPI e gerar um score de oportunidade comercial preciso, acionável e estratificado.
 
 ━━━ DADOS DE ENTRADA (todos os campos disponíveis) ━━━
 
@@ -49,13 +52,13 @@ OPERAÇÃO:
 Calcule 5 sub-scores e some ponderado:
 
 1. MATURIDADE DIGITAL [peso 30%]
-   0 = site + automação avançada (CRM, chatbot, agendamento online)
-   5 = tem site mas sem automação visível
-   10 = sem site, sem redes ativas ou perfil abandonado
+   Alta (0-3): Tem site próprio estruturado, links de agendamento online (Booksy, Calendly, Trinks, etc) ou indícios de atendimento automatizado.
+   Média (4-7): Tem site básico ou apenas redes sociais, sem automação visível.
+   Baixa (8-10): Sem site, sem redes ativas ou perfil abandonado.
 
 2. DOR IDENTIFICADA NAS AVALIAÇÕES [peso 25%]
    Analise o texto das reviews buscando gatilhos:
-   ALTA (8-10): "demora", "não atende", "WhatsApp", "sem resposta", "cancelou", "desorganizado", "fila", "espera"
+   ALTA (8-10): "demora", "não atende", "WhatsApp", "sem resposta", "cancelou", "desorganizado", "robô ruim", "atendimento automático péssimo" (sinaliza automação ineficiente).
    MÉDIA (4-7): "poderia melhorar", "às vezes demora", "site confuso"
    BAIXA (0-3): reviews positivas ou sem menção a processos
 
@@ -102,7 +105,7 @@ Retorne APENAS JSON válido, sem markdown, sem explicações externas:
   "analysis": "Dossiê estratégico de qualificação em formato de texto estruturado. Deve obrigatoriamente incluir: 1. PONTOS POSITIVOS (pontos fortes do lead, boa reputação, fotos, etc.); 2. PONTOS NEGATIVOS (dores críticas encontradas, falta de site, demora em WhatsApp/plantão, etc.); 3. DIRETRIZ E GANCHO PARA O SDR (instruções exatas de abordagem comercial personalizadas para este negócio)."
 }
 `,
-      agent2Prompt: `Você é um SDR (Sales Development Representative) especialista em abordagens consultivas via WhatsApp.
+			agent2Prompt: `Você é um SDR (Sales Development Representative) especialista em abordagens consultivas via WhatsApp.
 Sua missão é interagir com o cliente para responder dúvidas, contornar objeções com empatia e agendar uma reunião de demonstração.
 
 ━━━ DIRETRIZES DE COMUNICAÇÃO ━━━
@@ -126,42 +129,42 @@ R - Respond (Responda): Use o RAG para apresentar o valor real ou ROI da soluç�
 
 EXEMPLO DE ABERTURA:
 "Olá! Tudo bem? Notei que a [NOME_EMPRESA] é referência, mas vi que alguns clientes comentam sobre [DOR]. Temos uma solução que pode ajudar. Faz sentido conversarmos sobre isso?"`,
-      weeklyLimit: 50,
-    }
-  );
+			weeklyLimit: 50,
+		}
+	);
 }
 
 export async function saveAiConfigAction(formData: FormData) {
-  const session = await auth();
-  const userId = session?.user?.id ? parseInt(session.user.id, 10) : null;
-  if (!userId) throw new Error("Usuário não autenticado.");
+	const session = await auth();
+	const userId = session?.user?.id ? parseInt(session.user.id, 10) : null;
+	if (!userId) throw new Error("Usuário não autenticado.");
 
-  const agent1Prompt = formData.get("agent1Prompt") as string;
-  const agent2Prompt = formData.get("agent2Prompt") as string;
-  const weeklyLimit = parseInt(formData.get("weeklyLimit") as string, 10);
-  const autoOutreach = formData.get("autoOutreach") === "on" ? "true" : "false";
+	const agent1Prompt = formData.get("agent1Prompt") as string;
+	const agent2Prompt = formData.get("agent2Prompt") as string;
+	const weeklyLimit = parseInt(formData.get("weeklyLimit") as string, 10);
+	const autoOutreach = formData.get("autoOutreach") === "on" ? "true" : "false";
 
-  const existing = await db
-    .select()
-    .from(campaignConfigs)
-    .where(eq(campaignConfigs.userId, userId));
+	const existing = await db
+		.select()
+		.from(campaignConfigs)
+		.where(eq(campaignConfigs.userId, userId));
 
-  if (existing.length > 0) {
-    await db
-      .update(campaignConfigs)
-      .set({ agent1Prompt, agent2Prompt, weeklyLimit, autoOutreach })
-      .where(eq(campaignConfigs.userId, userId));
-  } else {
-    await db.insert(campaignConfigs).values({
-      userId,
-      name: "Configuração Padrão",
-      agent1Prompt,
-      agent2Prompt,
-      weeklyLimit,
-      autoOutreach,
-    });
-  }
+	if (existing.length > 0) {
+		await db
+			.update(campaignConfigs)
+			.set({ agent1Prompt, agent2Prompt, weeklyLimit, autoOutreach })
+			.where(eq(campaignConfigs.userId, userId));
+	} else {
+		await db.insert(campaignConfigs).values({
+			userId,
+			name: "Configuração Padrão",
+			agent1Prompt,
+			agent2Prompt,
+			weeklyLimit,
+			autoOutreach,
+		});
+	}
 
-  revalidatePath("/agents");
-  revalidatePath("/");
+	revalidatePath("/agents");
+	revalidatePath("/");
 }

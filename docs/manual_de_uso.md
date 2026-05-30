@@ -31,13 +31,15 @@ Mostram a saúde da sua operação em tempo real:
 ### 2.2. Radar de Extração (Search Form)
 O campo de busca luminoso no centro da tela.
 *   **O que faz:** Ao digitar um segmento e localização (Ex: "Contabilidades em Brasília") e apertar **Buscar**, o ExtrairLeads vai varrer o Google Maps em tempo real e baixar os dados públicos (Telefone, Site, Endereço, Nome) diretamente para o funil "Novos".
+*   **Filtro Inteligente:** O sistema possui proteção automática de saldo. Leads duplicados ou empresas **sem número de telefone cadastrado no Google** são ignorados instantaneamente, garantindo que você pague apenas por contatos válidos para prospecção.
 *   **Dica:** Sempre selecione uma Campanha no botão suspensivo acima dele antes de buscar, para não misturar leads de segmentos diferentes.
 
 ### 2.3. Os Botões de Ação (Aceleradores)
 Logo abaixo do título "Extrair, Qualificar & Vender", existem 3 botões poderosos para uso em massa:
 
-1.  **🔍 Analisar Pendentes:** 
-    *   **Função:** Pega todos os leads da coluna "Novos" que possuem site e envia para a Inteligência Artificial visitar, ler e qualificar.
+1.  **🔍 Analisar Pendentes (Qualificação):** 
+    *   **Função:** Pega os leads da coluna "Novos" e envia para a Inteligência Artificial analisar. A IA cruza dados do site, avaliações do Google Maps e presença digital.
+    *   **Nova Inteligência (Score):** A IA agora detecta se o lead já possui site sofisticado, links de agendamento online (Booksy, Calendly) e busca ativamente por reclamações de "robô ruim" ou "demora no WhatsApp" nas avaliações do Google, elevando o score de oportunidade caso o cliente esteja insatisfeito com sua automação atual.
 2.  **💬 Disparo Frio (Outreach):** 
     *   **Função:** Inicia a prospecção ativa. Pega os leads "Qualificados" e dispara a mensagem de introdução pelo seu WhatsApp conectado, de forma automática e hiperpersonalizada.
 3.  **🔄 Follow-up:** 
