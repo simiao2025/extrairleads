@@ -1,6 +1,5 @@
 import { db } from "../src/db";
 import { leads } from "../src/db/schema";
-import { eq } from "drizzle-orm";
 
 async function main() {
   const allLeads = await db.select().from(leads);
