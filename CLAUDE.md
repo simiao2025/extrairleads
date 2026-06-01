@@ -53,3 +53,24 @@ Executamos a varredura automatizada completa após a implementação dos parsers
   * **Excel (`.xls`, `.xlsx`):** Conversão para tabelas Markdown. Planilhas longas (> 20 linhas) são divididas, replicando a linha de cabeçalho e separadores no início de cada novo fragmento de tabela.
 * **Módulo central:** `src/lib/document-parsers.ts`
 * **API Endpoint:** `src/app/api/knowledge/upload/route.ts` (com estratégia de rollback no banco caso ocorra erro ao gerar embeddings).
+
+---
+
+## 6. Diretrizes de Qualidade Obrigatórias (Sempre Executar)
+
+Todos os agentes de IA e desenvolvedores que atuarem neste repositório devem, **obrigatoriamente**, realizar varreduras e revisões de qualidade baseadas nas seguintes diretrizes antes de finalizar qualquer entrega:
+
+1. **Pureza de Código (`/code-purity`):**
+   * Eliminar qualquer dead code, variáveis ou imports não utilizados.
+   * Evitar duplicação lógica (DRY) extraindo utilitários compartilhados.
+   * Manter consistência estrita de estilo rodando o formatador do Biome.
+   
+2. **Cibersegurança Web (`/cybersecurity-web`):**
+   * Auditar rotas, webhooks e manipulação de formulários contra vulnerabilidades do OWASP Top 10 (especialmente A10:2025 - Mishandling of Exceptional Conditions).
+   * Validar inputs utilizando Zod e garantir parametrização de consultas SQL (Drizzle ORM).
+   * Proteger segredos de ambiente no `.env` e nunca expor chaves ou senhas em texto puro.
+
+3. **Otimização de Performance (`/performance-optimization`):**
+   * Adicionar índices em chaves estrangeiras (`campaignId`, `userId`, `niche`) nas tabelas de leads e tarefas.
+   * Evitar loops bloqueantes estáticos, optando por concorrência paralela controlada (Promise.all chunks).
+   * Otimizar payloads de RSC (React Server Components) para o cliente.

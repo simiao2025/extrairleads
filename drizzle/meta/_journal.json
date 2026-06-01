@@ -29,6 +29,13 @@
       "when": 1779674673827,
       "tag": "0003_tired_hex",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1780348335224,
+      "tag": "0004_loving_golden_guardian",
+      "breakpoints": true
     }
   ]
 }

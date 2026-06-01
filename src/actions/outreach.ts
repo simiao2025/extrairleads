@@ -22,18 +22,11 @@ const groq = new OpenAI({
 
 export async function qualifyLeadsAction(leadIds: number[], jobId?: number) {
 	let progress = 0;
-	for (const id of leadIds) {
+	const CONCURRENCY_LIMIT = 4; // Process in parallel chunks of 4 to maximize speed while respecting Groq TPM
+
+	async function qualifySingleLead(id: number, retries = 3): Promise<void> {
 		const [lead] = await db.select().from(leads).where(eq(leads.id, id));
-		if (!lead) {
-			progress++;
-			if (jobId) {
-				await db
-					.update(scrapingJobs)
-					.set({ currentProgress: progress })
-					.where(eq(scrapingJobs.id, jobId));
-			}
-			continue;
-		}
+		if (!lead) return;
 
 		// Load config specific to the lead's owner (userId)
 		const [config] = lead.userId
@@ -53,6 +46,14 @@ export async function qualifyLeadsAction(leadIds: number[], jobId?: number) {
 					`- Nota ${r.rating}: "${r.snippet || r.text || ""}" (${r.date || "recente"})`,
 			)
 			.join("\n");
+
+		// Instrução de JSON limpa para alinhar com o banco e evitar conflitos cognitivos no Llama
+		const cleanInstruction = `\n\nIMPORTANTE: Retorne EXCLUSIVAMENTE um objeto JSON válido contendo exatamente dois campos:
+{
+  "score": número (de 0 a 100),
+  "analysis": "uma string contendo a sua análise estratégica completa"
+}
+Não adicione nenhum outro campo adicional ou aninhamento como 'score_breakdown' ou 'classificacao' no JSON final.`;
 
 		const formattedPrompt = prompt
 			.replace(/{nome}/g, lead.name || "")
@@ -93,9 +94,7 @@ export async function qualifyLeadsAction(leadIds: number[], jobId?: number) {
 				messages: [
 					{
 						role: "system",
-						content:
-							formattedPrompt +
-							'\n\nIMPORTANTE: Retorne EXCLUSIVAMENTE um objeto JSON válido no seguinte formato exato: {"score": 85, "analysis": "Sua análise detalhada aqui"}. Não adicione nenhum outro texto.',
+						content: formattedPrompt + cleanInstruction,
 					},
 					{
 						role: "user",
@@ -119,23 +118,35 @@ export async function qualifyLeadsAction(leadIds: number[], jobId?: number) {
 				})
 				.where(eq(leads.id, id));
 		} catch (e: any) {
-			console.error(`Erro ao qualificar o lead ${id}:`, e.message);
-			// Se for rate limit, tenta aguardar mais um pouco
-			if (e.status === 429) {
-				await new Promise((resolve) => setTimeout(resolve, 5000));
+			console.error(`Erro ao qualificar o lead ${id} (Tentativas restantes: ${retries}):`, e.message);
+			if (retries > 0) {
+				const delay = e.status === 429 ? 6000 : 2000;
+				await new Promise((resolve) => setTimeout(resolve, delay));
+				return qualifySingleLead(id, retries - 1);
 			}
 		}
+	}
 
-		progress++;
-		if (jobId) {
-			await db
-				.update(scrapingJobs)
-				.set({ currentProgress: progress })
-				.where(eq(scrapingJobs.id, jobId));
+	// Executa em lotes paralelos controlados para máximo ganho de performance
+	for (let i = 0; i < leadIds.length; i += CONCURRENCY_LIMIT) {
+		const chunk = leadIds.slice(i, i + CONCURRENCY_LIMIT);
+		await Promise.all(
+			chunk.map(async (id) => {
+				await qualifySingleLead(id);
+				progress++;
+				if (jobId) {
+					await db
+						.update(scrapingJobs)
+						.set({ currentProgress: progress })
+						.where(eq(scrapingJobs.id, jobId));
+				}
+			}),
+		);
+
+		// Breve Throttle entre lotes para segurança de limite de token (TPM) da Groq
+		if (i + CONCURRENCY_LIMIT < leadIds.length) {
+			await new Promise((resolve) => setTimeout(resolve, 1500));
 		}
-
-		// Delay de segurança entre leads para não estourar o limite de TPM (Tokens Per Minute)
-		await new Promise((resolve) => setTimeout(resolve, 2500));
 	}
 }
 

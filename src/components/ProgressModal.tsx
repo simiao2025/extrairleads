@@ -57,7 +57,11 @@ export function ProgressModal({
 			? Math.min(100, Math.round((progress / total) * 100))
 			: 100;
 	const qualifyPercent =
-		status === "completed" ? 100 : status === "qualifying" ? 50 : 0; // Simplified qualification progress
+		status === "completed"
+			? 100
+			: status === "qualifying"
+				? Math.min(100, Math.round((progress / Math.max(1, total)) * 100))
+				: 0;
 
 	const modalContent = (
 		<div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">

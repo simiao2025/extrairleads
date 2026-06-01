@@ -242,7 +242,7 @@ export default async function Home({ searchParams }: PageProps) {
 						</h2>
 					</div>
 
-					<KanbanBoard initialLeads={pagedLeads} />
+					<KanbanBoard key={campaignId || "all"} initialLeads={pagedLeads} />
 					<Pagination
 						currentPage={page}
 						totalPages={totalPages}

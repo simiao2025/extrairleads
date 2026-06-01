@@ -3,12 +3,18 @@ import { ArrowLeft, Users } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { db } from "@/db";
-import { leads } from "@/db/schema";
+import { campaigns, leads } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { LeadsClient } from "./client";
 
 interface PageProps {
-	searchParams: Promise<{ page?: string; search?: string; status?: string }>;
+	searchParams: Promise<{
+		page?: string;
+		search?: string;
+		status?: string;
+		campaignId?: string;
+		niche?: string;
+	}>;
 }
 
 export default async function LeadsPage({ searchParams }: PageProps) {
@@ -19,6 +25,8 @@ export default async function LeadsPage({ searchParams }: PageProps) {
 	const page = Math.max(1, parseInt(params.page || "1", 10));
 	const search = params.search || "";
 	const status = params.status || "";
+	const campaignId = params.campaignId ? parseInt(params.campaignId, 10) : undefined;
+	const niche = params.niche || "";
 
 	const allLeads = userId
 		? await db
@@ -28,6 +36,22 @@ export default async function LeadsPage({ searchParams }: PageProps) {
 				.orderBy(asc(leads.createdAt))
 		: [];
 
+	const userCampaigns = userId
+		? await db
+				.select({ id: campaigns.id, name: campaigns.name })
+				.from(campaigns)
+				.where(eq(campaigns.userId, userId))
+				.orderBy(asc(campaigns.name))
+		: [];
+
+	const uniqueNiches = Array.from(
+		new Set(
+			allLeads
+				.map((l) => l.niche)
+				.filter((n): n is string => n !== null && n !== "")
+		)
+	).sort();
+
 	const filteredLeads = allLeads.filter((lead) => {
 		const matchSearch =
 			!search ||
@@ -35,7 +59,9 @@ export default async function LeadsPage({ searchParams }: PageProps) {
 			lead.phone?.includes(search) ||
 			lead.website?.toLowerCase().includes(search.toLowerCase());
 		const matchStatus = !status || lead.status === status;
-		return matchSearch && matchStatus;
+		const matchCampaign = !campaignId || lead.campaignId === campaignId;
+		const matchNiche = !niche || lead.niche === niche;
+		return matchSearch && matchStatus && matchCampaign && matchNiche;
 	});
 
 	return (
@@ -71,7 +97,11 @@ export default async function LeadsPage({ searchParams }: PageProps) {
 				<LeadsClient
 					initialSearch={search}
 					initialStatus={status}
+					initialCampaignId={params.campaignId || ""}
+					initialNiche={niche}
 					filteredLeads={filteredLeads}
+					campaigns={userCampaigns}
+					niches={uniqueNiches}
 					currentPage={page}
 				/>
 			</div>

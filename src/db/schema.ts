@@ -27,21 +27,28 @@ export const scrapingJobStatusEnum = pgEnum("scraping_job_status", [
 	"failed",
 ]);
 
-export const scrapingJobs = pgTable("scraping_jobs", {
-	id: serial("id").primaryKey(),
-	campaignId: integer("campaign_id").references(() => campaigns.id, {
-		onDelete: "cascade",
-	}),
-	userId: integer("user_id").references(() => users.id, {
-		onDelete: "cascade",
-	}),
-	status: scrapingJobStatusEnum("status").default("scraping"),
-	totalExpected: integer("total_expected").default(20),
-	currentProgress: integer("current_progress").default(0),
-	jobType: text("job_type").default("full"),
-	createdAt: timestamp("created_at").defaultNow(),
-	updatedAt: timestamp("updated_at").defaultNow(),
-});
+export const scrapingJobs = pgTable(
+	"scraping_jobs",
+	{
+		id: serial("id").primaryKey(),
+		campaignId: integer("campaign_id").references(() => campaigns.id, {
+			onDelete: "cascade",
+		}),
+		userId: integer("user_id").references(() => users.id, {
+			onDelete: "cascade",
+		}),
+		status: scrapingJobStatusEnum("status").default("scraping"),
+		totalExpected: integer("total_expected").default(20),
+		currentProgress: integer("current_progress").default(0),
+		jobType: text("job_type").default("full"),
+		createdAt: timestamp("created_at").defaultNow(),
+		updatedAt: timestamp("updated_at").defaultNow(),
+	},
+	(table) => [
+		index("scraping_jobs_user_idx").on(table.userId),
+		index("scraping_jobs_campaign_idx").on(table.campaignId),
+	],
+);
 
 export const users = pgTable("users", {
 	id: serial("id").primaryKey(),
@@ -165,6 +172,8 @@ export const leads = pgTable(
 		index("leads_status_idx").on(table.status),
 		index("leads_created_idx").on(table.createdAt),
 		index("leads_user_idx").on(table.userId),
+		index("leads_campaign_idx").on(table.campaignId),
+		index("leads_niche_idx").on(table.niche),
 	],
 );
 
