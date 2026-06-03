@@ -13,10 +13,11 @@ import {
 	Send,
 	Sparkles,
 	User,
+	Volume2,
 	VolumeX,
 	Zap,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import useSWR from "swr";
 import {
 	generateAiSuggestionAction,
@@ -118,7 +119,8 @@ export function ConversasClient({
 		isLoading: isLoadingChat,
 	} = useSWR(
 		activeLeadId ? `chat-${activeLeadId}` : null,
-		() => getLeadChatAction(activeLeadId!),
+		() =>
+			activeLeadId ? getLeadChatAction(activeLeadId) : Promise.resolve([]),
 		{
 			refreshInterval: 4000,
 		},
@@ -146,16 +148,18 @@ export function ConversasClient({
 			c.lead.niche?.toLowerCase().includes(search.toLowerCase()),
 	);
 
-	const scrollToBottom = () => {
+	const scrollToBottom = useCallback(() => {
 		if (scrollRef.current) {
 			scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
 		}
-	};
+	}, []);
 
 	// Rola para o fim ao atualizar histórico
 	useEffect(() => {
-		scrollToBottom();
-	}, [history]);
+		if (history) {
+			scrollToBottom();
+		}
+	}, [history, scrollToBottom]);
 
 	const handleSend = async () => {
 		if (!input.trim() || !activeLeadId) return;
@@ -300,6 +304,7 @@ export function ConversasClient({
 							const hasUnread = c.lead.status === "human_intervention";
 							return (
 								<button
+									type="button"
 									key={c.lead.id}
 									onClick={() => setActiveLeadId(c.lead.id)}
 									className={`w-full flex items-center gap-3 p-4 text-left transition-all relative ${
@@ -317,7 +322,7 @@ export function ConversasClient({
 									<div className="relative shrink-0">
 										<div className="w-12 h-12 rounded-full flex items-center justify-center text-sm text-white font-bold overflow-hidden bg-zinc-800 border border-zinc-700 shadow-md">
 											{c.lead.imageUrl ? (
-												// eslint-disable-next-line @next/next/no-img-element
+												// biome-ignore lint/performance/noImgElement: dynamic avatars from external URLs cannot easily use next/image
 												<img
 													src={c.lead.imageUrl}
 													alt={c.lead.name}
@@ -413,7 +418,7 @@ export function ConversasClient({
 								{/* Avatar */}
 								<div className="w-10 h-10 rounded-full flex items-center justify-center text-sm text-white font-bold shrink-0 overflow-hidden bg-zinc-700 border border-zinc-600/50 shadow">
 									{activeConversation.lead.imageUrl ? (
-										// eslint-disable-next-line @next/next/no-img-element
+										// biome-ignore lint/performance/noImgElement: dynamic avatars from external URLs cannot easily use next/image
 										<img
 											src={activeConversation.lead.imageUrl}
 											alt={activeConversation.lead.name}
@@ -489,6 +494,7 @@ export function ConversasClient({
 									Suas respostas serão enviadas manualmente.
 								</span>
 								<button
+									type="button"
 									onClick={handleToggleIntervention}
 									className="underline hover:text-white text-[10px] font-bold uppercase tracking-wider"
 								>
@@ -518,9 +524,10 @@ export function ConversasClient({
 							) : (
 								history.map((msg, i) => {
 									const isAssistant = msg.role === "assistant";
+									const isAudio = msg.type === "audio";
 									return (
 										<div
-											key={i}
+											key={msg.id || i}
 											className={`flex ${isAssistant ? "justify-end" : "justify-start"}`}
 										>
 											<div
@@ -530,9 +537,38 @@ export function ConversasClient({
 														: "bg-[#202c33] border-zinc-800/50 text-[#e9edef] rounded-tl-none hover:shadow-[0_0_12px_rgba(32,44,51,0.2)]"
 												}`}
 											>
-												<p className="leading-relaxed whitespace-pre-wrap break-words">
-													{msg.content}
-												</p>
+												{isAudio ? (
+													<div className="flex items-center gap-3 py-1.5 min-w-[200px]">
+														<button
+															type="button"
+															className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-transform active:scale-95 ${
+																isAssistant
+																	? "bg-emerald-400/20 text-emerald-300 hover:bg-emerald-400/30"
+																	: "bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30"
+															}`}
+														>
+															<Volume2 className="w-4 h-4" />
+														</button>
+														<div className="flex-1 flex items-end gap-[3px] h-6 px-1 border-r border-white/10 pr-3">
+															<span className="w-[3px] bg-emerald-400/40 rounded-full h-2 animate-[pulse_1s_infinite_100ms]"></span>
+															<span className="w-[3px] bg-emerald-400/80 rounded-full h-4 animate-[pulse_1s_infinite_300ms]"></span>
+															<span className="w-[3px] bg-emerald-400 rounded-full h-5 animate-[pulse_1s_infinite_500ms]"></span>
+															<span className="w-[3px] bg-emerald-400/60 rounded-full h-3 animate-[pulse_1s_infinite_200ms]"></span>
+															<span className="w-[3px] bg-emerald-400/40 rounded-full h-2 animate-[pulse_1s_infinite_400ms]"></span>
+															<span className="w-[3px] bg-emerald-400/70 rounded-full h-4 animate-[pulse_1s_infinite_150ms]"></span>
+															<span className="w-[3px] bg-emerald-400 rounded-full h-6 animate-[pulse_1s_infinite_450ms]"></span>
+															<span className="w-[3px] bg-emerald-400/50 rounded-full h-3 animate-[pulse_1s_infinite_350ms]"></span>
+															<span className="w-[3px] bg-emerald-400/30 rounded-full h-2 animate-[pulse_1s_infinite_100ms]"></span>
+														</div>
+														<span className="text-[10px] text-zinc-400 font-bold tracking-wider select-none shrink-0 uppercase pr-1">
+															Áudio
+														</span>
+													</div>
+												) : (
+													<p className="leading-relaxed whitespace-pre-wrap break-words">
+														{msg.content}
+													</p>
+												)}
 												<div className="flex items-center justify-end gap-1 mt-1.5 border-t border-white/5 pt-1">
 													<p className="text-[9px] text-white/40 font-medium">
 														{msg.createdAt
@@ -548,6 +584,59 @@ export function ConversasClient({
 									);
 								})
 							)}
+
+							{generating && (
+								<div className="flex justify-end">
+									<div className="bg-[#005c4b] border border-[#005c4b]/50 p-3 px-4 rounded-2xl rounded-tr-none text-zinc-300 text-xs flex items-center gap-1.5 shadow-lg shadow-emerald-950/20">
+										<Sparkles className="w-3.5 h-3.5 text-emerald-300 animate-pulse" />
+										<span className="text-[11px] font-medium">
+											IA gerando sugestão...
+										</span>
+										<span className="flex gap-1 ml-1.5">
+											<span
+												className="w-1.5 h-1.5 bg-white/70 rounded-full animate-bounce"
+												style={{ animationDelay: "0ms" }}
+											></span>
+											<span
+												className="w-1.5 h-1.5 bg-white/70 rounded-full animate-bounce"
+												style={{ animationDelay: "150ms" }}
+											></span>
+											<span
+												className="w-1.5 h-1.5 bg-white/70 rounded-full animate-bounce"
+												style={{ animationDelay: "300ms" }}
+											></span>
+										</span>
+									</div>
+								</div>
+							)}
+
+							{!generating &&
+								history.length > 0 &&
+								history[history.length - 1].role === "user" &&
+								activeConversation.lead.status !== "human_intervention" && (
+									<div className="flex justify-start">
+										<div className="bg-[#202c33] border border-zinc-800/50 p-3 px-4 rounded-2xl rounded-tl-none text-zinc-300 text-xs flex items-center gap-1.5 shadow-lg shadow-black/10">
+											<Bot className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+											<span className="text-[11px] text-zinc-400 font-medium">
+												IA SDR digitando...
+											</span>
+											<span className="flex gap-1 ml-1.5">
+												<span
+													className="w-1.5 h-1.5 bg-zinc-500 rounded-full animate-bounce"
+													style={{ animationDelay: "0ms" }}
+												></span>
+												<span
+													className="w-1.5 h-1.5 bg-zinc-500 rounded-full animate-bounce"
+													style={{ animationDelay: "150ms" }}
+												></span>
+												<span
+													className="w-1.5 h-1.5 bg-zinc-500 rounded-full animate-bounce"
+													style={{ animationDelay: "300ms" }}
+												></span>
+											</span>
+										</div>
+									</div>
+								)}
 						</div>
 
 						{/* Input e Controles de Envio */}

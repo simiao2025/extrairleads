@@ -1,5 +1,5 @@
 import { and, asc, eq } from "drizzle-orm";
-import { Layers, MessageSquare, Star, User } from "lucide-react";
+import { Layers, MessageSquare, Star, TrendingUp, User } from "lucide-react";
 import { checkWhatsAppConnectionAction } from "@/actions/whatsapp";
 import {
 	AnalyzeButton,
@@ -10,11 +10,11 @@ import { GlobalCampaignFilter } from "@/components/GlobalCampaignFilter";
 import { KanbanBoard } from "@/components/KanbanBoard";
 import { MatrixRain } from "@/components/MatrixRain";
 import SearchForm from "@/components/SearchForm";
+import { AnalyticsChart } from "@/components/ui/analytics";
 import { Pagination } from "@/components/ui/pagination";
 import { db } from "@/db";
 import { campaigns, leads } from "@/db/schema";
 import { auth } from "@/lib/auth";
-import { AnalyticsSection } from "./analytics-section";
 
 const ITEMS_PER_PAGE = 40;
 
@@ -83,8 +83,29 @@ export default async function Home({ searchParams }: PageProps) {
 		discarded: allLeads.filter((l) => l.status === "discarded").length,
 	};
 
-	const conversionRate =
-		counts.total > 0 ? Math.round((counts.interested / counts.total) * 100) : 0;
+	const STATUS_COLORS: Record<string, string> = {
+		raw: "#38bdf8",
+		qualified: "#34d399",
+		contacted: "#a78bfa",
+		interested: "#fb923c",
+		discarded: "#71717a",
+	};
+
+	const STATUS_LABELS: Record<string, string> = {
+		raw: "Novos",
+		qualified: "Qualificados",
+		contacted: "Contatados",
+		interested: "Interessados",
+		discarded: "Descartados",
+	};
+
+	const pieData = Object.entries(leadsByStatus)
+		.filter(([, value]) => value > 0)
+		.map(([name, value]) => ({
+			name: STATUS_LABELS[name] || name,
+			value,
+			fill: STATUS_COLORS[name] || "#71717a",
+		}));
 
 	const selectedCampaignObj = campaignId
 		? userCampaigns.find((c) => c.id === campaignId)
@@ -123,6 +144,7 @@ export default async function Home({ searchParams }: PageProps) {
 						<div className="absolute inset-0 bg-gradient-to-t from-background via-background/20 to-transparent z-10" />
 						<div className="absolute inset-0 bg-gradient-to-l from-transparent via-background/10 to-background z-10" />
 						<div className="absolute inset-0 bg-gradient-to-b from-background via-transparent to-transparent z-10" />
+						{/* biome-ignore lint/performance/noImgElement: using normal img for aesthetic background robot is fine */}
 						<img
 							src="/robot.png"
 							alt="IA SDR"
@@ -187,49 +209,89 @@ export default async function Home({ searchParams }: PageProps) {
 					</div>
 				</div>
 
-				{/* ── Stats ── */}
-				<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-					<StatCard
-						label="Leads Totais"
-						value={counts.total.toString()}
-						icon={<Layers className="h-5 w-5" />}
-						colorClass="text-sky-400"
-						accentGlow="bg-sky-500/20"
-						delay={300}
-					/>
-					<StatCard
-						label="Qualificados IA"
-						value={counts.qualified.toString()}
-						icon={<User className="h-5 w-5" />}
-						colorClass="text-emerald-400"
-						accentGlow="bg-emerald-500/20"
-						delay={400}
-					/>
-					<StatCard
-						label="Msgs Enviadas"
-						value={counts.contacted.toString()}
-						icon={<MessageSquare className="h-5 w-5" />}
-						colorClass="text-violet-400"
-						accentGlow="bg-violet-500/20"
-						delay={500}
-					/>
-					<StatCard
-						label="Interessados"
-						value={counts.interested.toString()}
-						icon={<Star className="h-5 w-5" />}
-						colorClass="text-amber-400"
-						accentGlow="bg-amber-500/20"
-						delay={600}
-					/>
-				</div>
+				{/* ── Bento Grid Dashboard: Métricas & Analytics ── */}
+				<section className="space-y-5 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300 fill-mode-both">
+					<div className="flex items-center gap-3">
+						<div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+							<TrendingUp className="h-4 w-4 text-emerald-400" />
+						</div>
+						<h2 className="font-heading text-lg font-bold tracking-tight text-white">
+							Métricas & Analytics
+						</h2>
+					</div>
 
-				{/* ── Analytics Section ── */}
-				<AnalyticsSection
-					leadsByStatus={leadsByStatus}
-					conversionRate={conversionRate}
-					totalLeads={counts.total}
-					qualifiedLeads={counts.qualified}
-				/>
+					<div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
+						{/* Coluna 1: Stats rápidos de performance */}
+						<div className="md:col-span-1 flex flex-col gap-4">
+							<StatCard
+								label="Leads Totais"
+								value={counts.total.toString()}
+								icon={<Layers className="h-5 w-5" />}
+								colorClass="text-sky-400"
+								accentGlow="bg-sky-500/20"
+								delay={300}
+							/>
+							<StatCard
+								label="Qualificados IA"
+								value={counts.qualified.toString()}
+								icon={<User className="h-5 w-5" />}
+								colorClass="text-emerald-400"
+								accentGlow="bg-emerald-500/20"
+								delay={400}
+							/>
+							<StatCard
+								label="Msgs Enviadas"
+								value={counts.contacted.toString()}
+								icon={<MessageSquare className="h-5 w-5" />}
+								colorClass="text-violet-400"
+								accentGlow="bg-violet-500/20"
+								delay={500}
+							/>
+							<StatCard
+								label="Interessados"
+								value={counts.interested.toString()}
+								icon={<Star className="h-5 w-5" />}
+								colorClass="text-amber-400"
+								accentGlow="bg-amber-500/20"
+								delay={600}
+							/>
+						</div>
+
+						{/* Coluna 2 e 3: Gráficos de Pizza e Barra integrados */}
+						<div className="md:col-span-2 lg:col-span-3 grid grid-cols-1 lg:grid-cols-3 gap-6">
+							<div className="lg:col-span-1 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5 backdrop-blur-xl hover:border-white/[0.1] transition-colors duration-300">
+								<AnalyticsChart
+									title="Distribuição por Status"
+									type="pie"
+									data={pieData}
+								/>
+							</div>
+							<div className="lg:col-span-2 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5 backdrop-blur-xl hover:border-white/[0.1] transition-colors duration-300">
+								<AnalyticsChart
+									title="Visão Geral do Pipeline"
+									type="bar"
+									data={[
+										{ name: "Novos", value: leadsByStatus.raw || 0 },
+										{
+											name: "Qualificados",
+											value: leadsByStatus.qualified || 0,
+										},
+										{ name: "Contatados", value: leadsByStatus.contacted || 0 },
+										{
+											name: "Interessados",
+											value: leadsByStatus.interested || 0,
+										},
+										{
+											name: "Descartados",
+											value: leadsByStatus.discarded || 0,
+										},
+									]}
+									height={260}
+								/>
+							</div>
+						</div>
+					</div>
+				</section>
 
 				{/* ── Kanban ── */}
 				<section className="space-y-5">

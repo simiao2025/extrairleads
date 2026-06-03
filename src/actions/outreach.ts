@@ -118,7 +118,10 @@ Não adicione nenhum outro campo adicional ou aninhamento como 'score_breakdown'
 				})
 				.where(eq(leads.id, id));
 		} catch (e: any) {
-			console.error(`Erro ao qualificar o lead ${id} (Tentativas restantes: ${retries}):`, e.message);
+			console.error(
+				`Erro ao qualificar o lead ${id} (Tentativas restantes: ${retries}):`,
+				e.message,
+			);
 			if (retries > 0) {
 				const delay = e.status === 429 ? 6000 : 2000;
 				await new Promise((resolve) => setTimeout(resolve, delay));
@@ -343,22 +346,20 @@ Análise Técnica: ${lead.aiAnalysis}`,
 				});
 				const message = completion.choices[0].message.content;
 
-				const response = await fetch(
-					`${evolutionUrl}/message/sendText/${instanceName}`,
-					{
-						method: "POST",
-						headers: {
-							"Content-Type": "application/json",
-							apikey: instanceToken as string,
-						},
-						body: JSON.stringify({
-							number: lead.phone,
-							text: message,
-							delay: 1200,
-							linkPreview: true,
-						}),
+				const response = await fetch(`${evolutionUrl}/send/text`, {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+						apikey: instanceToken as string,
 					},
-				);
+					body: JSON.stringify({
+						instance: instanceName,
+						number: lead.phone,
+						text: message,
+						delay: 1200,
+						linkPreview: true,
+					}),
+				});
 
 				if (!response.ok) {
 					await response.text(); // consume body
@@ -441,21 +442,19 @@ O cliente não respondeu nosso primeiro contato. Gere UMA MENSAGEM CURTA DE FOLL
 				});
 				const message = completion.choices[0].message.content;
 
-				const response = await fetch(
-					`${evolutionUrl}/message/sendText/${instanceName}`,
-					{
-						method: "POST",
-						headers: {
-							"Content-Type": "application/json",
-							apikey: instanceToken,
-						},
-						body: JSON.stringify({
-							number: lead.phone,
-							text: message,
-							delay: 1200,
-						}),
+				const response = await fetch(`${evolutionUrl}/send/text`, {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+						apikey: instanceToken,
 					},
-				);
+					body: JSON.stringify({
+						instance: instanceName,
+						number: lead.phone,
+						text: message,
+						delay: 1200,
+					}),
+				});
 
 				if (response.ok) {
 					count++;

@@ -238,7 +238,7 @@ export async function sendManualWhatsAppMessageAction(
 		if (!user) return { success: false, error: "Usuário não autenticado." };
 
 		const [lead] = await db.select().from(leads).where(eq(leads.id, leadId));
-		if (!lead || !lead.phone) {
+		if (!lead?.phone) {
 			return {
 				success: false,
 				error: "Lead não encontrado ou sem número de telefone.",
@@ -292,17 +292,19 @@ export async function sendManualWhatsAppMessageAction(
 				return { success: false, error: "WhatsApp Evolution não configurado." };
 			}
 
-			const response = await fetch(
-				`${evolutionUrl}/message/sendText/${instanceName}`,
-				{
-					method: "POST",
-					headers: {
-						"Content-Type": "application/json",
-						apikey: instanceToken,
-					},
-					body: JSON.stringify({ number: lead.phone, text, delay: 1200 }),
+			const response = await fetch(`${evolutionUrl}/send/text`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					apikey: instanceToken,
 				},
-			);
+				body: JSON.stringify({
+					instance: instanceName,
+					number: lead.phone,
+					text,
+					delay: 1200,
+				}),
+			});
 
 			if (!response.ok) {
 				const errorText = await response.text();

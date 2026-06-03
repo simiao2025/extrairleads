@@ -289,3 +289,30 @@ export const knowledgeBase = pgTable(
 		index("knowledge_base_document_idx").on(table.documentId),
 	],
 );
+
+export const ttsAudioCache = pgTable(
+	"tts_audio_cache",
+	{
+		id: serial("id").primaryKey(),
+		textHash: text("text_hash").notNull().unique(),
+		text: text("text").notNull(),
+		base64Audio: text("base64_audio").notNull(),
+		createdAt: timestamp("created_at").defaultNow(),
+	},
+	(table) => [index("tts_audio_cache_hash_idx").on(table.textHash)],
+);
+
+export const semanticCache = pgTable(
+	"semantic_cache",
+	{
+		id: serial("id").primaryKey(),
+		userId: integer("user_id").references(() => users.id, {
+			onDelete: "cascade",
+		}),
+		query: text("query").notNull(),
+		response: text("response").notNull(),
+		embedding: vector1536("embedding"),
+		createdAt: timestamp("created_at").defaultNow(),
+	},
+	(table) => [index("semantic_cache_user_idx").on(table.userId)],
+);

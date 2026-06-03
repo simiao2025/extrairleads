@@ -1,6 +1,7 @@
 "use client";
 
 import { useDroppable } from "@dnd-kit/core";
+import { AnimatePresence, motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { KanbanCard } from "./KanbanCard";
 
@@ -81,15 +82,21 @@ export function KanbanColumn({
 			<div className="h-px w-full bg-gradient-to-r from-transparent via-white/10 to-transparent mb-2" />
 
 			<div className="flex flex-col gap-3 flex-1">
-				{leads.map((lead, i) => (
-					<div
-						key={lead.id}
-						className="animate-in fade-in slide-in-from-top-8 zoom-in-95 duration-500 fill-mode-both"
-						style={{ animationDelay: `${animationDelay + 100 + i * 100}ms` }}
-					>
-						<KanbanCard lead={lead} />
-					</div>
-				))}
+				<AnimatePresence mode="popLayout">
+					{leads.map((lead) => (
+						<motion.div
+							key={lead.id}
+							layout
+							initial={{ opacity: 0, scale: 0.9, y: 10 }}
+							animate={{ opacity: 1, scale: 1, y: 0 }}
+							exit={{ opacity: 0, scale: 0.9, y: -10 }}
+							transition={{ type: "spring", stiffness: 350, damping: 25 }}
+							className="w-full"
+						>
+							<KanbanCard lead={lead} />
+						</motion.div>
+					))}
+				</AnimatePresence>
 
 				{leads.length === 0 && (
 					<div className="mt-10 flex flex-col items-center justify-center opacity-40">
