@@ -90,12 +90,13 @@ export async function checkWhatsAppConnectionAction() {
 					token: token,
 					qrcode: true,
 					integration: "WHATSAPP-BAILEYS",
-					webhook: process.env.APP_URL
-						? `${process.env.APP_URL}/api/webhook/whatsapp`
-						: "https://extrairleads.brasilonthebox.shop/api/webhook/whatsapp",
-					webhook_by_events: false,
-					webhook_events: ["MESSAGES_UPSERT"],
-					events: ["MESSAGES_UPSERT"],
+					webhook: {
+						url: process.env.APP_URL
+							? `${process.env.APP_URL}/api/webhook/whatsapp`
+							: "https://extrairleads.brasilonthebox.shop/api/webhook/whatsapp",
+						enabled: true,
+						events: ["MESSAGES_UPSERT"],
+					},
 				}),
 			});
 
