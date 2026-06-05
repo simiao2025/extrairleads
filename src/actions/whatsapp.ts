@@ -124,7 +124,7 @@ export async function checkWhatsAppConnectionAction() {
 					},
 					body: JSON.stringify({
 						webhookUrl: webhookUrl,
-						subscribe: ["MESSAGES_UPSERT"],
+						subscribe: ["MESSAGE"],
 					}),
 				}).catch((e) => console.error("Falha ao registrar webhook:", e));
 			}
@@ -162,7 +162,7 @@ export async function checkWhatsAppConnectionAction() {
 				},
 				body: JSON.stringify({
 					webhookUrl: webhookUrl,
-					subscribe: ["MESSAGES_UPSERT"],
+					subscribe: ["MESSAGE"],
 				}),
 			});
 		} catch (e) {
