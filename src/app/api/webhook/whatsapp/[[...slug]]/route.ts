@@ -2,13 +2,14 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import crypto from "node:crypto";
-import { and, sql as drizzleSql, eq, gte } from "drizzle-orm";
+import { and, eq, gte } from "drizzle-orm";
+import { sql as drizzleSql } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { db } from "@/db";
-import { chatHistory, leads, users } from "@/db/schema";
+import { chatHistory, leads } from "@/db/schema";
 import { getCachedAudio, saveCachedAudio } from "@/lib/cache";
-import { normalizeEvolutionPayload } from "@/services/evolution-parser";
+import { parseZavuWebhook } from "@/services/zavu-parser";
 import { processAIResponse } from "@/services/ai-agent";
 
 const openai = new OpenAI({
@@ -17,9 +18,12 @@ const openai = new OpenAI({
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-async function findOrCreateLead(phone: string, ownerUserId: number | null) {
+async function findOrCreateLead(phone: string) {
 	const rawPhone = phone.replace(/\D/g, "");
 
+	// Pela Zavu, como é SaaS global (no teste não temos dono vinculado diretamente),
+	// podemos assumir um ownerUserId como o admin default, ou se vier metadata.
+	// Vamos buscar ou criar o lead global.
 	let [lead] = await db
 		.select()
 		.from(leads)
@@ -29,9 +33,9 @@ async function findOrCreateLead(phone: string, ownerUserId: number | null) {
 		const [newLead] = await db
 			.insert(leads)
 			.values({
-				userId: ownerUserId,
+				userId: 1, // Fixando 1 apenas para este demo SaaS
 				phone: rawPhone,
-				name: "Contato WhatsApp",
+				name: "Contato WhatsApp (Zavu)",
 				status: "raw",
 			})
 			.returning();
@@ -42,80 +46,58 @@ async function findOrCreateLead(phone: string, ownerUserId: number | null) {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function extractMessageContent(
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	messagePayload: any,
 	messageType: string,
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	rawData: any,
-	instanceName: string,
-	instanceToken: string,
-	evolutionUrl: string,
+	textContent: string,
+	audioUrl: string | undefined,
 ): Promise<{ textContent: string; base64Audio: string | null }> {
-	const conversation = messagePayload.conversation;
-	const extendedText = messagePayload.extendedTextMessage?.text;
-	const audioMessage = messagePayload.audioMessage;
-
-	if (conversation) return { textContent: conversation, base64Audio: null };
-	if (extendedText) return { textContent: extendedText, base64Audio: null };
-
-	if (audioMessage || messageType === "audio") {
+	if (messageType === "audio" && audioUrl) {
 		try {
-			const downloadUrl = `${evolutionUrl}/media/download/${instanceName}`;
-			const mediaRes = await fetch(downloadUrl, {
-				method: "POST",
-				headers: { "Content-Type": "application/json", apikey: instanceToken },
-				body: JSON.stringify({ message: rawData }),
-			});
+			// Zavu envia URL pronta
+			const mediaRes = await fetch(audioUrl);
 
 			if (mediaRes.ok) {
-				const mediaData = await mediaRes.json();
-				const base64Audio = mediaData.base64 || mediaData?.data?.base64 || null;
+				const arrayBuffer = await mediaRes.arrayBuffer();
+				const buffer = Buffer.from(arrayBuffer);
+				
+				const tempFile = path.join(os.tmpdir(), `audio-${crypto.randomUUID()}.mp3`);
+				fs.writeFileSync(tempFile, buffer);
 
-				if (base64Audio) {
-					const buffer = Buffer.from(base64Audio, "base64");
-					// Correção de segurança: tmpdir e UUID
-					const tempFile = path.join(os.tmpdir(), `audio-${crypto.randomUUID()}.mp3`);
-					fs.writeFileSync(tempFile, buffer);
+				const transcriptionResponse = await openai.audio.transcriptions.create({
+					file: fs.createReadStream(tempFile),
+					model: "whisper-1",
+				});
 
-					const transcriptionResponse = await openai.audio.transcriptions.create({
-						file: fs.createReadStream(tempFile),
-						model: "whisper-1",
-					});
+				const text = transcriptionResponse.text;
 
-					const textContent = transcriptionResponse.text;
-
-					try {
-						fs.unlinkSync(tempFile);
-					} catch (e) {
-						console.error("Falha ao remover arquivo temporário", e);
-					}
-
-					return { textContent, base64Audio: `data:audio/mp3;base64,${base64Audio}` };
+				try {
+					fs.unlinkSync(tempFile);
+				} catch (e) {
+					console.error("Falha ao remover arquivo temporário", e);
 				}
+
+				return { textContent: text, base64Audio: `data:audio/mp3;base64,${buffer.toString("base64")}` };
 			}
 		} catch (err) {
-			console.error("[extractMessageContent] Erro:", err);
+			console.error("[extractMessageContent] Erro ao processar áudio Zavu:", err);
 		}
 	}
 
-	return { textContent: "", base64Audio: null };
+	return { textContent, base64Audio: null };
 }
 
-async function sendWhatsAppReply({
+async function sendZavuReply({
 	shouldReplyAudio,
 	aiResponseText,
-	instanceName,
 	phone,
-	instanceToken,
-	evolutionUrl,
+	zavuKey,
 }: {
 	shouldReplyAudio: boolean;
 	aiResponseText: string;
-	instanceName: string;
 	phone: string;
-	instanceToken: string;
-	evolutionUrl: string;
+	zavuKey: string;
 }) {
+	const ZAVU_API_URL = "https://api.zavu.dev/v1/messages";
+
 	if (shouldReplyAudio) {
 		try {
 			let base64Audio = await getCachedAudio(aiResponseText);
@@ -132,21 +114,19 @@ async function sendWhatsAppReply({
 				await saveCachedAudio(aiResponseText, base64Audio);
 			}
 
-			await fetch(`${evolutionUrl}/send/audio`, {
+			await fetch(ZAVU_API_URL, {
 				method: "POST",
-				headers: { "Content-Type": "application/json", apikey: instanceToken },
+				headers: { "Content-Type": "application/json", Authorization: `Bearer ${zavuKey}` },
 				body: JSON.stringify({
-					instance: instanceName,
-					number: phone,
-					audio: base64Audio,
-					ptt: true,
-					encoding: true,
-					delay: 1500,
+					channel: "whatsapp",
+					to: phone,
+					type: "audio",
+					audio: { base64: base64Audio }
 				}),
 			});
 			return;
 		} catch (err) {
-			console.error("[sendWhatsAppReply] Erro no TTS:", err);
+			console.error("[sendZavuReply] Erro no TTS:", err);
 		}
 	}
 
@@ -159,14 +139,14 @@ async function sendWhatsAppReply({
 		const block = blocks[i];
 		const typingDelay = Math.min(3000, Math.max(1000, block.length * 35));
 
-		await fetch(`${evolutionUrl}/send/text`, {
+		await fetch(ZAVU_API_URL, {
 			method: "POST",
-			headers: { "Content-Type": "application/json", apikey: instanceToken },
+			headers: { "Content-Type": "application/json", Authorization: `Bearer ${zavuKey}` },
 			body: JSON.stringify({
-				instance: instanceName,
-				number: phone,
+				channel: "whatsapp",
+				to: phone,
+				type: "text",
 				text: block,
-				delay: typingDelay,
 			}),
 		});
 
@@ -176,69 +156,36 @@ async function sendWhatsAppReply({
 	}
 }
 
-export async function POST(req: NextRequest, { params }: { params: Promise<{ slug?: string[] }> }) {
+export async function POST(req: NextRequest) {
 	try {
 		const body = await req.json();
-		let eventName = (body.event || "").toUpperCase();
-
-		try {
-			const resolvedParams = await params;
-			if (resolvedParams?.slug && resolvedParams.slug.length > 0) {
-				const slugEvent = resolvedParams.slug[0].toUpperCase();
-				if (!eventName || slugEvent.includes("MESSAGE")) {
-					eventName = slugEvent;
-				}
-			}
-		} catch (err) {
-			console.error("Falha ao extrair slug", err);
-		}
-
-		if (!eventName.includes("MESSAGE")) {
-			return NextResponse.json({ ok: true });
-		}
-
-		const rawInstanceName = body.instanceName || body.instance || "";
-
-		const [owner] = rawInstanceName
-			? await db.select().from(users).where(eq(users.whatsappInstanceName, rawInstanceName))
-			: [];
-
-		const instanceTokenFallback = owner?.whatsappInstanceToken || process.env.EVOLUTION_API_KEY || "";
 		
-		// AUTENTICAÇÃO DO WEBHOOK (Security)
-		const secretParam = req.nextUrl.searchParams.get("secret");
-		if (owner && owner.whatsappInstanceToken) {
-			if (secretParam !== owner.whatsappInstanceToken) {
-				console.warn(`[Security] Webhook bloqueado. Instância: ${rawInstanceName}. Secret inválido.`);
-				return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-			}
-		}
+		// 1. ZAVU WEBHOOK DUMP PARA DEBUG (Test Mode)
+		// Isso nos ajudará a ver exatamente como a Zavu nos chama.
+		console.log("[ZAVU WEBHOOK DUMP]:", JSON.stringify(body, null, 2));
 
-		const normalized = normalizeEvolutionPayload(body, instanceTokenFallback);
-		if (!normalized || !normalized.remoteJid || !normalized.instanceName) {
-			return NextResponse.json({ ok: true, error: "Payload inválido" });
-		}
+		const zavuKey = process.env.ZAVU_API_KEY || "zv_live_3433196b8211b9d3dc00a461298dc64570f5a295dbabb95e";
 
-		const { instanceName, instanceToken, remoteJid, isFromMe, messageType, messagePayload, rawData } = normalized;
-		const phone = remoteJid.split("@")[0];
-
-		if (remoteJid.includes("@g.us")) {
+		// Validação se é um webhook válido do Zavu (Ex: checar evento)
+		const parsed = parseZavuWebhook(body);
+		
+		if (!parsed) {
+			// Ignorar eventos que não são mensagens ativas (Ex: delivery status)
 			return NextResponse.json({ ok: true });
 		}
 
-		const evolutionUrl = process.env.EVOLUTION_API_URL || "https://evolution-api.brasilonthebox.shop";
-		const ownerUserId = owner?.id || null;
-		const resolvedToken = owner?.whatsappInstanceToken || instanceToken || instanceTokenFallback;
+		const { phone, isFromMe, messageType, textContent: rawText, audioUrl } = parsed;
 
-		const lead = await findOrCreateLead(phone, ownerUserId);
+		if (phone.includes("@g.us")) {
+			return NextResponse.json({ ok: true }); // Ignora grupos
+		}
+
+		const lead = await findOrCreateLead(phone);
 
 		const extracted = await extractMessageContent(
-			messagePayload,
 			messageType,
-			rawData,
-			instanceName,
-			resolvedToken,
-			evolutionUrl,
+			rawText,
+			audioUrl,
 		);
 		
 		const { textContent, base64Audio } = extracted;
@@ -293,7 +240,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
 			}
 		})();
 
-		// DELEGA PARA O AGENT AI EXTERNALIZADO (Code Purity)
+		const ownerUserId = lead.userId || 1; // Assumimos 1 (dono global)
 		const { aiResponseText, forceAudio } = await processAIResponse(lead, textContent, ownerUserId);
 
 		if (!aiResponseText || !aiResponseText.trim()) {
@@ -302,13 +249,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
 
 		const shouldReplyAudio = (messageType === "audio" || forceAudio) && !!process.env.OPENAI_API_KEY;
 
-		await sendWhatsAppReply({
+		await sendZavuReply({
 			shouldReplyAudio,
 			aiResponseText,
-			instanceName,
 			phone,
-			instanceToken: resolvedToken,
-			evolutionUrl,
+			zavuKey,
 		});
 
 		await db.insert(chatHistory).values({
@@ -320,8 +265,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
 
 		return NextResponse.json({ ok: true });
 	} catch (error) {
-		console.error("Webhook error:", error);
-		// Retorna 500 sem expor a stack trace para o cliente
+		console.error("Zavu Webhook error:", error);
 		return NextResponse.json({ ok: false }, { status: 500 });
 	}
 }
