@@ -29,11 +29,116 @@ const openai = new OpenAI({
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Normaliza o payload do Evolution Go v3 para uma estrutura unificada,
+// compatível também com v1/v2 para não quebrar instâncias antigas.
+//
+// Payload v3 real (confirmado pelo debug):
+//   body.instanceName
+//   body.instanceToken
+//   body.data.Info.Chat        → remoteJid  (ex: "556385112006@s.whatsapp.net")
+//   body.data.Info.IsFromMe    → boolean
+//   body.data.Info.Type        → "text" | "audio" | "image" | ...
+//   body.data.Info.ID          → messageId
+//   body.data.Info.PushName    → nome do contato
+//   body.data.Message          → objeto com o conteúdo (capital M)
+//     .conversation            → texto simples
+//     .audioMessage            → áudio
+//     .extendedTextMessage.text→ texto com link/preview
+//
+// Payload v2 (legado):
+//   body.instance
+//   body.data.key.remoteJid
+//   body.data.key.fromMe
+//   body.data.message          → (minúsculo)
+// ─────────────────────────────────────────────────────────────────────────────
+interface NormalizedMessage {
+	instanceName: string;
+	instanceToken: string;
+	remoteJid: string;
+	isFromMe: boolean;
+	messageType: string; // "text" | "audio" | "image" | ...
+	messageId: string;
+	pushName: string;
+	// Objeto de mensagem normalizado — sempre com chave minúscula "message"
+	// para compatibilidade com extractMessageContent
+	messagePayload: {
+		conversation?: string;
+		extendedTextMessage?: { text: string };
+		audioMessage?: Record<string, unknown>;
+		[key: string]: unknown;
+	};
+	// Referência ao data bruto para operações de download de mídia
+	rawData: any;
+}
+
+function normalizeEvolutionPayload(
+	body: any,
+	instanceTokenFallback: string,
+): NormalizedMessage | null {
+	const isV3 = !!body?.data?.Info; // Evolution Go v3 usa Info com I maiúsculo
+
+	if (isV3) {
+		const info = body.data.Info;
+		const msg = body.data.Message || {}; // capital M no v3
+
+		const remoteJid: string = info.Chat || "";
+		if (!remoteJid) return null;
+
+		// Detecta tipo de mensagem pelo campo Info.Type do v3
+		const rawType = (info.Type || "").toLowerCase();
+		let messageType = "text";
+		if (rawType === "audio" || msg.audioMessage) messageType = "audio";
+		else if (rawType === "image" || msg.imageMessage) messageType = "image";
+		else if (rawType === "document" || msg.documentMessage)
+			messageType = "document";
+
+		return {
+			instanceName: body.instanceName || body.instance || "",
+			instanceToken: body.instanceToken || instanceTokenFallback,
+			remoteJid,
+			isFromMe: !!info.IsFromMe,
+			messageType,
+			messageId: info.ID || "",
+			pushName: info.PushName || "",
+			messagePayload: {
+				// Normaliza para minúsculo para reutilizar extractMessageContent
+				conversation: msg.conversation,
+				extendedTextMessage: msg.extendedTextMessage,
+				audioMessage: msg.audioMessage,
+				...msg,
+			},
+			rawData: body.data,
+		};
+	}
+
+	// Legado v1/v2
+	const data = body.data || body;
+	const remoteJid: string = data?.key?.remoteJid || data?.Info?.Chat || "";
+	if (!remoteJid) return null;
+
+	const msg = data.message || data.Message || {};
+	let messageType = "text";
+	if (msg.audioMessage) messageType = "audio";
+	else if (msg.imageMessage) messageType = "image";
+
+	return {
+		instanceName: body.instance || body.instanceName || "",
+		instanceToken: body.instanceToken || instanceTokenFallback,
+		remoteJid,
+		isFromMe: !!data?.key?.fromMe,
+		messageType,
+		messageId: data?.key?.id || "",
+		pushName: data?.pushName || "",
+		messagePayload: msg,
+		rawData: data,
+	};
+}
+
 // 1. Auxiliar para localizar ou auto-cadastrar o lead
 async function findOrCreateLead(phone: string, ownerUserId: number | null) {
 	const rawPhone = phone.replace(/\D/g, "");
 
-	// Tenta localizar o lead ignorando qualquer máscara ou formatação (ex: +55 (11) 99999-9999)
 	let [lead] = await db
 		.select()
 		.from(leads)
@@ -56,16 +161,19 @@ async function findOrCreateLead(phone: string, ownerUserId: number | null) {
 	return lead;
 }
 
-// 2. Auxiliar para extrair conteúdo do texto ou áudio (com transcrição via OpenAI Whisper)
+// 2. Extrai texto ou transcreve áudio
+// Recebe messagePayload já normalizado (chave minúscula "message" encapsulada)
 async function extractMessageContent(
-	messageData: any,
+	messagePayload: NormalizedMessage["messagePayload"],
+	messageType: string,
+	rawData: any,
 	instanceName: string,
 	instanceToken: string,
 	evolutionUrl: string,
 ): Promise<{ textContent: string; base64Audio: string | null }> {
-	const conversation = messageData.message?.conversation;
-	const extendedText = messageData.message?.extendedTextMessage?.text;
-	const audioMessage = messageData.message?.audioMessage;
+	const conversation = messagePayload.conversation;
+	const extendedText = messagePayload.extendedTextMessage?.text;
+	const audioMessage = messagePayload.audioMessage;
 
 	if (conversation) {
 		return { textContent: conversation, base64Audio: null };
@@ -73,8 +181,10 @@ async function extractMessageContent(
 	if (extendedText) {
 		return { textContent: extendedText, base64Audio: null };
 	}
-	if (audioMessage) {
+	if (audioMessage || messageType === "audio") {
 		try {
+			// Evolution Go v3: download de mídia via /media/download/{instanceName}
+			// O body deve conter o rawData completo para o servidor localizar a mídia
 			const downloadUrl = `${evolutionUrl}/media/download/${instanceName}`;
 			const mediaRes = await fetch(downloadUrl, {
 				method: "POST",
@@ -82,12 +192,14 @@ async function extractMessageContent(
 					"Content-Type": "application/json",
 					apikey: instanceToken,
 				},
-				body: JSON.stringify({ message: messageData }),
+				body: JSON.stringify({ message: rawData }),
 			});
 
 			if (mediaRes.ok) {
 				const mediaData = await mediaRes.json();
-				const base64Audio = mediaData.base64;
+				// v3 retorna base64 direto ou dentro de .data.base64
+				const base64Audio = mediaData.base64 || mediaData?.data?.base64 || null;
+
 				if (base64Audio) {
 					const buffer = Buffer.from(base64Audio, "base64");
 					const tempFile = path.join(process.cwd(), `temp-${Date.now()}.mp3`);
@@ -117,7 +229,7 @@ async function extractMessageContent(
 	return { textContent: "", base64Audio: null };
 }
 
-// 3. Auxiliar para buscar o contexto semântico vetorial (RAG)
+// 3. Busca contexto semântico vetorial (RAG)
 async function getSemanticContext(
 	ownerUserId: number | null,
 	textContent: string,
@@ -149,7 +261,7 @@ async function getSemanticContext(
 	return "";
 }
 
-// 4. Auxiliar para obter histórico de conversas recente
+// 4. Histórico recente de conversa
 async function getChatHistory(leadId: number): Promise<string> {
 	const history = await db
 		.select()
@@ -164,7 +276,7 @@ async function getChatHistory(leadId: number): Promise<string> {
 		.join("\n");
 }
 
-// 5. Auxiliar para gerenciar as ações tomadas pela IA (Tools)
+// 5. Executa as ferramentas autônomas da IA (Tools)
 async function handleToolsExecution(toolCalls: any[], lead: any) {
 	let forceAudio = false;
 	let overrideText = "";
@@ -212,7 +324,7 @@ async function handleToolsExecution(toolCalls: any[], lead: any) {
 	return { forceAudio, overrideText };
 }
 
-// 6. Auxiliar para enviar a resposta (Texto ou Áudio via Evolution Go v3 API)
+// 6. Envia resposta (texto em blocos ou áudio TTS)
 async function sendWhatsAppReply({
 	shouldReplyAudio,
 	aiResponseText,
@@ -230,7 +342,6 @@ async function sendWhatsAppReply({
 }) {
 	if (shouldReplyAudio) {
 		try {
-			// Buscar o áudio gerado anteriormente se houver cache
 			let base64Audio = await getCachedAudio(aiResponseText);
 
 			if (!base64Audio) {
@@ -242,8 +353,6 @@ async function sendWhatsAppReply({
 
 				const arrayBuf = await mp3.arrayBuffer();
 				base64Audio = Buffer.from(arrayBuf).toString("base64");
-
-				// Salvar áudio gerado no cache para reuso futuro
 				await saveCachedAudio(aiResponseText, base64Audio);
 			}
 
@@ -258,16 +367,17 @@ async function sendWhatsAppReply({
 					number: phone,
 					audio: base64Audio,
 					ptt: true,
+					encoding: true, // v3: converte MP3 → OGG/Opus automaticamente
 					delay: 1500,
 				}),
 			});
 			return;
 		} catch (_ttsErr) {
-			// Fallback para envio de texto se der erro na fala
+			// Fallback para texto se TTS falhar
 		}
 	}
 
-	// Responder com Texto em Blocos (Parágrafos) para Extrema Humanização
+	// Texto dividido em blocos para humanização
 	const blocks = aiResponseText
 		.split(/\n\n+/)
 		.map((b) => b.trim())
@@ -305,20 +415,10 @@ export async function POST(
 	try {
 		const body = await req.json();
 
-		// DEBUG: Save raw payload to DB to inspect Evolution Go v3 structure
-		try {
-			await db.insert(chatHistory).values({
-				leadId: 152, // Test lead
-				role: "user",
-				type: "text",
-				content: `[DEBUG WEBHOOK] URL: ${req.url} HEADERS: ${JSON.stringify(Object.fromEntries(req.headers))} BODY: ${JSON.stringify(body)}`,
-			});
-		} catch (e) {}
-
-		// O Evolution API V3 (Go) envia "MESSAGES_UPSERT" em maiúsculo (ou camelCase).
-		// Além disso, se "Webhook by Events" estiver ativado, o evento pode vir na URL
+		// Detecta o nome do evento — v3 envia body.event = "Message" (sem ponto)
+		// v2 envia "messages.upsert" ou "MESSAGES_UPSERT"
 		let eventName = (body.event || "").toUpperCase();
-		
+
 		try {
 			const resolvedParams = await params;
 			if (resolvedParams?.slug && resolvedParams.slug.length > 0) {
@@ -327,57 +427,84 @@ export async function POST(
 					eventName = slugEvent;
 				}
 			}
-		} catch (e) {
-			// ignora erro ao ler params
-		}
+		} catch (_e) {}
 
+		// v3 envia event = "Message"; v2 envia "MESSAGES_UPSERT" / "MESSAGES.UPSERT"
 		if (!eventName.includes("MESSAGE")) {
 			return NextResponse.json({ ok: true });
 		}
 
-		// A instância pode vir no body ou nos headers (v3)
-		const instanceName =
-			body.instance ||
-			body.instanceName ||
-			req.headers.get("instance") ||
-			req.headers.get("x-evolution-instance");
-			
-		if (!instanceName) {
-			return NextResponse.json({ ok: true, error: "No instance provided" });
+		// Resolve o token da instância para normalização
+		// (pode não estar no body ainda antes de buscar o owner)
+		const rawInstanceName = body.instanceName || body.instance || "";
+
+		const [ownerPreCheck] = rawInstanceName
+			? await db
+					.select()
+					.from(users)
+					.where(eq(users.whatsappInstanceName, rawInstanceName))
+			: [];
+
+		const instanceTokenFallback =
+			ownerPreCheck?.whatsappInstanceToken ||
+			process.env.EVOLUTION_API_KEY ||
+			"";
+
+		// Normaliza o payload independente da versão do Evolution (v2 ou v3)
+		const normalized = normalizeEvolutionPayload(body, instanceTokenFallback);
+
+		if (!normalized || !normalized.remoteJid || !normalized.instanceName) {
+			return NextResponse.json({
+				ok: true,
+				error: "Payload inválido ou sem remoteJid",
+			});
 		}
 
-		const messageData = body.data;
-		const remoteJid = messageData?.key?.remoteJid || body?.data?.Info?.Chat;
-		const isFromMe = !!messageData?.key?.fromMe || !!body?.data?.Info?.IsFromMe;
-
-		if (!remoteJid) {
-			return NextResponse.json({ ok: true });
-		}
+		const {
+			instanceName,
+			instanceToken,
+			remoteJid,
+			isFromMe,
+			messageType,
+			messagePayload,
+			rawData,
+		} = normalized;
 
 		const phone = remoteJid.split("@")[0];
 
-		// Localizar o dono da instância WhatsApp (multi-tenant)
-		const [owner] = await db
-			.select()
-			.from(users)
-			.where(eq(users.whatsappInstanceName, instanceName));
-		const ownerUserId = owner?.id || null;
-		const instanceToken =
-			owner?.whatsappInstanceToken || process.env.EVOLUTION_API_KEY || "";
+		// Rejeita mensagens de grupos
+		if (remoteJid.includes("@g.us")) {
+			return NextResponse.json({ ok: true });
+		}
+
 		const evolutionUrl =
 			process.env.EVOLUTION_API_URL ||
 			"https://evolution-api.brasilonthebox.shop";
 
+		// Owner pode ter sido pré-carregado acima; se não, busca de novo
+		const owner =
+			ownerPreCheck ||
+			(
+				await db
+					.select()
+					.from(users)
+					.where(eq(users.whatsappInstanceName, instanceName))
+			)[0];
+
+		const ownerUserId = owner?.id || null;
+		const resolvedToken =
+			owner?.whatsappInstanceToken || instanceToken || instanceTokenFallback;
+
 		// 1. Localizar ou Auto-Cadastrar o Lead
 		const lead = await findOrCreateLead(phone, ownerUserId);
 
-		// 2. Extrair Texto / Transcrever Áudio se necessário
-		// Como a V3 manda "Message" maiúsculo
-		const msgPayload = messageData.message || messageData.Message || messageData;
+		// 2. Extrair texto / transcrever áudio
 		const extracted = await extractMessageContent(
-			{ ...messageData, message: msgPayload },
+			messagePayload,
+			messageType,
+			rawData,
 			instanceName,
-			instanceToken,
+			resolvedToken,
 			evolutionUrl,
 		);
 		const textContent = extracted.textContent;
@@ -387,9 +514,8 @@ export async function POST(
 			return NextResponse.json({ ok: true });
 		}
 
-		// Se a mensagem for enviada pelo próprio atendente (fromMe = true)
+		// Mensagem enviada pelo próprio atendente (fromMe = true)
 		if (isFromMe) {
-			// Evitar salvar mensagens duplicadas que já foram inseridas pelo painel (SDR)
 			const fifteenSecondsAgo = new Date(Date.now() - 15000);
 			const [existingMsg] = await db
 				.select()
@@ -404,33 +530,28 @@ export async function POST(
 				);
 
 			if (!existingMsg) {
-				const audioMessage = messageData.message?.audioMessage;
-				// Salvar a resposta manual do SDR (pelo celular/whatsapp web) no banco
 				await db.insert(chatHistory).values({
 					leadId: lead.id,
 					role: "assistant",
 					content: textContent,
 					audioBase64: base64Audio,
-					type: audioMessage ? "audio" : "text",
+					type: messageType === "audio" ? "audio" : "text",
 				});
 			}
 
-			// Como é uma mensagem nossa (SDR), não chamamos a IA para responder!
 			return NextResponse.json({ ok: true });
 		}
 
-		// 3. Salvar Histórico do Usuário
-		const audioMessage = messageData.message?.audioMessage;
+		// 3. Salvar mensagem do usuário no histórico
 		await db.insert(chatHistory).values({
 			leadId: lead.id,
 			role: "user",
 			content: textContent,
 			audioBase64: base64Audio,
-			type: audioMessage ? "audio" : "text",
+			type: messageType === "audio" ? "audio" : "text",
 		});
 
-		// 3.1 Cleanup assíncrono: limpa audioBase64 de usuários mais antigos que 24 horas
-		// (Isso não atrasa a resposta do webhook)
+		// 3.1 Cleanup assíncrono: remove áudios com mais de 24 horas
 		(async () => {
 			try {
 				await db.execute(drizzleSql`
@@ -446,18 +567,18 @@ export async function POST(
 			}
 		})();
 
-		// 4. RAG - Busca Semântica Vetorial (Neon Postgres pgvector)
+		// 4. RAG — busca semântica vetorial
 		const ragContext = await getSemanticContext(ownerUserId, textContent);
 
-		// 5. Buscar Histórico Recente de Conversa
+		// 5. Histórico recente de conversa
 		const formattedHistory = await getChatHistory(lead.id);
 
-		// Tentar recuperar do cache semântico antes de chamar a LLM
+		// Tenta cache semântico antes de chamar a LLM
 		let aiResponseText = await getSemanticCache(ownerUserId, textContent);
 		let forceAudio = false;
 
 		if (!aiResponseText) {
-			// 6. Configurar Prompt de Sistema & Chamada Llama 3.3
+			// 6. Prompt de sistema & chamada Llama 3.3 via Groq
 			const [config] = ownerUserId
 				? await db
 						.select()
@@ -490,7 +611,6 @@ HISTÓRICO DA CONVERSA:
 ${formattedHistory}
 `;
 
-			// Definição das Ferramentas Autônomas (Tool Use)
 			const tools = [
 				{
 					type: "function" as const,
@@ -596,7 +716,7 @@ ${formattedHistory}
 					{ role: "user", content: textContent },
 				],
 				model: "llama-3.3-70b-versatile",
-				tools: tools,
+				tools,
 				tool_choice: "auto",
 			});
 
@@ -604,7 +724,6 @@ ${formattedHistory}
 			const toolCalls = choice.message.tool_calls as any[];
 			aiResponseText = choice.message.content || "";
 
-			// Tratar chamadas de funções autônomas (Tools)
 			if (toolCalls && toolCalls.length > 0) {
 				const execution = await handleToolsExecution(toolCalls, lead);
 				forceAudio = execution.forceAudio;
@@ -632,7 +751,6 @@ ${formattedHistory}
 				}
 			}
 
-			// Salvar resposta no cache semântico se for uma resposta em texto padrão (sem ferramenta de ação rodada)
 			if (aiResponseText.trim() && (!toolCalls || toolCalls.length === 0)) {
 				await saveSemanticCache(ownerUserId, textContent, aiResponseText);
 			}
@@ -642,20 +760,20 @@ ${formattedHistory}
 			return NextResponse.json({ ok: true });
 		}
 
-		// 7. Enviar Mensagem Final (Texto Dividido em Blocos ou Áudio Natural)
+		// 7. Enviar resposta (áudio ou texto em blocos)
 		const shouldReplyAudio =
-			(!!audioMessage || forceAudio) && !!process.env.OPENAI_API_KEY;
+			(messageType === "audio" || forceAudio) && !!process.env.OPENAI_API_KEY;
 
 		await sendWhatsAppReply({
 			shouldReplyAudio,
 			aiResponseText,
 			instanceName,
 			phone,
-			instanceToken,
+			instanceToken: resolvedToken,
 			evolutionUrl,
 		});
 
-		// 8. Salvar Histórico do Assistente
+		// 8. Salvar resposta do assistente no histórico
 		await db.insert(chatHistory).values({
 			leadId: lead.id,
 			role: "assistant",
@@ -665,6 +783,7 @@ ${formattedHistory}
 
 		return NextResponse.json({ ok: true });
 	} catch (_error) {
+		console.error("Webhook error:", _error);
 		return NextResponse.json({ ok: false }, { status: 500 });
 	}
 }
