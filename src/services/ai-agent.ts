@@ -1,16 +1,19 @@
+import { desc, sql as drizzleSql, eq } from "drizzle-orm";
 import OpenAI from "openai";
-import { and, desc, eq, sql as drizzleSql } from "drizzle-orm";
+import { z } from "zod";
 import { db } from "@/db";
 import { appointments, campaignConfigs, chatHistory, leads } from "@/db/schema";
 import { getSemanticCache, saveSemanticCache } from "@/lib/cache";
-import { z } from "zod";
 
 const groq = new OpenAI({
 	apiKey: process.env.GROQ_API_KEY,
 	baseURL: "https://api.groq.com/openai/v1",
 });
 
-async function getSemanticContext(ownerUserId: number | null, textContent: string): Promise<string> {
+async function getSemanticContext(
+	ownerUserId: number | null,
+	textContent: string,
+): Promise<string> {
 	if (!ownerUserId || !process.env.OPENAI_API_KEY) return "";
 	try {
 		const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -32,7 +35,9 @@ async function getSemanticContext(ownerUserId: number | null, textContent: strin
 
 		if (relatedDocs.rows && relatedDocs.rows.length > 0) {
 			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			return relatedDocs.rows.map((row: any) => `- ${row.title}: ${row.content}`).join("\n");
+			return relatedDocs.rows
+				.map((row: any) => `- ${row.title}: ${row.content}`)
+				.join("\n");
 		}
 	} catch (err) {
 		console.error("[getSemanticContext] Erro:", err);
@@ -69,7 +74,7 @@ async function handleToolsExecution(toolCalls: any[], lead: any) {
 
 	for (const toolCall of toolCalls) {
 		const toolName = toolCall.function.name;
-		
+
 		try {
 			const toolArgs = JSON.parse(toolCall.function.arguments);
 
@@ -95,9 +100,15 @@ async function handleToolsExecution(toolCalls: any[], lead: any) {
 					notes: toolArgs.notes || "Agendado autonomamente via IA SDR",
 					status: "confirmed",
 				});
-				await db.update(leads).set({ status: "interested" }).where(eq(leads.id, lead.id));
+				await db
+					.update(leads)
+					.set({ status: "interested" })
+					.where(eq(leads.id, lead.id));
 			} else if (toolName === "escalate_to_human") {
-				await db.update(leads).set({ status: "human_intervention" }).where(eq(leads.id, lead.id));
+				await db
+					.update(leads)
+					.set({ status: "human_intervention" })
+					.where(eq(leads.id, lead.id));
 			} else if (toolName === "send_voice_note") {
 				forceAudio = true;
 				overrideText = toolArgs.text_to_speak;
@@ -111,16 +122,25 @@ async function handleToolsExecution(toolCalls: any[], lead: any) {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function processAIResponse(lead: any, textContent: string, ownerUserId: number | null) {
+export async function processAIResponse(
+	lead: any,
+	textContent: string,
+	ownerUserId: number | null,
+) {
 	const ragContext = await getSemanticContext(ownerUserId, textContent);
 	const formattedHistory = await getChatHistory(lead.id);
 
-	let aiResponseText = ownerUserId ? await getSemanticCache(ownerUserId, textContent) : null;
+	let aiResponseText = ownerUserId
+		? await getSemanticCache(ownerUserId, textContent)
+		: null;
 	let forceAudio = false;
 
 	if (!aiResponseText) {
 		const [config] = ownerUserId
-			? await db.select().from(campaignConfigs).where(eq(campaignConfigs.userId, ownerUserId))
+			? await db
+					.select()
+					.from(campaignConfigs)
+					.where(eq(campaignConfigs.userId, ownerUserId))
 			: [];
 
 		const systemPrompt = `${config?.agent2Prompt || "Você é um SDR focado em abordagens."}
@@ -150,11 +170,15 @@ ${formattedHistory}
 				type: "function" as const,
 				function: {
 					name: "update_lead_info",
-					description: "Atualiza dados cadastrais da empresa/lead e muda status para qualificado.",
+					description:
+						"Atualiza dados cadastrais da empresa/lead e muda status para qualificado.",
 					parameters: {
 						type: "object",
 						properties: {
-							name: { type: "string", description: "Nome real da empresa/contato." },
+							name: {
+								type: "string",
+								description: "Nome real da empresa/contato.",
+							},
 							niche: { type: "string" },
 							city: { type: "string" },
 							state: { type: "string" },
@@ -172,7 +196,10 @@ ${formattedHistory}
 					parameters: {
 						type: "object",
 						properties: {
-							dateStr: { type: "string", description: "Data/hora ISO: '2026-05-20T14:00:00Z'" },
+							dateStr: {
+								type: "string",
+								description: "Data/hora ISO: '2026-05-20T14:00:00Z'",
+							},
 							notes: { type: "string" },
 						},
 						required: ["dateStr"],
@@ -246,7 +273,11 @@ ${formattedHistory}
 			}
 		}
 
-		if (aiResponseText.trim() && (!toolCalls || toolCalls.length === 0) && ownerUserId) {
+		if (
+			aiResponseText.trim() &&
+			(!toolCalls || toolCalls.length === 0) &&
+			ownerUserId
+		) {
 			await saveSemanticCache(ownerUserId, textContent, aiResponseText);
 		}
 	}
