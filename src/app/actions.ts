@@ -41,8 +41,10 @@ export {
 } from "@/actions/scraping";
 export {
 	checkWhatsAppConnectionAction,
+	disconnectWhatsAppAction,
 	getWhatsAppQrCodeAction,
 	getWhatsAppSettingsAction,
 	saveWhatsAppSettingsAction,
 	sendManualWhatsAppMessageAction,
+	sendWhatsAppAudioAction,
 } from "@/actions/whatsapp";

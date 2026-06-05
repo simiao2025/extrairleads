@@ -499,7 +499,9 @@ export async function disconnectWhatsAppAction() {
 
 		const instanceName = user.whatsappInstanceName;
 		const token = user.whatsappInstanceToken || GLOBAL_KEY;
-		const evolutionUrl = process.env.EVOLUTION_API_URL || "https://evolution-api.brasilonthebox.shop";
+		const evolutionUrl =
+			process.env.EVOLUTION_API_URL ||
+			"https://evolution-api.brasilonthebox.shop";
 
 		// Tenta logout e delete na Evolution API
 		try {
@@ -523,6 +525,86 @@ export async function disconnectWhatsAppAction() {
 				whatsappInstanceToken: null,
 			})
 			.where(eq(users.id, user.id));
+
+		return { success: true };
+	} catch (error: any) {
+		return { success: false, error: error.message };
+	}
+}
+
+/**
+ * Envia uma mensagem de áudio (PTT/voz) via Evolution Go v3.
+ * O arquivo deve ser base64 de um OGG/Opus ou MP3 (com encoding: true para conversão automática).
+ *
+ * Endpoint: POST /send/audio
+ * Body: { instance, number, audio (base64), encoding: true }
+ */
+export async function sendWhatsAppAudioAction(
+	leadId: number,
+	audioBase64: string,
+	mimeType: "audio/ogg" | "audio/mpeg" = "audio/ogg",
+) {
+	try {
+		const session = await auth();
+		if (!session?.user?.email)
+			return { success: false, error: "Usuário não autenticado." };
+
+		const [user] = await db
+			.select()
+			.from(users)
+			.where(eq(users.email, session.user.email));
+		if (!user) return { success: false, error: "Usuário não autenticado." };
+
+		const [lead] = await db.select().from(leads).where(eq(leads.id, leadId));
+		if (!lead?.phone) {
+			return {
+				success: false,
+				error: "Lead não encontrado ou sem número de telefone.",
+			};
+		}
+
+		const instanceName = user.whatsappInstanceName;
+		const instanceToken = user.whatsappInstanceToken;
+		const evolutionUrl =
+			process.env.EVOLUTION_API_URL ||
+			"https://evolution-api.brasilonthebox.shop";
+
+		if (!evolutionUrl || !instanceName || !instanceToken) {
+			return { success: false, error: "WhatsApp Evolution não configurado." };
+		}
+
+		const phoneStr = lead.phone.replace(/\D/g, "");
+
+		// encoding: true instrui o servidor a converter MP3 → OGG/Opus se necessário
+		const response = await fetch(`${evolutionUrl}/send/audio`, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				apikey: instanceToken,
+			},
+			body: JSON.stringify({
+				instance: instanceName,
+				number: phoneStr,
+				audio: audioBase64,
+				encoding: true,
+				delay: 1200,
+			}),
+		});
+
+		if (!response.ok) {
+			const errorText = await response.text();
+			return {
+				success: false,
+				error: `Falha ao enviar áudio: ${errorText}`,
+			};
+		}
+
+		await db.insert(chatHistory).values({
+			leadId: lead.id,
+			role: "assistant",
+			content: audioBase64,
+			type: "audio",
+		});
 
 		return { success: true };
 	} catch (error: any) {
