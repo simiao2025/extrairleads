@@ -53,16 +53,16 @@ async function extractMessageContent(
 	instanceName: string,
 	instanceToken: string,
 	evolutionUrl: string,
-): Promise<string> {
+): Promise<{ textContent: string; base64Audio: string | null }> {
 	const conversation = messageData.message?.conversation;
 	const extendedText = messageData.message?.extendedTextMessage?.text;
 	const audioMessage = messageData.message?.audioMessage;
 
 	if (conversation) {
-		return conversation;
+		return { textContent: conversation, base64Audio: null };
 	}
 	if (extendedText) {
-		return extendedText;
+		return { textContent: extendedText, base64Audio: null };
 	}
 	if (audioMessage) {
 		try {
@@ -96,13 +96,13 @@ async function extractMessageContent(
 						fs.unlinkSync(tempFile);
 					} catch (_e) {}
 
-					return textContent;
+					return { textContent, base64Audio: `data:audio/mp3;base64,${base64Audio}` };
 				}
 			}
 		} catch (_err) {}
 	}
 
-	return "";
+	return { textContent: "", base64Audio: null };
 }
 
 // 3. Auxiliar para buscar o contexto semântico vetorial (RAG)
@@ -322,14 +322,16 @@ export async function POST(req: NextRequest) {
 		const lead = await findOrCreateLead(phone, ownerUserId);
 
 		// 2. Extrair Texto / Transcrever Áudio se necessário
-		const textContent = await extractMessageContent(
+		const extracted = await extractMessageContent(
 			messageData,
 			instanceName,
 			instanceToken,
 			evolutionUrl,
 		);
+		const textContent = extracted.textContent;
+		const base64Audio = extracted.base64Audio;
 
-		if (!textContent.trim()) {
+		if (!textContent.trim() && !base64Audio) {
 			return NextResponse.json({ ok: true });
 		}
 
@@ -339,8 +341,26 @@ export async function POST(req: NextRequest) {
 			leadId: lead.id,
 			role: "user",
 			content: textContent,
+			audioBase64: base64Audio,
 			type: audioMessage ? "audio" : "text",
 		});
+
+		// 3.1 Cleanup assíncrono: limpa audioBase64 de usuários mais antigos que 24 horas
+		// (Isso não atrasa a resposta do webhook)
+		(async () => {
+			try {
+				await db.execute(drizzleSql`
+					UPDATE chat_history 
+					SET audio_base64 = NULL 
+					WHERE role = 'user' 
+					AND type = 'audio' 
+					AND audio_base64 IS NOT NULL
+					AND created_at < NOW() - INTERVAL '24 HOURS'
+				`);
+			} catch (e) {
+				console.error("Erro no cleanup de áudio:", e);
+			}
+		})();
 
 		// 4. RAG - Busca Semântica Vetorial (Neon Postgres pgvector)
 		const ragContext = await getSemanticContext(ownerUserId, textContent);

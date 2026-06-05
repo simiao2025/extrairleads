@@ -16,6 +16,9 @@ import {
 	Volume2,
 	VolumeX,
 	Zap,
+	Mic,
+	Square,
+	Trash2,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import useSWR from "swr";
@@ -24,6 +27,7 @@ import {
 	getLeadChatAction,
 	moveLeadAction,
 	sendManualWhatsAppMessageAction,
+	sendWhatsAppAudioAction,
 } from "@/app/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -60,6 +64,7 @@ interface ChatMessage {
 	role: string | null;
 	content: string | null;
 	type: string | null;
+	audioBase64?: string | null;
 	createdAt: Date | null;
 }
 
@@ -135,6 +140,11 @@ export function ConversasClient({
 	const [togglingStatus, setTogglingStatus] = useState(false);
 	const [showRightPanel, setShowRightPanel] = useState(true);
 
+	const [isRecording, setIsRecording] = useState(false);
+	const [recordingTime, setRecordingTime] = useState(0);
+	const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+	const audioChunksRef = useRef<Blob[]>([]);
+	const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
 	const scrollRef = useRef<HTMLDivElement>(null);
 	const activeConversation = conversations.find(
 		(c) => c.lead.id === activeLeadId,
@@ -199,12 +209,104 @@ export function ConversasClient({
 									createdAt: new Date(),
 									role: "assistant",
 								},
-							}
+						  }
 						: c,
 				);
-			}, false);
+			});
 		}
 		setSending(false);
+	};
+
+	const startRecording = async () => {
+		try {
+			const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+			const mediaRecorder = new MediaRecorder(stream);
+			mediaRecorderRef.current = mediaRecorder;
+			audioChunksRef.current = [];
+
+			mediaRecorder.ondataavailable = (event) => {
+				if (event.data.size > 0) {
+					audioChunksRef.current.push(event.data);
+				}
+			};
+
+			mediaRecorder.onstop = async () => {
+				const audioBlob = new Blob(audioChunksRef.current, { type: "audio/ogg" });
+				
+				// Ler como base64
+				const reader = new FileReader();
+				reader.readAsDataURL(audioBlob);
+				reader.onloadend = async () => {
+					const base64data = reader.result as string;
+					const base64String = base64data.split(",")[1]; // remove o prefixo data:...
+
+					if (!activeLeadId) return;
+					setSending(true);
+
+					// Optimistic update
+					const optimisticMsg: ChatMessage = {
+						id: Date.now(),
+						leadId: activeLeadId,
+						role: "assistant",
+						content: "[Áudio Enviado]",
+						audioBase64: base64String,
+						type: "audio",
+						createdAt: new Date(),
+					};
+					mutateHistory((prev) => [...((prev as ChatMessage[]) || []), optimisticMsg], false);
+
+					const res = await sendWhatsAppAudioAction(activeLeadId, base64String);
+					if (!res.success) {
+						mutateHistory();
+						error(`Erro ao enviar áudio: ${res.error}`);
+					} else {
+						mutateHistory();
+					}
+					setSending(false);
+				};
+
+				// Limpar as faixas de áudio para liberar o microfone
+				stream.getTracks().forEach(track => track.stop());
+			};
+
+			mediaRecorder.start();
+			setIsRecording(true);
+			setRecordingTime(0);
+
+			timerIntervalRef.current = setInterval(() => {
+				setRecordingTime((prev) => prev + 1);
+			}, 1000);
+		} catch (err) {
+			console.error("Erro ao acessar microfone", err);
+			error("Permissão de microfone negada ou não disponível.");
+		}
+	};
+
+	const stopRecording = () => {
+		if (mediaRecorderRef.current && isRecording) {
+			mediaRecorderRef.current.stop();
+			setIsRecording(false);
+			if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+		}
+	};
+
+	const cancelRecording = () => {
+		if (mediaRecorderRef.current && isRecording) {
+			// Cancela o envio: reatribui onstop para não fazer nada
+			mediaRecorderRef.current.onstop = () => {
+				mediaRecorderRef.current?.stream.getTracks().forEach(track => track.stop());
+			};
+			mediaRecorderRef.current.stop();
+			setIsRecording(false);
+			if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+			setRecordingTime(0);
+		}
+	};
+
+	const formatTime = (seconds: number) => {
+		const m = Math.floor(seconds / 60).toString().padStart(2, "0");
+		const s = (seconds % 60).toString().padStart(2, "0");
+		return `${m}:${s}`;
 	};
 
 	const handleGenerateAI = async () => {
@@ -538,31 +640,29 @@ export function ConversasClient({
 												}`}
 											>
 												{isAudio ? (
-													<div className="flex items-center gap-3 py-1.5 min-w-[200px]">
-														<button
-															type="button"
-															className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-transform active:scale-95 ${
-																isAssistant
-																	? "bg-emerald-400/20 text-emerald-300 hover:bg-emerald-400/30"
-																	: "bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30"
-															}`}
-														>
-															<Volume2 className="w-4 h-4" />
-														</button>
-														<div className="flex-1 flex items-end gap-[3px] h-6 px-1 border-r border-white/10 pr-3">
-															<span className="w-[3px] bg-emerald-400/40 rounded-full h-2 animate-[pulse_1s_infinite_100ms]"></span>
-															<span className="w-[3px] bg-emerald-400/80 rounded-full h-4 animate-[pulse_1s_infinite_300ms]"></span>
-															<span className="w-[3px] bg-emerald-400 rounded-full h-5 animate-[pulse_1s_infinite_500ms]"></span>
-															<span className="w-[3px] bg-emerald-400/60 rounded-full h-3 animate-[pulse_1s_infinite_200ms]"></span>
-															<span className="w-[3px] bg-emerald-400/40 rounded-full h-2 animate-[pulse_1s_infinite_400ms]"></span>
-															<span className="w-[3px] bg-emerald-400/70 rounded-full h-4 animate-[pulse_1s_infinite_150ms]"></span>
-															<span className="w-[3px] bg-emerald-400 rounded-full h-6 animate-[pulse_1s_infinite_450ms]"></span>
-															<span className="w-[3px] bg-emerald-400/50 rounded-full h-3 animate-[pulse_1s_infinite_350ms]"></span>
-															<span className="w-[3px] bg-emerald-400/30 rounded-full h-2 animate-[pulse_1s_infinite_100ms]"></span>
-														</div>
-														<span className="text-[10px] text-zinc-400 font-bold tracking-wider select-none shrink-0 uppercase pr-1">
-															Áudio
+													<div className="flex flex-col gap-1.5 min-w-[200px] max-w-xs">
+														<span className="text-[10px] text-zinc-400 font-bold tracking-wider uppercase flex items-center gap-1.5">
+															<Volume2 className="w-3 h-3 text-emerald-400" />
+															Áudio {isAssistant ? "Enviado" : "Recebido"}
 														</span>
+														{msg.audioBase64 ? (
+															<audio 
+																controls 
+																src={msg.audioBase64.startsWith("data:") ? msg.audioBase64 : `data:audio/ogg;base64,${msg.audioBase64}`}
+																className="h-10 w-full max-w-[250px] outline-none"
+															/>
+														) : (
+															<p className="text-[11px] text-zinc-400 italic">Áudio expirado ou indisponível</p>
+														)}
+														{/* Mostrar a transcrição apenas se houver conteúdo textual real */}
+														{msg.content && msg.content !== "[Áudio Enviado]" && (
+															<div className="mt-1 pt-1.5 border-t border-white/5">
+																<span className="text-[9px] text-zinc-500 uppercase font-semibold mb-1 block">Transcrição:</span>
+																<p className="text-xs text-zinc-300 italic leading-relaxed whitespace-pre-wrap break-words">
+																	"{msg.content}"
+																</p>
+															</div>
+														)}
 													</div>
 												) : (
 													<p className="leading-relaxed whitespace-pre-wrap break-words">
@@ -641,57 +741,99 @@ export function ConversasClient({
 
 						{/* Input e Controles de Envio */}
 						<div className="bg-[#202c33] px-4 py-3.5 flex items-end gap-3 border-t border-zinc-800/40 z-10 shrink-0">
-							{/* Botão de Sugestão IA */}
-							<Button
-								type="button"
-								variant="ghost"
-								size="icon"
-								onClick={handleGenerateAI}
-								disabled={generating || sending}
-								className="w-10 h-10 rounded-xl text-zinc-400 hover:text-emerald-400 hover:bg-[#00a884]/10 shrink-0 transition-all border border-zinc-700/30 hover:border-emerald-500/20 active:scale-95 cursor-pointer shadow-sm"
-								title="Sugerir resposta com IA"
-							>
-								{generating ? (
-									<Loader2 className="w-5 h-5 animate-spin" />
-								) : (
-									<Sparkles className="w-5 h-5" />
-								)}
-							</Button>
+							{isRecording ? (
+								<div className="flex-1 flex items-center justify-between bg-zinc-900/50 rounded-xl px-4 min-h-[40px] border border-red-500/20">
+									<div className="flex items-center gap-3">
+										<div className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
+										<span className="text-zinc-300 font-mono text-sm">{formatTime(recordingTime)}</span>
+										<span className="text-xs text-zinc-500 ml-2 hidden sm:inline">Gravando áudio...</span>
+									</div>
+									<div className="flex items-center gap-2">
+										<Button
+											type="button"
+											variant="ghost"
+											onClick={cancelRecording}
+											className="w-8 h-8 rounded-full text-zinc-400 hover:text-red-400 hover:bg-red-400/10 p-0"
+											title="Cancelar gravação"
+										>
+											<Trash2 className="w-4 h-4" />
+										</Button>
+										<Button
+											type="button"
+											onClick={stopRecording}
+											className="w-8 h-8 rounded-full bg-emerald-500 hover:bg-emerald-400 text-emerald-950 p-0"
+											title="Parar e Enviar"
+										>
+											<Square className="w-3.5 h-3.5 fill-current" />
+										</Button>
+									</div>
+								</div>
+							) : (
+								<>
+									{/* Botão de Sugestão IA */}
+									<Button
+										type="button"
+										variant="ghost"
+										size="icon"
+										onClick={handleGenerateAI}
+										disabled={generating || sending}
+										className="w-10 h-10 rounded-xl text-zinc-400 hover:text-emerald-400 hover:bg-[#00a884]/10 shrink-0 transition-all border border-zinc-700/30 hover:border-emerald-500/20 active:scale-95 cursor-pointer shadow-sm"
+										title="Sugerir resposta com IA"
+									>
+										{generating ? (
+											<Loader2 className="w-5 h-5 animate-spin" />
+										) : (
+											<Sparkles className="w-5 h-5" />
+										)}
+									</Button>
 
-							{/* Área de Texto */}
-							<div className="flex-1 bg-[#2a3942]/90 rounded-xl overflow-hidden min-h-[40px] flex items-center border border-transparent focus-within:border-emerald-500/50 transition-colors shadow-inner">
-								<textarea
-									value={input}
-									onChange={(e) => setInput(e.target.value)}
-									onKeyDown={(e) => {
-										if (e.key === "Enter" && !e.shiftKey) {
-											e.preventDefault();
-											handleSend();
-										}
-									}}
-									placeholder="Digite sua resposta..."
-									className="w-full bg-transparent text-[#e9edef] text-sm px-4 py-2.5 max-h-32 focus:outline-none resize-none min-h-[40px] scrollbar-none"
-									rows={
-										input.split("\n").length > 1
-											? Math.min(input.split("\n").length, 5)
-											: 1
-									}
-								/>
-							</div>
+									{/* Área de Texto */}
+									<div className="flex-1 bg-[#2a3942]/90 rounded-xl overflow-hidden min-h-[40px] flex items-center border border-transparent focus-within:border-emerald-500/50 transition-colors shadow-inner">
+										<textarea
+											value={input}
+											onChange={(e) => setInput(e.target.value)}
+											onKeyDown={(e) => {
+												if (e.key === "Enter" && !e.shiftKey) {
+													e.preventDefault();
+													handleSend();
+												}
+											}}
+											placeholder="Digite sua resposta..."
+											className="w-full bg-transparent text-[#e9edef] text-sm px-4 py-2.5 max-h-32 focus:outline-none resize-none min-h-[40px] scrollbar-none"
+											rows={
+												input.split("\n").length > 1
+													? Math.min(input.split("\n").length, 5)
+													: 1
+											}
+										/>
+									</div>
 
-							{/* Botão Enviar */}
-							<Button
-								type="button"
-								onClick={handleSend}
-								disabled={!input.trim() || sending}
-								className="w-10 h-10 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-bold shrink-0 flex items-center justify-center p-0 transition-transform hover:scale-105 active:scale-95 disabled:opacity-40 disabled:hover:scale-100 shadow-md shadow-emerald-500/10 cursor-pointer"
-							>
-								{sending ? (
-									<Loader2 className="w-5 h-5 animate-spin" />
-								) : (
-									<Send className="w-[18px] h-[18px] ml-0.5" />
-								)}
-							</Button>
+									{/* Botão Enviar ou Gravar Áudio */}
+									{input.trim() ? (
+										<Button
+											type="button"
+											onClick={handleSend}
+											disabled={sending}
+											className="w-10 h-10 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-bold shrink-0 flex items-center justify-center p-0 transition-transform hover:scale-105 active:scale-95 disabled:opacity-40 disabled:hover:scale-100 shadow-md shadow-emerald-500/10 cursor-pointer"
+										>
+											{sending ? (
+												<Loader2 className="w-5 h-5 animate-spin" />
+											) : (
+												<Send className="w-[18px] h-[18px] ml-0.5" />
+											)}
+										</Button>
+									) : (
+										<Button
+											type="button"
+											onClick={startRecording}
+											className="w-10 h-10 rounded-xl bg-[#2a3942] hover:bg-[#32454f] text-emerald-400 shrink-0 flex items-center justify-center p-0 transition-transform hover:scale-105 active:scale-95 shadow-md shadow-black/20 cursor-pointer"
+											title="Gravar áudio"
+										>
+											<Mic className="w-5 h-5" />
+										</Button>
+									)}
+								</>
+							)}
 						</div>
 					</>
 				) : (

@@ -205,6 +205,7 @@ export const chatHistory = pgTable(
 		leadId: integer("lead_id").references(() => leads.id),
 		role: text("role"), // 'user' ou 'assistant'
 		content: text("content"),
+		audioBase64: text("audio_base64"), // salva o Base64 temporário ou permanente do áudio
 		type: text("type").default("text"), // 'text' ou 'audio'
 		createdAt: timestamp("created_at").defaultNow(),
 	},

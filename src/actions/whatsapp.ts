@@ -542,7 +542,7 @@ export async function disconnectWhatsAppAction() {
 export async function sendWhatsAppAudioAction(
 	leadId: number,
 	audioBase64: string,
-	mimeType: "audio/ogg" | "audio/mpeg" = "audio/ogg",
+	_mimeType: "audio/ogg" | "audio/mpeg" = "audio/ogg",
 ) {
 	try {
 		const session = await auth();
