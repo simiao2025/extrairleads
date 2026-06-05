@@ -115,18 +115,16 @@ export async function checkWhatsAppConnectionAction() {
 					? `${process.env.APP_URL}/api/webhook/whatsapp`
 					: "https://extrairleads.brasilonthebox.shop/api/webhook/whatsapp";
 
-				await fetch(`${evolutionUrl}/webhook/set`, {
+				await fetch(`${evolutionUrl}/instance/connect`, {
 					method: "POST",
 					headers: {
 						apikey: token,
+						instance: instanceName,
 						"Content-Type": "application/json",
 					},
 					body: JSON.stringify({
-						instance: instanceName,
-						url: webhookUrl,
-						webhook_by_events: false,
-						webhook_base64: false,
-						events: ["MESSAGES_UPSERT"],
+						webhookUrl: webhookUrl,
+						subscribe: ["MESSAGES_UPSERT"],
 					}),
 				}).catch((e) => console.error("Falha ao registrar webhook:", e));
 			}
@@ -155,18 +153,16 @@ export async function checkWhatsAppConnectionAction() {
 				? `${process.env.APP_URL}/api/webhook/whatsapp`
 				: "https://extrairleads.brasilonthebox.shop/api/webhook/whatsapp";
 
-			await fetch(`${evolutionUrl}/webhook/set`, {
+			await fetch(`${evolutionUrl}/instance/connect`, {
 				method: "POST",
 				headers: {
 					apikey: serverToken,
+					instance: instanceName,
 					"Content-Type": "application/json",
 				},
 				body: JSON.stringify({
-					instance: instanceName,
-					url: webhookUrl,
-					webhook_by_events: false,
-					webhook_base64: false,
-					events: ["MESSAGES_UPSERT"],
+					webhookUrl: webhookUrl,
+					subscribe: ["MESSAGES_UPSERT"],
 				}),
 			});
 		} catch (e) {
