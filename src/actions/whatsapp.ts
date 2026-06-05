@@ -130,31 +130,33 @@ export async function checkWhatsAppConnectionAction() {
 			}
 
 			const createData = await createRes.json();
-			// Evolution v3 Go retorna o apikey real no campo hash.apikey
+			// Evolution v3 Go retorna o apikey real no campo data.token ou hash.apikey
 			const actualToken =
-				createData.hash?.apikey || createData.instance?.apikey || newToken;
+				createData.data?.token ||
+				createData.hash?.apikey ||
+				createData.instance?.apikey ||
+				newToken;
 
-			// Se o token real for diferente do que enviamos, reconfigura o webhook com o token correto
-			if (actualToken !== newToken) {
-				const actualWebhookUrl = getBaseWebhookUrl(actualToken);
-				try {
-					await fetch(`${evolutionUrl}/webhook/set/${instanceName}`, {
-						method: "POST",
-						headers: {
-							apikey: globalKey,
-							"Content-Type": "application/json",
-						},
-						body: JSON.stringify({
-							webhook: {
-								url: actualWebhookUrl,
-								enabled: true,
-								events: ["MESSAGES_UPSERT"],
-							},
-						}),
-					});
-				} catch (e) {
-					console.error("[checkWhatsApp] Falha ao atualizar webhook:", e);
-				}
+			// No v3, o Evolution ignora o webhook no payload de criação.
+			// É OBRIGATÓRIO chamar a rota /instance/connect incondicionalmente para configurar o webhook.
+			const actualWebhookUrl = getBaseWebhookUrl(actualToken);
+			try {
+				await fetch(`${evolutionUrl}/instance/connect`, {
+					method: "POST",
+					headers: {
+						apikey: actualToken,
+						"Content-Type": "application/json",
+					},
+					body: JSON.stringify({
+						immediate: false,
+						subscribe: ["MESSAGE", "SEND_MESSAGE"],
+						webhookUrl: actualWebhookUrl,
+						webhookBase64: true,
+						base64: true,
+					}),
+				});
+			} catch (e) {
+				console.error("[checkWhatsApp] Falha ao configurar webhook:", e);
 			}
 
 			// Salva o novo token no banco — SEMPRE substitui o antigo
@@ -281,6 +283,32 @@ export async function getWhatsAppQrCodeAction() {
 		}
 
 		if (!token) return { success: false, error: "Token não encontrado." };
+
+		// Configura o webhook e inicia a conexão via /instance/connect antes de pegar o QR code (Evolution Go v3)
+		const baseUrl =
+			process.env.APP_URL || "https://extrairleads.brasilonthebox.shop";
+		const actualWebhookUrl = `${baseUrl}/api/webhook/whatsapp?secret=${token}`;
+		try {
+			await fetch(`${evolutionUrl}/instance/connect`, {
+				method: "POST",
+				headers: {
+					apikey: token,
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({
+					immediate: false,
+					subscribe: ["MESSAGE", "SEND_MESSAGE"],
+					webhookUrl: actualWebhookUrl,
+					webhookBase64: true,
+					base64: true,
+				}),
+			});
+		} catch (e) {
+			console.error(
+				"[getWhatsAppQrCode] Falha ao configurar webhook em connect:",
+				e,
+			);
+		}
 
 		const response = await fetch(`${evolutionUrl}/instance/qr`, {
 			method: "GET",

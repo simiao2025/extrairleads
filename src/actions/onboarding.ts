@@ -102,7 +102,10 @@ export async function saveOnboardingInfoAction(data: {
 
 			const createData = await response.json();
 			const actualToken =
-				createData.hash?.apikey || createData.instance?.apikey || instanceToken;
+				createData.data?.token ||
+				createData.hash?.apikey ||
+				createData.instance?.apikey ||
+				instanceToken;
 
 			await db
 				.update(users)
