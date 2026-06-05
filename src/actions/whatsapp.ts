@@ -102,6 +102,26 @@ export async function checkWhatsAppConnectionAction() {
 						whatsappInstanceToken: token,
 					})
 					.where(eq(users.id, user.id));
+
+				// Configurar Webhook para a nova instância
+				const webhookUrl = process.env.APP_URL
+					? `${process.env.APP_URL}/api/webhook/whatsapp`
+					: "https://extrairleads.brasilonthebox.shop/api/webhook/whatsapp";
+
+				await fetch(`${evolutionUrl}/webhook/set`, {
+					method: "POST",
+					headers: {
+						apikey: token,
+						"Content-Type": "application/json",
+					},
+					body: JSON.stringify({
+						instance: instanceName,
+						url: webhookUrl,
+						webhook_by_events: false,
+						webhook_base64: false,
+						events: ["MESSAGES_UPSERT"],
+					}),
+				}).catch((e) => console.error("Falha ao registrar webhook:", e));
 			}
 
 			return { success: true, connected: false, state: "DISCONNECTED" };
@@ -120,6 +140,30 @@ export async function checkWhatsAppConnectionAction() {
 					whatsappInstanceToken: serverToken,
 				})
 				.where(eq(users.id, user.id));
+		}
+
+		// Garante que a instância existente tenha o Webhook corretamente configurado
+		try {
+			const webhookUrl = process.env.APP_URL
+				? `${process.env.APP_URL}/api/webhook/whatsapp`
+				: "https://extrairleads.brasilonthebox.shop/api/webhook/whatsapp";
+
+			await fetch(`${evolutionUrl}/webhook/set`, {
+				method: "POST",
+				headers: {
+					apikey: serverToken,
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({
+					instance: instanceName,
+					url: webhookUrl,
+					webhook_by_events: false,
+					webhook_base64: false,
+					events: ["MESSAGES_UPSERT"],
+				}),
+			});
+		} catch (e) {
+			console.error("Erro ao configurar Webhook da Evolution API:", e);
 		}
 
 		const connected = foundInstance.connected === true;
