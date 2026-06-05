@@ -99,6 +99,25 @@ export async function saveOnboardingInfoAction(data: {
 					error: `Falha ao criar instância no WhatsApp: ${response.statusText}`,
 				};
 			}
+
+			const createData = await response.json();
+			const actualToken =
+				createData.hash?.apikey || createData.instance?.apikey || instanceToken;
+
+			await db
+				.update(users)
+				.set({
+					phone,
+					address,
+					city,
+					uf,
+					cep,
+					cpfCnpj,
+					onboardingStatus: "COMPLETED",
+					whatsappInstanceName: instanceName,
+					whatsappInstanceToken: actualToken,
+				})
+				.where(eq(users.email, session.user.email));
 		} catch (err: any) {
 			console.error("Erro de rede ao conectar com Evolution API:", err);
 			return {
@@ -107,21 +126,6 @@ export async function saveOnboardingInfoAction(data: {
 					"Falha de comunicação com o servidor do WhatsApp. Tente novamente.",
 			};
 		}
-
-		await db
-			.update(users)
-			.set({
-				phone,
-				address,
-				city,
-				uf,
-				cep,
-				cpfCnpj,
-				onboardingStatus: "COMPLETED",
-				whatsappInstanceName: instanceName,
-				whatsappInstanceToken: instanceToken,
-			})
-			.where(eq(users.email, session.user.email));
 
 		return { success: true };
 	} catch (error: any) {

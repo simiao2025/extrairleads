@@ -111,22 +111,30 @@ export async function checkWhatsAppConnectionAction() {
 			});
 
 			if (createRes.ok) {
+				const createData = await createRes.json();
+				const actualToken =
+					createData.hash?.apikey || createData.instance?.apikey || token;
+				const actualWebhookUrl = getBaseWebhookUrl(actualToken);
+
 				await db
 					.update(users)
 					.set({
 						whatsappInstanceName: instanceName,
-						whatsappInstanceToken: token,
+						whatsappInstanceToken: actualToken,
 					})
 					.where(eq(users.id, user.id));
 
 				await fetch(`${evolutionUrl}/instance/connect`, {
 					method: "POST",
 					headers: {
-						apikey: token,
+						apikey: actualToken,
 						instance: instanceName,
 						"Content-Type": "application/json",
 					},
-					body: JSON.stringify({ webhookUrl, subscribe: ["MESSAGE"] }),
+					body: JSON.stringify({
+						webhookUrl: actualWebhookUrl,
+						subscribe: ["MESSAGE"],
+					}),
 				}).catch((e) => console.error("Falha ao registrar webhook:", e));
 			}
 
