@@ -74,7 +74,7 @@ async function sendZavuMessage(
 		},
 		body: JSON.stringify({
 			channel: "whatsapp",
-			to: phoneStr,
+			to: `+${phoneStr.replace(/\D/g, "")}`,
 			type: "text",
 			text: text,
 		}),
@@ -192,7 +192,7 @@ export async function sendWhatsAppAudioAction(
 			},
 			body: JSON.stringify({
 				channel: "whatsapp",
-				to: phoneStr,
+				to: `+${phoneStr}`,
 				type: "audio",
 				audio: {
 					base64: audioBase64

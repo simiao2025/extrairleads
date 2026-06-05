@@ -119,7 +119,7 @@ async function sendZavuReply({
 				headers: { "Content-Type": "application/json", Authorization: `Bearer ${zavuKey}` },
 				body: JSON.stringify({
 					channel: "whatsapp",
-					to: phone,
+					to: `+${phone}`,
 					type: "audio",
 					audio: { base64: base64Audio }
 				}),
@@ -144,7 +144,7 @@ async function sendZavuReply({
 			headers: { "Content-Type": "application/json", Authorization: `Bearer ${zavuKey}` },
 			body: JSON.stringify({
 				channel: "whatsapp",
-				to: phone,
+				to: `+${phone}`,
 				type: "text",
 				text: block,
 			}),
