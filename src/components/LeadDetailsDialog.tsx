@@ -8,12 +8,17 @@ import {
 	Send,
 	Sparkles,
 	User,
+	Mic,
+	Square,
+	Trash2,
+	Volume2,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import {
 	generateAiSuggestionAction,
 	getLeadChatAction,
 	sendManualWhatsAppMessageAction,
+	sendWhatsAppAudioAction,
 } from "@/app/actions";
 import { Button } from "@/components/ui/button";
 import {
@@ -72,6 +77,13 @@ export default function LeadDetailsDialog({
 	const [sending, setSending] = useState(false);
 	const [generating, setGenerating] = useState(false);
 	const [isOpen, setIsOpen] = useState(false);
+	
+	const [isRecording, setIsRecording] = useState(false);
+	const [recordingTime, setRecordingTime] = useState(0);
+	const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+	const audioChunksRef = useRef<Blob[]>([]);
+	const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
 	const scrollRef = useRef<HTMLDivElement>(null);
 
 	const loadChat = async (showLoading = true) => {
@@ -110,6 +122,7 @@ export default function LeadDetailsDialog({
 			leadId: lead.id,
 			role: "assistant",
 			content: input,
+			audioBase64: null,
 			type: "text",
 			createdAt: new Date(),
 		};
@@ -125,6 +138,97 @@ export default function LeadDetailsDialog({
 			loadChat();
 		}
 		setSending(false);
+	};
+
+	const startRecording = async () => {
+		try {
+			const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+			const mediaRecorder = new MediaRecorder(stream);
+			mediaRecorderRef.current = mediaRecorder;
+			audioChunksRef.current = [];
+
+			mediaRecorder.ondataavailable = (event) => {
+				if (event.data.size > 0) {
+					audioChunksRef.current.push(event.data);
+				}
+			};
+
+			mediaRecorder.onstop = async () => {
+				const audioBlob = new Blob(audioChunksRef.current, { type: "audio/ogg" });
+				
+				// Ler como base64
+				const reader = new FileReader();
+				reader.readAsDataURL(audioBlob);
+				reader.onloadend = async () => {
+					const base64data = reader.result as string;
+					const base64String = base64data.split(",")[1]; // remove o prefixo data:...
+
+					setSending(true);
+
+					// Optimistic update
+					const optimisticMsg: ChatMessage = {
+						id: Date.now(),
+						leadId: lead.id,
+						role: "assistant",
+						content: "[Áudio Enviado]",
+						audioBase64: base64String,
+						type: "audio",
+						createdAt: new Date(),
+					};
+					setHistory((prev) => [...prev, optimisticMsg]);
+
+					const res = await sendWhatsAppAudioAction(lead.id, base64String);
+					if (!res.success) {
+						setHistory((prev) => prev.filter((m) => m.id !== optimisticMsg.id));
+						notify(`Erro ao enviar áudio: ${res.error}`, { type: "error" });
+					} else {
+						loadChat();
+					}
+					setSending(false);
+				};
+
+				// Limpar as faixas de áudio para liberar o microfone
+				stream.getTracks().forEach(track => track.stop());
+			};
+
+			mediaRecorder.start();
+			setIsRecording(true);
+			setRecordingTime(0);
+
+			timerIntervalRef.current = setInterval(() => {
+				setRecordingTime((prev) => prev + 1);
+			}, 1000);
+		} catch (err) {
+			console.error("Erro ao acessar microfone", err);
+			notify("Permissão de microfone negada ou não disponível.", { type: "error" });
+		}
+	};
+
+	const stopRecording = () => {
+		if (mediaRecorderRef.current && isRecording) {
+			mediaRecorderRef.current.stop();
+			setIsRecording(false);
+			if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+		}
+	};
+
+	const cancelRecording = () => {
+		if (mediaRecorderRef.current && isRecording) {
+			// Cancela o envio: reatribui onstop para não fazer nada
+			mediaRecorderRef.current.onstop = () => {
+				mediaRecorderRef.current?.stream.getTracks().forEach(track => track.stop());
+			};
+			mediaRecorderRef.current.stop();
+			setIsRecording(false);
+			if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+			setRecordingTime(0);
+		}
+	};
+
+	const formatTime = (seconds: number) => {
+		const m = Math.floor(seconds / 60).toString().padStart(2, "0");
+		const s = (seconds % 60).toString().padStart(2, "0");
+		return `${m}:${s}`;
 	};
 
 	const handleGenerateAI = async () => {
@@ -321,21 +425,47 @@ export default function LeadDetailsDialog({
 									</p>
 								</div>
 							) : (
-								history.map((msg, i) => (
 									<div
-										key={i}
+										key={msg.id || i}
 										className={`flex ${msg.role === "assistant" ? "justify-end" : "justify-start"}`}
 									>
 										<div
-											className={`max-w-[85%] sm:max-w-[70%] p-2 px-3 rounded-xl text-[13px] shadow-sm relative ${
+											className={`max-w-[85%] sm:max-w-[70%] p-2 px-3 rounded-xl text-[13px] shadow-sm relative flex flex-col ${
 												msg.role === "assistant"
 													? "bg-[#005c4b] text-[#e9edef] rounded-tr-none"
 													: "bg-[#202c33] text-[#e9edef] rounded-tl-none"
 											}`}
 										>
-											<p className="leading-relaxed whitespace-pre-wrap break-words">
-												{msg.content}
-											</p>
+											{msg.type === "audio" ? (
+												<div className="flex flex-col gap-1.5 min-w-[200px] max-w-xs mb-1">
+													<span className="text-[10px] text-zinc-400 font-bold tracking-wider uppercase flex items-center gap-1.5">
+														<Volume2 className="w-3 h-3 text-emerald-400" />
+														Áudio {msg.role === "assistant" ? "Enviado" : "Recebido"}
+													</span>
+													{msg.audioBase64 ? (
+														<audio 
+															controls 
+															src={msg.audioBase64.startsWith("data:") ? msg.audioBase64 : `data:audio/ogg;base64,${msg.audioBase64}`}
+															className="h-10 w-full max-w-[250px] outline-none"
+														/>
+													) : (
+														<p className="text-[11px] text-zinc-400 italic">Áudio expirado ou indisponível</p>
+													)}
+													{/* Mostrar a transcrição apenas se houver conteúdo textual real */}
+													{msg.content && msg.content !== "[Áudio Enviado]" && (
+														<div className="mt-1 pt-1.5 border-t border-white/5">
+															<span className="text-[9px] text-zinc-500 uppercase font-semibold mb-1 block">Transcrição:</span>
+															<p className="text-xs text-zinc-300 italic leading-relaxed whitespace-pre-wrap break-words">
+																"{msg.content}"
+															</p>
+														</div>
+													)}
+												</div>
+											) : (
+												<p className="leading-relaxed whitespace-pre-wrap break-words">
+													{msg.content}
+												</p>
+											)}
 											<div className="flex items-center justify-end gap-1 mt-1">
 												<p className="text-[9px] text-white/50 font-medium">
 													{msg.createdAt
@@ -354,81 +484,125 @@ export default function LeadDetailsDialog({
 
 						{/* Input Area */}
 						<div className="bg-[#202c33] px-4 py-3 flex items-end gap-2 border-t border-zinc-800/50">
-							<DropdownMenu>
-								<DropdownMenuTrigger
-									disabled={sending}
-									className="inline-flex items-center justify-center whitespace-nowrap w-10 h-10 rounded-full text-zinc-400 hover:text-[#00a884] hover:bg-[#00a884]/10 shrink-0 transition-colors disabled:pointer-events-none disabled:opacity-50 outline-none"
-									title="Usar um template rápido"
-								>
-									<MessageSquareText className="w-5 h-5" />
-								</DropdownMenuTrigger>
-								<DropdownMenuContent
-									align="start"
-									className="w-80 bg-[#202c33] border-zinc-800 text-zinc-200 shadow-2xl p-0"
-								>
-									<div className="px-4 py-3 text-xs font-bold text-zinc-400 uppercase tracking-widest bg-[#111b21] rounded-t-lg">
-										Templates de Prospecção
+							{isRecording ? (
+								<div className="flex-1 flex items-center justify-between bg-zinc-900/50 rounded-xl px-4 min-h-[40px] border border-red-500/20 w-full">
+									<div className="flex items-center gap-3">
+										<div className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
+										<span className="text-zinc-300 font-mono text-sm">{formatTime(recordingTime)}</span>
+										<span className="text-xs text-zinc-500 ml-2 hidden sm:inline">Gravando áudio...</span>
 									</div>
-									{templates.map((t, idx) => (
-										<DropdownMenuItem
-											key={idx}
-											className="text-[13px] hover:bg-zinc-800 focus:bg-zinc-700 cursor-pointer px-4 py-3 border-t border-zinc-800/50 whitespace-normal leading-relaxed"
-											onClick={() => setInput(t)}
+									<div className="flex items-center gap-2">
+										<Button
+											type="button"
+											variant="ghost"
+											onClick={cancelRecording}
+											className="w-8 h-8 rounded-full text-zinc-400 hover:text-red-400 hover:bg-red-400/10 p-0"
+											title="Cancelar gravação"
 										>
-											{t}
-										</DropdownMenuItem>
-									))}
-								</DropdownMenuContent>
-							</DropdownMenu>
+											<Trash2 className="w-4 h-4" />
+										</Button>
+										<Button
+											type="button"
+											onClick={stopRecording}
+											className="w-8 h-8 rounded-full bg-[#00a884] hover:bg-[#029072] text-white p-0"
+											title="Parar e Enviar"
+										>
+											<Square className="w-3.5 h-3.5 fill-current" />
+										</Button>
+									</div>
+								</div>
+							) : (
+								<>
+									<DropdownMenu>
+										<DropdownMenuTrigger
+											disabled={sending}
+											className="inline-flex items-center justify-center whitespace-nowrap w-10 h-10 rounded-full text-zinc-400 hover:text-[#00a884] hover:bg-[#00a884]/10 shrink-0 transition-colors disabled:pointer-events-none disabled:opacity-50 outline-none"
+											title="Usar um template rápido"
+										>
+											<MessageSquareText className="w-5 h-5" />
+										</DropdownMenuTrigger>
+										<DropdownMenuContent
+											align="start"
+											className="w-80 bg-[#202c33] border-zinc-800 text-zinc-200 shadow-2xl p-0"
+										>
+											<div className="px-4 py-3 text-xs font-bold text-zinc-400 uppercase tracking-widest bg-[#111b21] rounded-t-lg">
+												Templates de Prospecção
+											</div>
+											<div className="p-2 max-h-[300px] overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-700">
+												{templates.map((tmpl, idx) => (
+													<DropdownMenuItem
+														key={idx}
+														onClick={() => setInput(tmpl)}
+														className="text-xs p-3 hover:bg-[#00a884]/10 hover:text-[#00a884] cursor-pointer rounded-lg border-b border-zinc-800/50 last:border-0 focus:bg-[#00a884]/10 focus:text-[#00a884]"
+													>
+														{tmpl}
+													</DropdownMenuItem>
+												))}
+											</div>
+										</DropdownMenuContent>
+									</DropdownMenu>
 
-							<Button
-								type="button"
-								variant="ghost"
-								size="icon"
-								onClick={handleGenerateAI}
-								disabled={generating || sending}
-								className="w-10 h-10 rounded-full text-zinc-400 hover:text-[#00a884] hover:bg-[#00a884]/10 shrink-0 transition-colors"
-								title="Sugerir mensagem com Inteligência Artificial"
-							>
-								{generating ? (
-									<Loader2 className="w-5 h-5 animate-spin" />
-								) : (
-									<Sparkles className="w-5 h-5" />
-								)}
-							</Button>
+									<Button
+										type="button"
+										variant="ghost"
+										size="icon"
+										onClick={handleGenerateAI}
+										disabled={generating || sending}
+										className="w-10 h-10 rounded-full text-zinc-400 hover:text-[#00a884] hover:bg-[#00a884]/10 shrink-0 transition-colors"
+										title="Sugerir mensagem com Inteligência Artificial"
+									>
+										{generating ? (
+											<Loader2 className="w-5 h-5 animate-spin" />
+										) : (
+											<Sparkles className="w-5 h-5" />
+										)}
+									</Button>
 
-							<div className="flex-1 bg-[#2a3942] rounded-xl overflow-hidden min-h-[60px] flex items-start border border-transparent focus-within:border-[#00a884]/50 transition-colors shadow-inner">
-								<textarea
-									value={input}
-									onChange={(e) => setInput(e.target.value)}
-									onKeyDown={(e) => {
-										if (e.key === "Enter" && !e.shiftKey) {
-											e.preventDefault();
-											handleSend();
-										}
-									}}
-									placeholder="Digite uma mensagem ou escolha um template ao lado..."
-									className="w-full bg-transparent text-[#e9edef] text-sm px-4 py-3 max-h-48 focus:outline-none resize-none min-h-[60px]"
-									rows={
-										input.split("\n").length > 1
-											? Math.min(input.split("\n").length, 8)
-											: 2
-									}
-								/>
-							</div>
+									<div className="flex-1 bg-[#2a3942] rounded-xl overflow-hidden min-h-[40px] flex items-center border border-transparent focus-within:border-[#00a884]/50 transition-colors shadow-inner">
+										<textarea
+											value={input}
+											onChange={(e) => setInput(e.target.value)}
+											onKeyDown={(e) => {
+												if (e.key === "Enter" && !e.shiftKey) {
+													e.preventDefault();
+													handleSend();
+												}
+											}}
+											placeholder="Digite uma mensagem ou escolha um template ao lado..."
+											className="w-full bg-transparent text-[#e9edef] text-sm px-4 py-2.5 max-h-48 focus:outline-none resize-none min-h-[40px] scrollbar-none"
+											rows={
+												input.split("\n").length > 1
+													? Math.min(input.split("\n").length, 8)
+													: 1
+											}
+										/>
+									</div>
 
-							<Button
-								type="button"
-								onClick={handleSend}
-								disabled={!input.trim() || sending}
-								className="w-10 h-10 rounded-full bg-[#00a884] hover:bg-[#029072] text-white shrink-0 flex items-center justify-center transition-transform hover:scale-105 disabled:opacity-50 disabled:hover:scale-100 p-0"
-							>
-								{sending ? (
-									<Loader2 className="w-5 h-5 animate-spin" />
-								) : (
-									<Send className="w-[18px] h-[18px] ml-0.5" />
-								)}
-							</Button>
+									{input.trim() ? (
+										<Button
+											type="button"
+											onClick={handleSend}
+											disabled={sending}
+											className="w-10 h-10 rounded-full bg-[#00a884] hover:bg-[#029072] text-white shrink-0 flex items-center justify-center transition-transform hover:scale-105 disabled:opacity-50 disabled:hover:scale-100 p-0"
+										>
+											{sending ? (
+												<Loader2 className="w-5 h-5 animate-spin" />
+											) : (
+												<Send className="w-[18px] h-[18px] ml-0.5" />
+											)}
+										</Button>
+									) : (
+										<Button
+											type="button"
+											onClick={startRecording}
+											className="w-10 h-10 rounded-full bg-[#2a3942] hover:bg-[#32454f] text-[#00a884] shrink-0 flex items-center justify-center transition-transform hover:scale-105 active:scale-95 shadow-md shadow-black/20 cursor-pointer p-0"
+											title="Gravar áudio"
+										>
+											<Mic className="w-5 h-5" />
+										</Button>
+									)}
+								</>
+							)}
 						</div>
 					</div>
 				</div>
