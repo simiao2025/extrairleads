@@ -298,7 +298,10 @@ async function sendWhatsAppReply({
 }
 
 // 7. Endpoint Principal Webhook POST
-export async function POST(req: NextRequest) {
+export async function POST(
+	req: NextRequest,
+	{ params }: { params: { slug?: string[] } },
+) {
 	try {
 		const body = await req.json();
 
@@ -313,16 +316,33 @@ export async function POST(req: NextRequest) {
 		} catch (e) {}
 
 		// O Evolution API V3 (Go) envia "MESSAGES_UPSERT" em maiúsculo (ou camelCase).
-		// Vamos garantir compatibilidade com V1, V2 e V3
-		const eventName = (body.event || "").toUpperCase();
-		if (eventName !== "MESSAGES.UPSERT" && eventName !== "MESSAGES_UPSERT") {
+		// Além disso, se "Webhook by Events" estiver ativado, o evento pode vir na URL
+		let eventName = (body.event || "").toUpperCase();
+		if (params?.slug && params.slug.length > 0) {
+			const slugEvent = params.slug[0].toUpperCase();
+			if (!eventName || slugEvent.includes("MESSAGE")) {
+				eventName = slugEvent;
+			}
+		}
+
+		if (!eventName.includes("MESSAGE")) {
 			return NextResponse.json({ ok: true });
 		}
 
-		const instanceName = body.instance;
+		// A instância pode vir no body ou nos headers (v3)
+		const instanceName =
+			body.instance ||
+			body.instanceName ||
+			req.headers.get("instance") ||
+			req.headers.get("x-evolution-instance");
+			
+		if (!instanceName) {
+			return NextResponse.json({ ok: true, error: "No instance provided" });
+		}
+
 		const messageData = body.data;
-		const remoteJid = messageData.key?.remoteJid;
-		const isFromMe = !!messageData.key?.fromMe;
+		const remoteJid = messageData?.key?.remoteJid || body?.data?.Info?.Chat;
+		const isFromMe = !!messageData?.key?.fromMe || !!body?.data?.Info?.IsFromMe;
 
 		if (!remoteJid) {
 			return NextResponse.json({ ok: true });
@@ -346,8 +366,10 @@ export async function POST(req: NextRequest) {
 		const lead = await findOrCreateLead(phone, ownerUserId);
 
 		// 2. Extrair Texto / Transcrever Áudio se necessário
+		// Como a V3 manda "Message" maiúsculo
+		const msgPayload = messageData.message || messageData.Message || messageData;
 		const extracted = await extractMessageContent(
-			messageData,
+			{ ...messageData, message: msgPayload },
 			instanceName,
 			instanceToken,
 			evolutionUrl,
