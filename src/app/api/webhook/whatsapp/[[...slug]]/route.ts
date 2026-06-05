@@ -300,7 +300,7 @@ async function sendWhatsAppReply({
 // 7. Endpoint Principal Webhook POST
 export async function POST(
 	req: NextRequest,
-	{ params }: { params: { slug?: string[] } },
+	{ params }: { params: Promise<{ slug?: string[] }> },
 ) {
 	try {
 		const body = await req.json();
@@ -318,11 +318,17 @@ export async function POST(
 		// O Evolution API V3 (Go) envia "MESSAGES_UPSERT" em maiúsculo (ou camelCase).
 		// Além disso, se "Webhook by Events" estiver ativado, o evento pode vir na URL
 		let eventName = (body.event || "").toUpperCase();
-		if (params?.slug && params.slug.length > 0) {
-			const slugEvent = params.slug[0].toUpperCase();
-			if (!eventName || slugEvent.includes("MESSAGE")) {
-				eventName = slugEvent;
+		
+		try {
+			const resolvedParams = await params;
+			if (resolvedParams?.slug && resolvedParams.slug.length > 0) {
+				const slugEvent = resolvedParams.slug[0].toUpperCase();
+				if (!eventName || slugEvent.includes("MESSAGE")) {
+					eventName = slugEvent;
+				}
 			}
+		} catch (e) {
+			// ignora erro ao ler params
 		}
 
 		if (!eventName.includes("MESSAGE")) {
