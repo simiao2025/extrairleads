@@ -477,23 +477,46 @@ export default function SettingsPage() {
 														</li>
 													</ol>
 
-													<button
-														onClick={handleGenerateQr}
-														disabled={qrLoading || checking}
-														className="w-full md:w-auto bg-white hover:bg-zinc-200 text-black font-semibold text-xs py-2.5 px-5 rounded-lg flex items-center justify-center gap-2 cursor-pointer transition-all duration-200"
-													>
-														{qrLoading ? (
-															<>
-																<Loader2 className="w-3.5 h-3.5 animate-spin" />
-																Gerando...
-															</>
-														) : (
-															<>
-																<QrCode className="w-4 h-4" />
-																Gerar QR Code
-															</>
-														)}
-													</button>
+													<div className="flex flex-col sm:flex-row items-center gap-3 w-full">
+														<button
+															onClick={handleGenerateQr}
+															disabled={qrLoading || checking}
+															className="w-full sm:w-auto flex-1 bg-white hover:bg-zinc-200 text-black font-semibold text-xs py-2.5 px-5 rounded-lg flex items-center justify-center gap-2 cursor-pointer transition-all duration-200"
+														>
+															{qrLoading ? (
+																<>
+																	<Loader2 className="w-3.5 h-3.5 animate-spin" />
+																	Gerando...
+																</>
+															) : (
+																<>
+																	<QrCode className="w-4 h-4" />
+																	Gerar QR Code
+																</>
+															)}
+														</button>
+
+														<button
+															onClick={async () => {
+																if (confirm("Tem certeza que deseja excluir esta instância do WhatsApp?")) {
+																	setChecking(true);
+																	const res = await disconnectWhatsAppAction();
+																	if (res.success) {
+																		setWhatsappStatus(null);
+																		handleCheckConnection(true);
+																		notify("Instância excluída com sucesso.", { type: "success" });
+																	} else {
+																		notify("Erro ao excluir: " + res.error, { type: "error" });
+																		setChecking(false);
+																	}
+																}
+															}}
+															disabled={checking}
+															className="w-full sm:w-auto flex-1 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 font-semibold text-xs py-2.5 px-5 rounded-lg flex items-center justify-center gap-2 cursor-pointer transition-all duration-200"
+														>
+															Desconectar
+														</button>
+													</div>
 
 													{qrError && (
 														<p className="text-red-400 text-xs mt-2 bg-red-400/5 border border-red-500/10 p-2 rounded-lg">
