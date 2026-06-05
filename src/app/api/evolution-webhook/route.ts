@@ -1,1 +1,1 @@
-export { POST } from "../webhook/whatsapp/route";
+export { POST } from "../webhook/whatsapp/[[...slug]]/route";
