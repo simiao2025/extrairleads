@@ -31,13 +31,20 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // 1. Auxiliar para localizar ou auto-cadastrar o lead
 async function findOrCreateLead(phone: string, ownerUserId: number | null) {
-	let [lead] = await db.select().from(leads).where(eq(leads.phone, phone));
+	const rawPhone = phone.replace(/\D/g, "");
+
+	// Tenta localizar o lead ignorando qualquer máscara ou formatação (ex: +55 (11) 99999-9999)
+	let [lead] = await db
+		.select()
+		.from(leads)
+		.where(drizzleSql`regexp_replace(${leads.phone}, '\\D', '', 'g') = ${rawPhone}`);
+
 	if (!lead) {
 		const [newLead] = await db
 			.insert(leads)
 			.values({
 				userId: ownerUserId,
-				phone: phone,
+				phone: rawPhone,
 				name: "Contato WhatsApp",
 				status: "raw",
 			})
