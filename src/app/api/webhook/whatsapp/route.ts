@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { desc, sql as drizzleSql, eq } from "drizzle-orm";
+import { desc, sql as drizzleSql, eq, and, gte } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { db } from "@/db";
@@ -300,7 +300,9 @@ export async function POST(req: NextRequest) {
 		const instanceName = body.instance;
 		const messageData = body.data;
 		const remoteJid = messageData.key?.remoteJid;
-		if (!remoteJid || messageData.key?.fromMe) {
+		const isFromMe = !!messageData.key?.fromMe;
+
+		if (!remoteJid) {
 			return NextResponse.json({ ok: true });
 		}
 
@@ -332,6 +334,38 @@ export async function POST(req: NextRequest) {
 		const base64Audio = extracted.base64Audio;
 
 		if (!textContent.trim() && !base64Audio) {
+			return NextResponse.json({ ok: true });
+		}
+
+		// Se a mensagem for enviada pelo próprio atendente (fromMe = true)
+		if (isFromMe) {
+			// Evitar salvar mensagens duplicadas que já foram inseridas pelo painel (SDR)
+			const fifteenSecondsAgo = new Date(Date.now() - 15000);
+			const [existingMsg] = await db
+				.select()
+				.from(chatHistory)
+				.where(
+					and(
+						eq(chatHistory.leadId, lead.id),
+						eq(chatHistory.role, "assistant"),
+						eq(chatHistory.content, textContent),
+						gte(chatHistory.createdAt, fifteenSecondsAgo),
+					),
+				);
+
+			if (!existingMsg) {
+				const audioMessage = messageData.message?.audioMessage;
+				// Salvar a resposta manual do SDR (pelo celular/whatsapp web) no banco
+				await db.insert(chatHistory).values({
+					leadId: lead.id,
+					role: "assistant",
+					content: textContent,
+					audioBase64: base64Audio,
+					type: audioMessage ? "audio" : "text",
+				});
+			}
+
+			// Como é uma mensagem nossa (SDR), não chamamos a IA para responder!
 			return NextResponse.json({ ok: true });
 		}
 
