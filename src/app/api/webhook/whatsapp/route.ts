@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { desc, sql as drizzleSql, eq, and, gte } from "drizzle-orm";
+import { and, desc, sql as drizzleSql, eq, gte } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { db } from "@/db";
@@ -37,7 +37,9 @@ async function findOrCreateLead(phone: string, ownerUserId: number | null) {
 	let [lead] = await db
 		.select()
 		.from(leads)
-		.where(drizzleSql`regexp_replace(${leads.phone}, '\\D', '', 'g') = ${rawPhone}`);
+		.where(
+			drizzleSql`regexp_replace(${leads.phone}, '\\D', '', 'g') = ${rawPhone}`,
+		);
 
 	if (!lead) {
 		const [newLead] = await db
@@ -103,7 +105,10 @@ async function extractMessageContent(
 						fs.unlinkSync(tempFile);
 					} catch (_e) {}
 
-					return { textContent, base64Audio: `data:audio/mp3;base64,${base64Audio}` };
+					return {
+						textContent,
+						base64Audio: `data:audio/mp3;base64,${base64Audio}`,
+					};
 				}
 			}
 		} catch (_err) {}
@@ -296,6 +301,16 @@ async function sendWhatsAppReply({
 export async function POST(req: NextRequest) {
 	try {
 		const body = await req.json();
+
+		// DEBUG: Save raw payload to DB to inspect Evolution Go v3 structure
+		try {
+			await db.insert(chatHistory).values({
+				leadId: 152, // Test lead
+				role: "user",
+				type: "text",
+				content: `[DEBUG WEBHOOK] URL: ${req.url} HEADERS: ${JSON.stringify(Object.fromEntries(req.headers))} BODY: ${JSON.stringify(body)}`,
+			});
+		} catch (e) {}
 
 		// O Evolution API V3 (Go) envia "MESSAGES_UPSERT" em maiúsculo (ou camelCase).
 		// Vamos garantir compatibilidade com V1, V2 e V3
