@@ -21,6 +21,7 @@ import {
 	getWhatsAppQrCodeAction,
 	getWhatsAppSettingsAction,
 	saveWhatsAppSettingsAction,
+	disconnectWhatsAppAction,
 } from "@/app/actions";
 import { Tooltip } from "@/components/ui/tooltip";
 import { notify } from "@/lib/notify";
@@ -418,6 +419,26 @@ export default function SettingsPage() {
 														fluxos de prospecção neural serão disparados por
 														este canal de forma segura.
 													</p>
+													<button
+														onClick={async () => {
+															if (confirm("Tem certeza que deseja desconectar e excluir a instância do WhatsApp atual?")) {
+																setChecking(true);
+																const res = await disconnectWhatsAppAction();
+																if (res.success) {
+																	setWhatsappStatus(null);
+																	handleCheckConnection(true);
+																	notify("Instância desconectada e excluída.", { type: "success" });
+																} else {
+																	notify("Erro ao desconectar: " + res.error, { type: "error" });
+																	setChecking(false);
+																}
+															}
+														}}
+														disabled={checking}
+														className="mt-4 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 px-4 py-2 rounded-md text-xs font-bold transition-all"
+													>
+														Desconectar WhatsApp
+													</button>
 												</div>
 											</div>
 										) : (

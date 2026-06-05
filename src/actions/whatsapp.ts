@@ -482,3 +482,50 @@ export async function saveWhatsAppSettingsAction(data: {
 		return { success: false, error: error.message };
 	}
 }
+
+export async function disconnectWhatsAppAction() {
+	try {
+		const session = await auth();
+		if (!session?.user?.email) throw new Error("Não autorizado");
+
+		const [user] = await db
+			.select()
+			.from(users)
+			.where(eq(users.email, session.user.email));
+
+		if (!user || !user.whatsappInstanceName) {
+			return { success: true };
+		}
+
+		const instanceName = user.whatsappInstanceName;
+		const token = user.whatsappInstanceToken || GLOBAL_KEY;
+		const evolutionUrl = process.env.EVOLUTION_API_URL || "https://evolution-api.brasilonthebox.shop";
+
+		// Tenta logout e delete na Evolution API
+		try {
+			await fetch(`${evolutionUrl}/instance/logout/${instanceName}`, {
+				method: "DELETE",
+				headers: { apikey: token },
+			});
+			await fetch(`${evolutionUrl}/instance/delete/${instanceName}`, {
+				method: "DELETE",
+				headers: { apikey: GLOBAL_KEY },
+			});
+		} catch (e) {
+			console.error("Falha ao remover da Evolution API:", e);
+		}
+
+		// Limpa do banco local
+		await db
+			.update(users)
+			.set({
+				whatsappInstanceName: null,
+				whatsappInstanceToken: null,
+			})
+			.where(eq(users.id, user.id));
+
+		return { success: true };
+	} catch (error: any) {
+		return { success: false, error: error.message };
+	}
+}
