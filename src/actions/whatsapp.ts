@@ -308,6 +308,26 @@ export async function sendManualWhatsAppMessageAction(
 
 			if (!response.ok) {
 				const errorText = await response.text();
+
+				if (errorText.includes("is not registered on WhatsApp")) {
+					await db
+						.update(leads)
+						.set({
+							status: "discarded",
+							aiAnalysis: lead.aiAnalysis
+								? lead.aiAnalysis +
+									"\n\n[SISTEMA] Lead descartado automaticamente: O número não possui WhatsApp ativo."
+								: "[SISTEMA] Lead descartado automaticamente: O número não possui WhatsApp ativo.",
+						})
+						.where(eq(leads.id, lead.id));
+
+					return {
+						success: false,
+						error:
+							"Este número não possui WhatsApp ativo. O lead foi descartado.",
+					};
+				}
+
 				return {
 					success: false,
 					error: `Falha na API do WhatsApp: ${errorText}`,
