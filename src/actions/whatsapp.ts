@@ -1,11 +1,25 @@
 "use server";
 
+import { randomBytes } from "crypto";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { chatHistory, leads, users } from "@/db/schema";
 import { auth } from "@/lib/auth";
 
-const GLOBAL_KEY = process.env.EVOLUTION_GLOBAL_API_KEY || "abcslirm2026";
+function getGlobalKey() {
+	const key = process.env.EVOLUTION_GLOBAL_API_KEY;
+	if (!key) {
+		throw new Error(
+			"EVOLUTION_GLOBAL_API_KEY não está configurada no ambiente (Risco de Segurança).",
+		);
+	}
+	return key;
+}
+
+function getBaseWebhookUrl(token: string) {
+	const baseUrl = process.env.APP_URL || "https://extrairleads.brasilonthebox.shop";
+	return `${baseUrl}/api/webhook/whatsapp?secret=${token}`;
+}
 
 // Auxiliar para obter dados do usuário logado
 async function getCurrentUser() {
@@ -27,7 +41,6 @@ export async function checkWhatsAppConnectionAction() {
 		}
 
 		if (!user.cpfCnpj && !user.whatsappInstanceName) {
-			// Não cria a instância prematuramente se o usuário ainda não tiver preenchido o CPF no Onboarding
 			return {
 				success: false,
 				state: "DISCONNECTED",
@@ -54,34 +67,29 @@ export async function checkWhatsAppConnectionAction() {
 			};
 		}
 
-		// Consulta a lista de instâncias na API global do Evolution Go v3
 		const response = await fetch(`${evolutionUrl}/instance/all`, {
 			method: "GET",
-			headers: {
-				apikey: GLOBAL_KEY,
-			},
+			headers: { apikey: getGlobalKey() },
 		});
 
 		if (!response.ok) {
-			await response.text(); // consume body
+			await response.text();
 			return { success: false, error: "Erro ao ler status no servidor." };
 		}
 
 		const resJson = await response.json();
 		const instancesList = resJson?.data || [];
-		const foundInstance = instancesList.find(
-			(inst: any) => inst.name === instanceName,
-		);
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const foundInstance = instancesList.find((inst: any) => inst.name === instanceName);
 
 		if (!foundInstance) {
-			const token =
-				user.whatsappInstanceToken ||
-				Math.random().toString(36).substring(2) + Date.now().toString(36);
+			const token = user.whatsappInstanceToken || randomBytes(32).toString("hex");
+			const webhookUrl = getBaseWebhookUrl(token);
 
 			const createRes = await fetch(`${evolutionUrl}/instance/create`, {
 				method: "POST",
 				headers: {
-					apikey: GLOBAL_KEY,
+					apikey: getGlobalKey(),
 					"Content-Type": "application/json",
 				},
 				body: JSON.stringify({
@@ -91,9 +99,7 @@ export async function checkWhatsAppConnectionAction() {
 					qrcode: true,
 					integration: "WHATSAPP-BAILEYS",
 					webhook: {
-						url: process.env.APP_URL
-							? `${process.env.APP_URL}/api/webhook/whatsapp`
-							: "https://extrairleads.brasilonthebox.shop/api/webhook/whatsapp",
+						url: webhookUrl,
 						enabled: true,
 						events: ["MESSAGES_UPSERT"],
 					},
@@ -101,7 +107,6 @@ export async function checkWhatsAppConnectionAction() {
 			});
 
 			if (createRes.ok) {
-				// Atualiza os dados de WhatsApp no banco
 				await db
 					.update(users)
 					.set({
@@ -110,11 +115,6 @@ export async function checkWhatsAppConnectionAction() {
 					})
 					.where(eq(users.id, user.id));
 
-				// Configurar Webhook para a nova instância
-				const webhookUrl = process.env.APP_URL
-					? `${process.env.APP_URL}/api/webhook/whatsapp`
-					: "https://extrairleads.brasilonthebox.shop/api/webhook/whatsapp";
-
 				await fetch(`${evolutionUrl}/instance/connect`, {
 					method: "POST",
 					headers: {
@@ -122,17 +122,13 @@ export async function checkWhatsAppConnectionAction() {
 						instance: instanceName,
 						"Content-Type": "application/json",
 					},
-					body: JSON.stringify({
-						webhookUrl: webhookUrl,
-						subscribe: ["MESSAGE"],
-					}),
+					body: JSON.stringify({ webhookUrl, subscribe: ["MESSAGE"] }),
 				}).catch((e) => console.error("Falha ao registrar webhook:", e));
 			}
 
 			return { success: true, connected: false, state: "DISCONNECTED" };
 		}
 
-		// Se a instância existe, garantimos que o token local esteja em sincronia com o token da API do Evolution Go
 		const serverToken = foundInstance.token;
 		if (
 			user.whatsappInstanceToken !== serverToken ||
@@ -147,12 +143,8 @@ export async function checkWhatsAppConnectionAction() {
 				.where(eq(users.id, user.id));
 		}
 
-		// Garante que a instância existente tenha o Webhook corretamente configurado
 		try {
-			const webhookUrl = process.env.APP_URL
-				? `${process.env.APP_URL}/api/webhook/whatsapp`
-				: "https://extrairleads.brasilonthebox.shop/api/webhook/whatsapp";
-
+			const webhookUrl = getBaseWebhookUrl(serverToken);
 			await fetch(`${evolutionUrl}/instance/connect`, {
 				method: "POST",
 				headers: {
@@ -160,10 +152,7 @@ export async function checkWhatsAppConnectionAction() {
 					instance: instanceName,
 					"Content-Type": "application/json",
 				},
-				body: JSON.stringify({
-					webhookUrl: webhookUrl,
-					subscribe: ["MESSAGE"],
-				}),
+				body: JSON.stringify({ webhookUrl, subscribe: ["MESSAGE"] }),
 			});
 		} catch (e) {
 			console.error("Erro ao configurar Webhook da Evolution API:", e);
@@ -172,51 +161,36 @@ export async function checkWhatsAppConnectionAction() {
 		const connected = foundInstance.connected === true;
 		const state = connected ? "CONNECTED" : "DISCONNECTED";
 
-		return {
-			success: true,
-			connected,
-			state,
-			instanceName,
-		};
-	} catch (error: any) {
-		return { success: false, error: error.message };
+		return { success: true, connected, state, instanceName };
+	} catch (error) {
+		console.error("[checkWhatsAppConnectionAction]", error);
+		return { success: false, error: "Erro interno no servidor." };
 	}
 }
 
 export async function getWhatsAppQrCodeAction() {
 	try {
 		const user = await getCurrentUser();
-		if (!user) {
-			return { success: false, error: "Usuário não autenticado." };
-		}
+		if (!user) return { success: false, error: "Usuário não autenticado." };
 
 		const instanceName = user.whatsappInstanceName;
-		if (!instanceName) {
-			return { success: false, error: "Nenhuma instância ativa configurada." };
-		}
+		if (!instanceName) return { success: false, error: "Nenhuma instância ativa." };
 
 		const evolutionUrl = process.env.EVOLUTION_API_URL;
-		if (!evolutionUrl) {
-			return { success: false, error: "URL do Evolution Go não configurada." };
-		}
+		if (!evolutionUrl) return { success: false, error: "URL não configurada." };
 
-		// Primeiro buscamos a lista de instâncias para garantir que temos o token correto
 		const listRes = await fetch(`${evolutionUrl}/instance/all`, {
 			method: "GET",
-			headers: {
-				apikey: GLOBAL_KEY,
-			},
+			headers: { apikey: getGlobalKey() },
 		});
 
 		let token = user.whatsappInstanceToken;
 		if (listRes.ok) {
 			const listData = await listRes.json();
-			const found = listData?.data?.find(
-				(inst: any) => inst.name === instanceName,
-			);
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			const found = listData?.data?.find((inst: any) => inst.name === instanceName);
 			if (found) {
 				token = found.token;
-				// Atualiza no banco se estiver diferente
 				if (user.whatsappInstanceToken !== token) {
 					await db
 						.update(users)
@@ -226,194 +200,152 @@ export async function getWhatsAppQrCodeAction() {
 			}
 		}
 
-		if (!token) {
-			return {
-				success: false,
-				error: "Token da instância não encontrado no servidor.",
-			};
-		}
+		if (!token) return { success: false, error: "Token não encontrado." };
 
-		// Obtém o QR Code de conexão chamando a rota correta do Evolution Go v3 com cabeçalhos apropriados
 		const response = await fetch(`${evolutionUrl}/instance/qr`, {
 			method: "GET",
-			headers: {
-				apikey: token,
-				instance: instanceName,
-			},
+			headers: { apikey: token, instance: instanceName },
 		});
 
 		if (!response.ok) {
-			await response.text(); // consume body
-			return {
-				success: false,
-				error: "Não foi possível gerar o QR Code no servidor.",
-			};
+			await response.text();
+			return { success: false, error: "Não foi possível gerar QR." };
 		}
 
 		const resJson = await response.json();
-
-		// O Evolution Go v3 retorna o QR code no campo resJson.data.Qrcode
 		const qrImage =
 			resJson?.data?.Qrcode ||
 			resJson?.base64 ||
 			resJson?.qrcode?.base64 ||
-			resJson?.code ||
-			null;
-		if (!qrImage) {
-			return {
-				success: false,
-				error: "Nenhum código QR retornado do servidor.",
-			};
-		}
+			resJson?.code;
 
-		return {
-			success: true,
-			qrCode: qrImage,
-			instanceName,
-		};
-	} catch (error: any) {
-		return { success: false, error: error.message };
+		if (!qrImage) return { success: false, error: "QR code vazio." };
+
+		return { success: true, qrCode: qrImage, instanceName };
+	} catch (error) {
+		console.error("[getWhatsAppQrCodeAction]", error);
+		return { success: false, error: "Erro interno." };
 	}
 }
 
-export async function sendManualWhatsAppMessageAction(
-	leadId: number,
+async function sendMetaMessage(
+	metaPhoneNumberId: string,
+	metaAccessToken: string,
+	phoneStr: string,
 	text: string,
 ) {
+	const metaResponse = await fetch(
+		`https://graph.facebook.com/v19.0/${metaPhoneNumberId}/messages`,
+		{
+			method: "POST",
+			headers: {
+				Authorization: `Bearer ${metaAccessToken}`,
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({
+				messaging_product: "whatsapp",
+				recipient_type: "individual",
+				to: phoneStr,
+				type: "text",
+				text: { preview_url: false, body: text },
+			}),
+		},
+	);
+
+	if (!metaResponse.ok) {
+		const errorText = await metaResponse.text();
+		throw new Error(`Falha API Meta: ${errorText}`);
+	}
+}
+
+async function sendEvolutionMessage(
+	instanceName: string,
+	instanceToken: string,
+	phoneStr: string,
+	text: string,
+	leadId: number,
+	aiAnalysis?: string | null,
+) {
+	const evolutionUrl = process.env.EVOLUTION_API_URL;
+	if (!evolutionUrl) throw new Error("WhatsApp Evolution não configurado.");
+
+	const sendPayload = { instance: instanceName, number: phoneStr, text, delay: 1200 };
+
+	const headers = {
+		"Content-Type": "application/json",
+		apikey: instanceToken,
+	};
+
+	let response = await fetch(`${evolutionUrl}/send/text`, {
+		method: "POST",
+		headers,
+		body: JSON.stringify(sendPayload),
+	});
+
+	if (!response.ok) {
+		let errorText = await response.text();
+		if (errorText.includes("is not registered") && phoneStr.startsWith("55")) {
+			let retryPhone = "";
+			if (phoneStr.length === 12) retryPhone = phoneStr.substring(0, 4) + "9" + phoneStr.substring(4);
+			else if (phoneStr.length === 13) retryPhone = phoneStr.substring(0, 4) + phoneStr.substring(5);
+
+			if (retryPhone) {
+				sendPayload.number = retryPhone;
+				response = await fetch(`${evolutionUrl}/send/text`, {
+					method: "POST",
+					headers,
+					body: JSON.stringify(sendPayload),
+				});
+				if (!response.ok) errorText = await response.text();
+			}
+		}
+
+		if (!response.ok) {
+			if (errorText.includes("is not registered")) {
+				await db
+					.update(leads)
+					.set({
+						status: "discarded",
+						aiAnalysis: aiAnalysis
+							? aiAnalysis + "\n\n[SISTEMA] Lead descartado automaticamente: Número não possui WhatsApp ativo."
+							: "[SISTEMA] Lead descartado automaticamente: Número não possui WhatsApp ativo.",
+					})
+					.where(eq(leads.id, leadId));
+				throw new Error("Este número não possui WhatsApp ativo. Lead descartado.");
+			}
+			throw new Error(`Falha API WhatsApp: ${errorText}`);
+		}
+	}
+}
+
+export async function sendManualWhatsAppMessageAction(leadId: number, text: string) {
 	try {
 		const user = await getCurrentUser();
 		if (!user) return { success: false, error: "Usuário não autenticado." };
 
 		const [lead] = await db.select().from(leads).where(eq(leads.id, leadId));
-		if (!lead?.phone) {
-			return {
-				success: false,
-				error: "Lead não encontrado ou sem número de telefone.",
-			};
-		}
+		if (!lead?.phone) return { success: false, error: "Lead sem número." };
 
 		const provider = user.whatsappProvider || "evolution";
 		const phoneStr = lead.phone.replace(/\D/g, "");
 
 		if (provider === "meta_official") {
-			const { metaAccessToken, metaPhoneNumberId } = user;
-			if (!metaAccessToken || !metaPhoneNumberId) {
-				return {
-					success: false,
-					error: "Credenciais da Meta não configuradas.",
-				};
+			if (!user.metaAccessToken || !user.metaPhoneNumberId) {
+				return { success: false, error: "Credenciais Meta não configuradas." };
 			}
-
-			const metaResponse = await fetch(
-				`https://graph.facebook.com/v19.0/${metaPhoneNumberId}/messages`,
-				{
-					method: "POST",
-					headers: {
-						Authorization: `Bearer ${metaAccessToken}`,
-						"Content-Type": "application/json",
-					},
-					body: JSON.stringify({
-						messaging_product: "whatsapp",
-						recipient_type: "individual",
-						to: phoneStr,
-						type: "text",
-						text: {
-							preview_url: false,
-							body: text,
-						},
-					}),
-				},
-			);
-
-			if (!metaResponse.ok) {
-				const errorText = await metaResponse.text();
-				return { success: false, error: `Falha na API da Meta: ${errorText}` };
-			}
+			await sendMetaMessage(user.metaPhoneNumberId, user.metaAccessToken, phoneStr, text);
 		} else {
-			const instanceName = user.whatsappInstanceName;
-			const instanceToken = user.whatsappInstanceToken;
-			const evolutionUrl = process.env.EVOLUTION_API_URL;
-
-			if (!evolutionUrl || !instanceName || !instanceToken) {
+			if (!user.whatsappInstanceName || !user.whatsappInstanceToken) {
 				return { success: false, error: "WhatsApp Evolution não configurado." };
 			}
-
-			const sendPayload = {
-				instance: instanceName,
-				number: phoneStr,
+			await sendEvolutionMessage(
+				user.whatsappInstanceName,
+				user.whatsappInstanceToken,
+				phoneStr,
 				text,
-				delay: 1200,
-			};
-
-			let response = await fetch(`${evolutionUrl}/send/text`, {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-					apikey: instanceToken,
-				},
-				body: JSON.stringify(sendPayload),
-			});
-
-			if (!response.ok) {
-				let errorText = await response.text();
-
-				// Tratar erro do nono dígito do Brasil (tenta enviar de novo com ou sem o 9)
-				if (
-					errorText.includes("is not registered on WhatsApp") &&
-					phoneStr.startsWith("55")
-				) {
-					let retryPhone = "";
-					if (phoneStr.length === 12) {
-						// Adiciona o 9 após o DDD (ex: 55 63 -> 55 63 9)
-						retryPhone = phoneStr.substring(0, 4) + "9" + phoneStr.substring(4);
-					} else if (phoneStr.length === 13) {
-						// Remove o 9 após o DDD
-						retryPhone = phoneStr.substring(0, 4) + phoneStr.substring(5);
-					}
-
-					if (retryPhone) {
-						sendPayload.number = retryPhone;
-						response = await fetch(`${evolutionUrl}/send/text`, {
-							method: "POST",
-							headers: {
-								"Content-Type": "application/json",
-								apikey: instanceToken,
-							},
-							body: JSON.stringify(sendPayload),
-						});
-
-						if (!response.ok) {
-							errorText = await response.text();
-						}
-					}
-				}
-
-				if (!response.ok) {
-					if (errorText.includes("is not registered on WhatsApp")) {
-						await db
-							.update(leads)
-							.set({
-								status: "discarded",
-								aiAnalysis: lead.aiAnalysis
-									? lead.aiAnalysis +
-										"\n\n[SISTEMA] Lead descartado automaticamente: O número não possui WhatsApp ativo (falhou mesmo após testar com/sem o 9º dígito)."
-									: "[SISTEMA] Lead descartado automaticamente: O número não possui WhatsApp ativo (falhou mesmo após testar com/sem o 9º dígito).",
-							})
-							.where(eq(leads.id, lead.id));
-
-						return {
-							success: false,
-							error:
-								"Este número não possui WhatsApp ativo. O lead foi descartado.",
-						};
-					}
-
-					return {
-						success: false,
-						error: `Falha na API do WhatsApp: ${errorText}`,
-					};
-				}
-			}
+				lead.id,
+				lead.aiAnalysis,
+			);
 		}
 
 		await db.insert(chatHistory).values({
@@ -424,8 +356,10 @@ export async function sendManualWhatsAppMessageAction(
 		});
 
 		return { success: true };
-	} catch (error: any) {
-		return { success: false, error: error.message };
+	} catch (error) {
+		const err = error as Error;
+		console.error("[sendManualWhatsAppMessageAction]", err);
+		return { success: false, error: err.message || "Erro ao enviar mensagem." };
 	}
 }
 
@@ -446,8 +380,9 @@ export async function getWhatsAppSettingsAction() {
 			plan: user.plan || "Starter",
 			leadsBalance: user.leadsBalance ?? 0,
 		};
-	} catch (error: any) {
-		return { success: false, error: error.message };
+	} catch (error) {
+		console.error("[getWhatsAppSettingsAction]", error);
+		return { success: false, error: "Erro ao ler configurações." };
 	}
 }
 
@@ -474,32 +409,22 @@ export async function saveWhatsAppSettingsAction(data: {
 			.where(eq(users.id, user.id));
 
 		return { success: true };
-	} catch (error: any) {
-		return { success: false, error: error.message };
+	} catch (error) {
+		console.error("[saveWhatsAppSettingsAction]", error);
+		return { success: false, error: "Erro ao salvar." };
 	}
 }
 
 export async function disconnectWhatsAppAction() {
 	try {
-		const session = await auth();
-		if (!session?.user?.email) throw new Error("Não autorizado");
-
-		const [user] = await db
-			.select()
-			.from(users)
-			.where(eq(users.email, session.user.email));
-
-		if (!user || !user.whatsappInstanceName) {
-			return { success: true };
-		}
+		const user = await getCurrentUser();
+		if (!user) throw new Error("Não autorizado");
+		if (!user.whatsappInstanceName) return { success: true };
 
 		const instanceName = user.whatsappInstanceName;
-		const token = user.whatsappInstanceToken || GLOBAL_KEY;
-		const evolutionUrl =
-			process.env.EVOLUTION_API_URL ||
-			"https://evolution-api.brasilonthebox.shop";
+		const token = user.whatsappInstanceToken || getGlobalKey();
+		const evolutionUrl = process.env.EVOLUTION_API_URL || "https://evolution-api.brasilonthebox.shop";
 
-		// Tenta logout e delete na Evolution API
 		try {
 			await fetch(`${evolutionUrl}/instance/logout/${instanceName}`, {
 				method: "DELETE",
@@ -507,63 +432,38 @@ export async function disconnectWhatsAppAction() {
 			});
 			await fetch(`${evolutionUrl}/instance/delete/${instanceName}`, {
 				method: "DELETE",
-				headers: { apikey: GLOBAL_KEY },
+				headers: { apikey: getGlobalKey() },
 			});
 		} catch (e) {
 			console.error("Falha ao remover da Evolution API:", e);
 		}
 
-		// Limpa do banco local
 		await db
 			.update(users)
-			.set({
-				whatsappInstanceName: null,
-				whatsappInstanceToken: null,
-			})
+			.set({ whatsappInstanceName: null, whatsappInstanceToken: null })
 			.where(eq(users.id, user.id));
 
 		return { success: true };
-	} catch (error: any) {
-		return { success: false, error: error.message };
+	} catch (error) {
+		console.error("[disconnectWhatsAppAction]", error);
+		return { success: false, error: "Falha ao desconectar." };
 	}
 }
 
-/**
- * Envia uma mensagem de áudio (PTT/voz) via Evolution Go v3.
- * O arquivo deve ser base64 de um OGG/Opus ou MP3 (com encoding: true para conversão automática).
- *
- * Endpoint: POST /send/audio
- * Body: { instance, number, audio (base64), encoding: true }
- */
 export async function sendWhatsAppAudioAction(
 	leadId: number,
 	audioBase64: string,
-	_mimeType: "audio/ogg" | "audio/mpeg" = "audio/ogg",
 ) {
 	try {
-		const session = await auth();
-		if (!session?.user?.email)
-			return { success: false, error: "Usuário não autenticado." };
-
-		const [user] = await db
-			.select()
-			.from(users)
-			.where(eq(users.email, session.user.email));
+		const user = await getCurrentUser();
 		if (!user) return { success: false, error: "Usuário não autenticado." };
 
 		const [lead] = await db.select().from(leads).where(eq(leads.id, leadId));
-		if (!lead?.phone) {
-			return {
-				success: false,
-				error: "Lead não encontrado ou sem número de telefone.",
-			};
-		}
+		if (!lead?.phone) return { success: false, error: "Lead sem telefone." };
 
 		const instanceName = user.whatsappInstanceName;
 		const instanceToken = user.whatsappInstanceToken;
-		const evolutionUrl =
-			process.env.EVOLUTION_API_URL ||
-			"https://evolution-api.brasilonthebox.shop";
+		const evolutionUrl = process.env.EVOLUTION_API_URL || "https://evolution-api.brasilonthebox.shop";
 
 		if (!evolutionUrl || !instanceName || !instanceToken) {
 			return { success: false, error: "WhatsApp Evolution não configurado." };
@@ -571,13 +471,9 @@ export async function sendWhatsAppAudioAction(
 
 		const phoneStr = lead.phone.replace(/\D/g, "");
 
-		// encoding: true instrui o servidor a converter MP3 → OGG/Opus se necessário
 		const response = await fetch(`${evolutionUrl}/send/audio`, {
 			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-				apikey: instanceToken,
-			},
+			headers: { "Content-Type": "application/json", apikey: instanceToken },
 			body: JSON.stringify({
 				instance: instanceName,
 				number: phoneStr,
@@ -589,10 +485,7 @@ export async function sendWhatsAppAudioAction(
 
 		if (!response.ok) {
 			const errorText = await response.text();
-			return {
-				success: false,
-				error: `Falha ao enviar áudio: ${errorText}`,
-			};
+			throw new Error(errorText);
 		}
 
 		await db.insert(chatHistory).values({
@@ -603,7 +496,9 @@ export async function sendWhatsAppAudioAction(
 		});
 
 		return { success: true };
-	} catch (error: any) {
-		return { success: false, error: error.message };
+	} catch (error) {
+		const err = error as Error;
+		console.error("[sendWhatsAppAudioAction]", err);
+		return { success: false, error: "Falha ao enviar áudio." };
 	}
 }
