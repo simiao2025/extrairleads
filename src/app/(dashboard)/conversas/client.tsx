@@ -64,7 +64,7 @@ interface ChatMessage {
 	role: string | null;
 	content: string | null;
 	type: string | null;
-	audioBase64?: string | null;
+	audioBase64: string | null;
 	createdAt: Date | null;
 }
 
@@ -180,6 +180,7 @@ export function ConversasClient({
 			leadId: activeLeadId,
 			role: "assistant",
 			content: input,
+			audioBase64: null,
 			type: "text",
 			createdAt: new Date(),
 		};
