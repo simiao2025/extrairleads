@@ -246,6 +246,7 @@ export async function sendManualWhatsAppMessageAction(
 		}
 
 		const provider = user.whatsappProvider || "evolution";
+		const phoneStr = lead.phone.replace(/\D/g, "");
 
 		if (provider === "meta_official") {
 			const { metaAccessToken, metaPhoneNumberId } = user;
@@ -255,8 +256,6 @@ export async function sendManualWhatsAppMessageAction(
 					error: "Credenciais da Meta não configuradas.",
 				};
 			}
-
-			const phoneStr = lead.phone.replace(/\D/g, "");
 
 			const metaResponse = await fetch(
 				`https://graph.facebook.com/v19.0/${metaPhoneNumberId}/messages`,
@@ -292,46 +291,81 @@ export async function sendManualWhatsAppMessageAction(
 				return { success: false, error: "WhatsApp Evolution não configurado." };
 			}
 
-			const response = await fetch(`${evolutionUrl}/send/text`, {
+			const sendPayload = {
+				instance: instanceName,
+				number: phoneStr,
+				text,
+				delay: 1200,
+			};
+
+			let response = await fetch(`${evolutionUrl}/send/text`, {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
 					apikey: instanceToken,
 				},
-				body: JSON.stringify({
-					instance: instanceName,
-					number: lead.phone,
-					text,
-					delay: 1200,
-				}),
+				body: JSON.stringify(sendPayload),
 			});
 
 			if (!response.ok) {
-				const errorText = await response.text();
+				let errorText = await response.text();
 
-				if (errorText.includes("is not registered on WhatsApp")) {
-					await db
-						.update(leads)
-						.set({
-							status: "discarded",
-							aiAnalysis: lead.aiAnalysis
-								? lead.aiAnalysis +
-									"\n\n[SISTEMA] Lead descartado automaticamente: O número não possui WhatsApp ativo."
-								: "[SISTEMA] Lead descartado automaticamente: O número não possui WhatsApp ativo.",
-						})
-						.where(eq(leads.id, lead.id));
+				// Tratar erro do nono dígito do Brasil (tenta enviar de novo com ou sem o 9)
+				if (
+					errorText.includes("is not registered on WhatsApp") &&
+					phoneStr.startsWith("55")
+				) {
+					let retryPhone = "";
+					if (phoneStr.length === 12) {
+						// Adiciona o 9 após o DDD (ex: 55 63 -> 55 63 9)
+						retryPhone = phoneStr.substring(0, 4) + "9" + phoneStr.substring(4);
+					} else if (phoneStr.length === 13) {
+						// Remove o 9 após o DDD
+						retryPhone = phoneStr.substring(0, 4) + phoneStr.substring(5);
+					}
+
+					if (retryPhone) {
+						sendPayload.number = retryPhone;
+						response = await fetch(`${evolutionUrl}/send/text`, {
+							method: "POST",
+							headers: {
+								"Content-Type": "application/json",
+								apikey: instanceToken,
+							},
+							body: JSON.stringify(sendPayload),
+						});
+
+						if (!response.ok) {
+							errorText = await response.text();
+						}
+					}
+				}
+
+				if (!response.ok) {
+					if (errorText.includes("is not registered on WhatsApp")) {
+						await db
+							.update(leads)
+							.set({
+								status: "discarded",
+								aiAnalysis: lead.aiAnalysis
+									? lead.aiAnalysis +
+										"\n\n[SISTEMA] Lead descartado automaticamente: O número não possui WhatsApp ativo (falhou mesmo após testar com/sem o 9º dígito)."
+									: "[SISTEMA] Lead descartado automaticamente: O número não possui WhatsApp ativo (falhou mesmo após testar com/sem o 9º dígito).",
+							})
+							.where(eq(leads.id, lead.id));
+
+						return {
+							success: false,
+							error:
+								"Este número não possui WhatsApp ativo. O lead foi descartado.",
+						};
+					}
 
 					return {
 						success: false,
-						error:
-							"Este número não possui WhatsApp ativo. O lead foi descartado.",
+						error: `Falha na API do WhatsApp: ${errorText}`,
 					};
 				}
-
-				return {
-					success: false,
-					error: `Falha na API do WhatsApp: ${errorText}`,
-				};
 			}
 		}
 
