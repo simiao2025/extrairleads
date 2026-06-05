@@ -68,9 +68,11 @@ export async function checkWhatsAppConnectionAction() {
 			};
 		}
 
+		const globalKey = getGlobalKey();
+
 		const response = await fetch(`${evolutionUrl}/instance/all`, {
 			method: "GET",
-			headers: { apikey: getGlobalKey() },
+			headers: { apikey: globalKey },
 		});
 
 		if (!response.ok) {
@@ -86,20 +88,25 @@ export async function checkWhatsAppConnectionAction() {
 		);
 
 		if (!foundInstance) {
-			const token =
-				user.whatsappInstanceToken || randomBytes(32).toString("hex");
-			const webhookUrl = getBaseWebhookUrl(token);
+			// Instância não existe no servidor (pode ter sido apagada).
+			// Gera um novo token; NUNCA reutilizar o token salvo pois a instância não existe mais.
+			const newToken = randomBytes(32).toString("hex");
+			const webhookUrl = getBaseWebhookUrl(newToken);
+
+			console.log(
+				`[checkWhatsApp] Instância "${instanceName}" não encontrada. Recriando...`,
+			);
 
 			const createRes = await fetch(`${evolutionUrl}/instance/create`, {
 				method: "POST",
 				headers: {
-					apikey: getGlobalKey(),
+					apikey: globalKey,
 					"Content-Type": "application/json",
 				},
 				body: JSON.stringify({
 					instanceName: instanceName,
 					name: instanceName,
-					token: token,
+					token: newToken,
 					qrcode: true,
 					integration: "WHATSAPP-BAILEYS",
 					webhook: {
@@ -110,37 +117,63 @@ export async function checkWhatsAppConnectionAction() {
 				}),
 			});
 
-			if (createRes.ok) {
-				const createData = await createRes.json();
-				const actualToken =
-					createData.hash?.apikey || createData.instance?.apikey || token;
-				const actualWebhookUrl = getBaseWebhookUrl(actualToken);
-
-				await db
-					.update(users)
-					.set({
-						whatsappInstanceName: instanceName,
-						whatsappInstanceToken: actualToken,
-					})
-					.where(eq(users.id, user.id));
-
-				await fetch(`${evolutionUrl}/instance/connect`, {
-					method: "POST",
-					headers: {
-						apikey: actualToken,
-						instance: instanceName,
-						"Content-Type": "application/json",
-					},
-					body: JSON.stringify({
-						webhookUrl: actualWebhookUrl,
-						subscribe: ["MESSAGE"],
-					}),
-				}).catch((e) => console.error("Falha ao registrar webhook:", e));
+			if (!createRes.ok) {
+				const errorText = await createRes.text();
+				console.error(
+					`[checkWhatsApp] Falha ao recriar instância: ${createRes.status} ${errorText}`,
+				);
+				return {
+					success: false,
+					error:
+						"Falha ao recriar instância do WhatsApp. Tente novamente ou entre em contato com o suporte.",
+				};
 			}
+
+			const createData = await createRes.json();
+			// Evolution v3 Go retorna o apikey real no campo hash.apikey
+			const actualToken =
+				createData.hash?.apikey || createData.instance?.apikey || newToken;
+
+			// Se o token real for diferente do que enviamos, reconfigura o webhook com o token correto
+			if (actualToken !== newToken) {
+				const actualWebhookUrl = getBaseWebhookUrl(actualToken);
+				try {
+					await fetch(`${evolutionUrl}/webhook/set/${instanceName}`, {
+						method: "POST",
+						headers: {
+							apikey: globalKey,
+							"Content-Type": "application/json",
+						},
+						body: JSON.stringify({
+							webhook: {
+								url: actualWebhookUrl,
+								enabled: true,
+								events: ["MESSAGES_UPSERT"],
+							},
+						}),
+					});
+				} catch (e) {
+					console.error("[checkWhatsApp] Falha ao atualizar webhook:", e);
+				}
+			}
+
+			// Salva o novo token no banco — SEMPRE substitui o antigo
+			await db
+				.update(users)
+				.set({
+					whatsappInstanceName: instanceName,
+					whatsappInstanceToken: actualToken,
+				})
+				.where(eq(users.id, user.id));
+
+			console.log(
+				`[checkWhatsApp] Instância "${instanceName}" recriada com sucesso.`,
+			);
 
 			return { success: true, connected: false, state: "DISCONNECTED" };
 		}
 
+		// Instância encontrada no servidor — sincroniza o token
 		const serverToken = foundInstance.token;
 		if (
 			user.whatsappInstanceToken !== serverToken ||
@@ -155,16 +188,22 @@ export async function checkWhatsAppConnectionAction() {
 				.where(eq(users.id, user.id));
 		}
 
+		// Garante que o webhook está configurado corretamente
 		try {
 			const webhookUrl = getBaseWebhookUrl(serverToken);
-			await fetch(`${evolutionUrl}/instance/connect`, {
+			await fetch(`${evolutionUrl}/webhook/set/${instanceName}`, {
 				method: "POST",
 				headers: {
-					apikey: serverToken,
-					instance: instanceName,
+					apikey: globalKey,
 					"Content-Type": "application/json",
 				},
-				body: JSON.stringify({ webhookUrl, subscribe: ["MESSAGE"] }),
+				body: JSON.stringify({
+					webhook: {
+						url: webhookUrl,
+						enabled: true,
+						events: ["MESSAGES_UPSERT"],
+					},
+				}),
 			});
 		} catch (e) {
 			console.error("Erro ao configurar Webhook da Evolution API:", e);
@@ -182,7 +221,7 @@ export async function checkWhatsAppConnectionAction() {
 
 export async function getWhatsAppQrCodeAction() {
 	try {
-		const user = await getCurrentUser();
+		let user = await getCurrentUser();
 		if (!user) return { success: false, error: "Usuário não autenticado." };
 
 		const instanceName = user.whatsappInstanceName;
@@ -192,12 +231,16 @@ export async function getWhatsAppQrCodeAction() {
 		const evolutionUrl = process.env.EVOLUTION_API_URL;
 		if (!evolutionUrl) return { success: false, error: "URL não configurada." };
 
+		const globalKey = getGlobalKey();
+
 		const listRes = await fetch(`${evolutionUrl}/instance/all`, {
 			method: "GET",
-			headers: { apikey: getGlobalKey() },
+			headers: { apikey: globalKey },
 		});
 
 		let token = user.whatsappInstanceToken;
+		let instanceExists = false;
+
 		if (listRes.ok) {
 			const listData = await listRes.json();
 			// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -205,6 +248,7 @@ export async function getWhatsAppQrCodeAction() {
 				(inst: any) => inst.name === instanceName,
 			);
 			if (found) {
+				instanceExists = true;
 				token = found.token;
 				if (user.whatsappInstanceToken !== token) {
 					await db
@@ -215,6 +259,27 @@ export async function getWhatsAppQrCodeAction() {
 			}
 		}
 
+		// Se a instância não existe (apagada externamente), recria via checkWhatsAppConnectionAction
+		if (!instanceExists) {
+			console.log(
+				`[getWhatsAppQrCode] Instância "${instanceName}" não encontrada. Recriando...`,
+			);
+			const recreateResult = await checkWhatsAppConnectionAction();
+			if (!recreateResult.success) {
+				return {
+					success: false,
+					error:
+						recreateResult.error ||
+						"Falha ao recriar instância. Tente novamente.",
+				};
+			}
+
+			// Re-lê o usuário do banco para pegar o novo token
+			user = (await getCurrentUser())!;
+			if (!user) return { success: false, error: "Usuário não autenticado." };
+			token = user.whatsappInstanceToken;
+		}
+
 		if (!token) return { success: false, error: "Token não encontrado." };
 
 		const response = await fetch(`${evolutionUrl}/instance/qr`, {
@@ -223,7 +288,10 @@ export async function getWhatsAppQrCodeAction() {
 		});
 
 		if (!response.ok) {
-			await response.text();
+			const errorText = await response.text();
+			console.error(
+				`[getWhatsAppQrCode] Erro ao gerar QR: ${response.status} ${errorText}`,
+			);
 			return { success: false, error: "Não foi possível gerar QR." };
 		}
 
