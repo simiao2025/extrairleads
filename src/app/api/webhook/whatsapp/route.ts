@@ -289,7 +289,11 @@ async function sendWhatsAppReply({
 export async function POST(req: NextRequest) {
 	try {
 		const body = await req.json();
-		if (body.event !== "messages.upsert") {
+
+		// O Evolution API V3 (Go) envia "MESSAGES_UPSERT" em maiúsculo (ou camelCase).
+		// Vamos garantir compatibilidade com V1, V2 e V3
+		const eventName = (body.event || "").toUpperCase();
+		if (eventName !== "MESSAGES.UPSERT" && eventName !== "MESSAGES_UPSERT") {
 			return NextResponse.json({ ok: true });
 		}
 
