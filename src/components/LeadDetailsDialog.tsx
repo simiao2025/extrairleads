@@ -12,6 +12,7 @@ import {
 	Square,
 	Trash2,
 	Volume2,
+	CheckCheck,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -425,19 +426,20 @@ export default function LeadDetailsDialog({
 									</p>
 								</div>
 							) : (
+								history.map((msg, i) => (
 									<div
 										key={msg.id || i}
 										className={`flex ${msg.role === "assistant" ? "justify-end" : "justify-start"}`}
 									>
 										<div
-											className={`max-w-[85%] sm:max-w-[70%] p-2 px-3 rounded-xl text-[13px] shadow-sm relative flex flex-col ${
+											className={`max-w-[85%] sm:max-w-[70%] px-2.5 pt-1.5 pb-2 rounded-lg text-[14px] shadow-sm relative flex flex-col ${
 												msg.role === "assistant"
-													? "bg-[#005c4b] text-[#e9edef] rounded-tr-none"
-													: "bg-[#202c33] text-[#e9edef] rounded-tl-none"
+													? "bg-[#005c4b] text-[#e9edef] rounded-tr-none before:absolute before:top-0 before:-right-2 before:w-2 before:h-3 before:bg-[#005c4b] before:[clip-path:polygon(0_0,100%_0,0_100%)] before:content-['']"
+													: "bg-[#202c33] text-[#e9edef] rounded-tl-none before:absolute before:top-0 before:-left-2 before:w-2 before:h-3 before:bg-[#202c33] before:[clip-path:polygon(100%_0,0_0,100%_100%)] before:content-['']"
 											}`}
 										>
 											{msg.type === "audio" ? (
-												<div className="flex flex-col gap-1.5 min-w-[200px] max-w-xs mb-1">
+												<div className="flex flex-col gap-1.5 min-w-[200px] max-w-xs mb-3 mt-1">
 													<span className="text-[10px] text-zinc-400 font-bold tracking-wider uppercase flex items-center gap-1.5">
 														<Volume2 className="w-3 h-3 text-emerald-400" />
 														Áudio {msg.role === "assistant" ? "Enviado" : "Recebido"}
@@ -464,10 +466,11 @@ export default function LeadDetailsDialog({
 											) : (
 												<p className="leading-relaxed whitespace-pre-wrap break-words">
 													{msg.content}
+													<span className="inline-block w-14" /> {/* Spacer for timestamp */}
 												</p>
 											)}
-											<div className="flex items-center justify-end gap-1 mt-1">
-												<p className="text-[9px] text-white/50 font-medium">
+											<div className="absolute bottom-1 right-2 flex items-center gap-1">
+												<p className="text-[10px] text-white/50 font-medium leading-none mt-[1px]">
 													{msg.createdAt
 														? new Date(msg.createdAt).toLocaleTimeString([], {
 																hour: "2-digit",
@@ -475,6 +478,9 @@ export default function LeadDetailsDialog({
 															})
 														: ""}
 												</p>
+												{msg.role === "assistant" && (
+													<CheckCheck className="w-[14px] h-[14px] text-[#53bdeb]" />
+												)}
 											</div>
 										</div>
 									</div>

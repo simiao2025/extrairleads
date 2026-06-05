@@ -19,6 +19,7 @@ import {
 	Mic,
 	Square,
 	Trash2,
+	CheckCheck,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import useSWR from "swr";
@@ -634,14 +635,14 @@ export function ConversasClient({
 											className={`flex ${isAssistant ? "justify-end" : "justify-start"}`}
 										>
 											<div
-												className={`max-w-[85%] sm:max-w-[70%] p-2.5 px-4 rounded-2xl text-[13px] shadow relative border transition-all ${
+												className={`max-w-[85%] sm:max-w-[70%] px-2.5 pt-1.5 pb-2 rounded-lg text-[14px] shadow-sm relative flex flex-col transition-all ${
 													isAssistant
-														? "bg-[#005c4b] border-[#005c4b]/50 text-[#e9edef] rounded-tr-none hover:shadow-[0_0_12px_rgba(0,92,75,0.2)]"
-														: "bg-[#202c33] border-zinc-800/50 text-[#e9edef] rounded-tl-none hover:shadow-[0_0_12px_rgba(32,44,51,0.2)]"
+														? "bg-[#005c4b] text-[#e9edef] rounded-tr-none hover:shadow-[0_0_12px_rgba(0,92,75,0.2)] before:absolute before:top-0 before:-right-2 before:w-2 before:h-3 before:bg-[#005c4b] before:[clip-path:polygon(0_0,100%_0,0_100%)] before:content-['']"
+														: "bg-[#202c33] text-[#e9edef] rounded-tl-none hover:shadow-[0_0_12px_rgba(32,44,51,0.2)] before:absolute before:top-0 before:-left-2 before:w-2 before:h-3 before:bg-[#202c33] before:[clip-path:polygon(100%_0,0_0,100%_100%)] before:content-['']"
 												}`}
 											>
 												{isAudio ? (
-													<div className="flex flex-col gap-1.5 min-w-[200px] max-w-xs">
+													<div className="flex flex-col gap-1.5 min-w-[200px] max-w-xs mb-3 mt-1">
 														<span className="text-[10px] text-zinc-400 font-bold tracking-wider uppercase flex items-center gap-1.5">
 															<Volume2 className="w-3 h-3 text-emerald-400" />
 															Áudio {isAssistant ? "Enviado" : "Recebido"}
@@ -668,10 +669,11 @@ export function ConversasClient({
 												) : (
 													<p className="leading-relaxed whitespace-pre-wrap break-words">
 														{msg.content}
+														<span className="inline-block w-14" /> {/* Spacer for timestamp */}
 													</p>
 												)}
-												<div className="flex items-center justify-end gap-1 mt-1.5 border-t border-white/5 pt-1">
-													<p className="text-[9px] text-white/40 font-medium">
+												<div className="absolute bottom-1 right-2 flex items-center gap-1">
+													<p className="text-[10px] text-white/50 font-medium leading-none mt-[1px]">
 														{msg.createdAt
 															? new Date(msg.createdAt).toLocaleTimeString([], {
 																	hour: "2-digit",
@@ -679,6 +681,9 @@ export function ConversasClient({
 																})
 															: ""}
 													</p>
+													{isAssistant && (
+														<CheckCheck className="w-[14px] h-[14px] text-[#53bdeb]" />
+													)}
 												</div>
 											</div>
 										</div>
