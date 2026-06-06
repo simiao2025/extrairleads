@@ -139,6 +139,7 @@ export async function POST(request: NextRequest) {
 				Connection: "keep-alive",
 			},
 		});
+	} catch (error) {
 		console.error("Scout chat error:", error);
 		return new Response(
 			JSON.stringify({ error: "Erro interno ao processar sua mensagem." }),

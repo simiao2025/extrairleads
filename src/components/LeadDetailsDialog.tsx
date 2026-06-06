@@ -541,7 +541,7 @@ export default function LeadDetailsDialog({
 								</div>
 							)}
 						</div>
-						<LeadScoutInsight lead={lead} />
+						<LeadScoutInsight lead={lead as any} />
 					</div>
 
 					{/* Right Panel: Chat */}
