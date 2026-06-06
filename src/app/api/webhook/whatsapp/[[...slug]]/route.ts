@@ -141,7 +141,7 @@ async function sendWhatsAppReply({
 				await saveCachedAudio(aiResponseText, base64Audio);
 			}
 
-			await fetch(`${evolutionUrl}/send/audio`, {
+			const response = await fetch(`${evolutionUrl}/send/audio`, {
 				method: "POST",
 				headers: { "Content-Type": "application/json", apikey: instanceToken },
 				body: JSON.stringify({
@@ -153,9 +153,14 @@ async function sendWhatsAppReply({
 					delay: 1500,
 				}),
 			});
+			if (!response.ok) {
+				const errorText = await response.text();
+				throw new Error(`Falha ao enviar áudio da IA (${response.status}): ${errorText}`);
+			}
 			return;
 		} catch (err) {
-			console.error("[sendWhatsAppReply] Erro no TTS:", err);
+			console.error("[sendWhatsAppReply] Erro no TTS ou envio de áudio:", err);
+			throw err;
 		}
 	}
 
@@ -168,7 +173,7 @@ async function sendWhatsAppReply({
 		const block = blocks[i];
 		const typingDelay = Math.min(3000, Math.max(1000, block.length * 35));
 
-		await fetch(`${evolutionUrl}/send/text`, {
+		const response = await fetch(`${evolutionUrl}/send/text`, {
 			method: "POST",
 			headers: { "Content-Type": "application/json", apikey: instanceToken },
 			body: JSON.stringify({
@@ -178,6 +183,11 @@ async function sendWhatsAppReply({
 				delay: typingDelay,
 			}),
 		});
+
+		if (!response.ok) {
+			const errorText = await response.text();
+			throw new Error(`Falha ao enviar mensagem de texto da IA (${response.status}): ${errorText}`);
+		}
 
 		if (i < blocks.length - 1) {
 			await sleep(typingDelay + 300);
@@ -281,13 +291,13 @@ export async function POST(
 				.select()
 				.from(chatHistory)
 				.where(
-					and(
-						eq(chatHistory.leadId, lead.id),
-						eq(chatHistory.role, "assistant"),
-						eq(chatHistory.content, textContent),
-						gte(chatHistory.createdAt, fifteenSecondsAgo),
-					),
-				);
+				and(
+					eq(chatHistory.leadId, lead.id),
+					eq(chatHistory.role, "assistant"),
+					eq(chatHistory.content, textContent),
+					gte(chatHistory.createdAt, fifteenSecondsAgo),
+				),
+			);
 
 			if (!existingMsg) {
 				await db.insert(chatHistory).values({
@@ -322,6 +332,17 @@ export async function POST(
 			}
 		})();
 
+		// Verifica se a IA está silenciada (Intervenção Humana ativa) para este lead
+		if (lead.status === "human_intervention") {
+			console.log(`[Webhook] IA SDR silenciada para o lead ${lead.name} (${lead.phone}). Ignorando resposta automática.`);
+			return NextResponse.json({ ok: true, message: "IA SDR Silenciada" });
+		}
+
+		if (!process.env.GROQ_API_KEY) {
+			console.warn("[Webhook] GROQ_API_KEY não configurada na Vercel (.env). A IA SDR não responderá.");
+			return NextResponse.json({ ok: true, error: "GROQ_API_KEY ausente" });
+		}
+
 		// DELEGA PARA O AGENT AI EXTERNALIZADO (Code Purity)
 		const { aiResponseText, forceAudio } = await processAIResponse(
 			lead,
@@ -353,9 +374,8 @@ export async function POST(
 		});
 
 		return NextResponse.json({ ok: true });
-	} catch (error) {
-		console.error("Webhook error:", error);
-		// Retorna 500 sem expor a stack trace para o cliente
-		return NextResponse.json({ ok: false }, { status: 500 });
+	} catch (error: any) {
+		console.error("Webhook error details:", error?.message || error, error?.stack);
+		return NextResponse.json({ ok: false, error: error?.message || "Internal Server Error" }, { status: 500 });
 	}
 }

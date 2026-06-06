@@ -6,7 +6,7 @@ import { appointments, campaignConfigs, chatHistory, leads } from "@/db/schema";
 import { getSemanticCache, saveSemanticCache } from "@/lib/cache";
 
 const groq = new OpenAI({
-	apiKey: process.env.GROQ_API_KEY,
+	apiKey: process.env.GROQ_API_KEY || "dummy-key-to-prevent-crash",
 	baseURL: "https://api.groq.com/openai/v1",
 });
 
