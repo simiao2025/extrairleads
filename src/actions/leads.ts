@@ -99,6 +99,7 @@ export async function updateLeadAction(
 		niche?: string;
 		city?: string;
 		state?: string;
+		status?: string;
 	},
 ) {
 	const session = await auth();

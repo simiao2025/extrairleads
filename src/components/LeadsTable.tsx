@@ -61,6 +61,7 @@ function EditDialog({ lead, open, onOpenChange, onSuccess }: EditDialogProps) {
 		niche: lead.niche || "",
 		city: lead.city || "",
 		state: lead.state || "",
+		status: lead.status || "raw",
 	});
 
 	const handleSubmit = async (e: React.FormEvent) => {
@@ -114,6 +115,22 @@ function EditDialog({ lead, open, onOpenChange, onSuccess }: EditDialogProps) {
 							onChange={(e) => setForm({ ...form, website: e.target.value })}
 							className="bg-zinc-900 border-zinc-800"
 						/>
+					</div>
+					<div>
+						<label className="text-xs font-bold text-zinc-400 mb-1.5 block uppercase">
+							Status
+						</label>
+						<select
+							value={form.status}
+							onChange={(e) => setForm({ ...form, status: e.target.value })}
+							className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+						>
+							{Object.entries(STATUS_LABELS).map(([key, label]) => (
+								<option key={key} value={key} className="bg-zinc-900">
+									{label}
+								</option>
+							))}
+						</select>
 					</div>
 					<div className="grid grid-cols-2 gap-3">
 						<div>
