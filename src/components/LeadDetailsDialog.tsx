@@ -2,19 +2,20 @@
 
 import {
 	Bot,
+	CheckCheck,
 	Loader2,
 	MessageSquare,
 	MessageSquareText,
+	Mic,
 	Send,
 	Sparkles,
-	User,
-	Mic,
 	Square,
 	Trash2,
+	User,
 	Volume2,
-	CheckCheck,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import useSWR from "swr";
 import {
 	generateAiSuggestionAction,
 	getLeadChatAction,
@@ -72,13 +73,25 @@ export default function LeadDetailsDialog({
 	lead: Lead;
 	children?: React.ReactNode;
 }) {
-	const [history, setHistory] = useState<ChatMessage[]>([]);
-	const [loading, setLoading] = useState(false);
+	const [isOpen, setIsOpen] = useState(false);
+
+	const {
+		data: swrHistory,
+		mutate: mutateHistory,
+		isLoading,
+	} = useSWR(
+		isOpen ? `chat-${lead.id}` : null,
+		() => getLeadChatAction(lead.id),
+		{ refreshInterval: 3000 },
+	);
+
+	const history = (swrHistory || []) as ChatMessage[];
+	const loading = isLoading && history.length === 0;
+
 	const [input, setInput] = useState("");
 	const [sending, setSending] = useState(false);
 	const [generating, setGenerating] = useState(false);
-	const [isOpen, setIsOpen] = useState(false);
-	
+
 	const [isRecording, setIsRecording] = useState(false);
 	const [recordingTime, setRecordingTime] = useState(0);
 	const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -86,13 +99,6 @@ export default function LeadDetailsDialog({
 	const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
 	const scrollRef = useRef<HTMLDivElement>(null);
-
-	const loadChat = async (showLoading = true) => {
-		if (showLoading) setLoading(true);
-		const data = await getLeadChatAction(lead.id);
-		setHistory(data as ChatMessage[]);
-		if (showLoading) setLoading(false);
-	};
 
 	const scrollToBottom = () => {
 		if (scrollRef.current) {
@@ -103,16 +109,6 @@ export default function LeadDetailsDialog({
 	useEffect(() => {
 		scrollToBottom();
 	}, [history]);
-
-	useEffect(() => {
-		let interval: any;
-		if (isOpen) {
-			interval = setInterval(() => {
-				loadChat(false);
-			}, 3000);
-		}
-		return () => clearInterval(interval);
-	}, [isOpen, lead.id]);
 
 	const handleSend = async () => {
 		if (!input.trim()) return;
@@ -127,16 +123,19 @@ export default function LeadDetailsDialog({
 			type: "text",
 			createdAt: new Date(),
 		};
-		setHistory((prev) => [...prev, optimisticMsg]);
+		mutateHistory(
+			(prev) => [...((prev as ChatMessage[]) || []), optimisticMsg],
+			false,
+		);
 		const textToSend = input;
 		setInput("");
 
 		const res = await sendManualWhatsAppMessageAction(lead.id, textToSend);
 		if (!res.success) {
-			setHistory((prev) => prev.filter((m) => m.id !== optimisticMsg.id));
+			mutateHistory(); // Revert
 			notify("Erro ao enviar: " + res.error, { type: "error" });
 		} else {
-			loadChat();
+			mutateHistory();
 		}
 		setSending(false);
 	};
@@ -155,8 +154,10 @@ export default function LeadDetailsDialog({
 			};
 
 			mediaRecorder.onstop = async () => {
-				const audioBlob = new Blob(audioChunksRef.current, { type: "audio/ogg" });
-				
+				const audioBlob = new Blob(audioChunksRef.current, {
+					type: "audio/ogg",
+				});
+
 				// Ler como base64
 				const reader = new FileReader();
 				reader.readAsDataURL(audioBlob);
@@ -176,20 +177,23 @@ export default function LeadDetailsDialog({
 						type: "audio",
 						createdAt: new Date(),
 					};
-					setHistory((prev) => [...prev, optimisticMsg]);
+					mutateHistory(
+						(prev) => [...((prev as ChatMessage[]) || []), optimisticMsg],
+						false,
+					);
 
 					const res = await sendWhatsAppAudioAction(lead.id, base64String);
 					if (!res.success) {
-						setHistory((prev) => prev.filter((m) => m.id !== optimisticMsg.id));
+						mutateHistory();
 						notify(`Erro ao enviar áudio: ${res.error}`, { type: "error" });
 					} else {
-						loadChat();
+						mutateHistory();
 					}
 					setSending(false);
 				};
 
 				// Limpar as faixas de áudio para liberar o microfone
-				stream.getTracks().forEach(track => track.stop());
+				stream.getTracks().forEach((track) => track.stop());
 			};
 
 			mediaRecorder.start();
@@ -201,7 +205,9 @@ export default function LeadDetailsDialog({
 			}, 1000);
 		} catch (err) {
 			console.error("Erro ao acessar microfone", err);
-			notify("Permissão de microfone negada ou não disponível.", { type: "error" });
+			notify("Permissão de microfone negada ou não disponível.", {
+				type: "error",
+			});
 		}
 	};
 
@@ -217,7 +223,9 @@ export default function LeadDetailsDialog({
 		if (mediaRecorderRef.current && isRecording) {
 			// Cancela o envio: reatribui onstop para não fazer nada
 			mediaRecorderRef.current.onstop = () => {
-				mediaRecorderRef.current?.stream.getTracks().forEach(track => track.stop());
+				mediaRecorderRef.current?.stream
+					.getTracks()
+					.forEach((track) => track.stop());
 			};
 			mediaRecorderRef.current.stop();
 			setIsRecording(false);
@@ -227,7 +235,9 @@ export default function LeadDetailsDialog({
 	};
 
 	const formatTime = (seconds: number) => {
-		const m = Math.floor(seconds / 60).toString().padStart(2, "0");
+		const m = Math.floor(seconds / 60)
+			.toString()
+			.padStart(2, "0");
 		const s = (seconds % 60).toString().padStart(2, "0");
 		return `${m}:${s}`;
 	};
@@ -254,7 +264,6 @@ export default function LeadDetailsDialog({
 			open={isOpen}
 			onOpenChange={(open) => {
 				setIsOpen(open);
-				if (open) loadChat(true);
 			}}
 		>
 			<DialogTrigger
@@ -442,21 +451,30 @@ export default function LeadDetailsDialog({
 												<div className="flex flex-col gap-1.5 min-w-[200px] max-w-xs mb-3 mt-1">
 													<span className="text-[10px] text-zinc-400 font-bold tracking-wider uppercase flex items-center gap-1.5">
 														<Volume2 className="w-3 h-3 text-emerald-400" />
-														Áudio {msg.role === "assistant" ? "Enviado" : "Recebido"}
+														Áudio{" "}
+														{msg.role === "assistant" ? "Enviado" : "Recebido"}
 													</span>
 													{msg.audioBase64 ? (
-														<audio 
-															controls 
-															src={msg.audioBase64.startsWith("data:") ? msg.audioBase64 : `data:audio/ogg;base64,${msg.audioBase64}`}
+														<audio
+															controls
+															src={
+																msg.audioBase64.startsWith("data:")
+																	? msg.audioBase64
+																	: `data:audio/ogg;base64,${msg.audioBase64}`
+															}
 															className="h-10 w-full max-w-[250px] outline-none"
 														/>
 													) : (
-														<p className="text-[11px] text-zinc-400 italic">Áudio expirado ou indisponível</p>
+														<p className="text-[11px] text-zinc-400 italic">
+															Áudio expirado ou indisponível
+														</p>
 													)}
 													{/* Mostrar a transcrição apenas se houver conteúdo textual real */}
 													{msg.content && msg.content !== "[Áudio Enviado]" && (
 														<div className="mt-1 pt-1.5 border-t border-white/5">
-															<span className="text-[9px] text-zinc-500 uppercase font-semibold mb-1 block">Transcrição:</span>
+															<span className="text-[9px] text-zinc-500 uppercase font-semibold mb-1 block">
+																Transcrição:
+															</span>
 															<p className="text-xs text-zinc-300 italic leading-relaxed whitespace-pre-wrap break-words">
 																"{msg.content}"
 															</p>
@@ -466,7 +484,8 @@ export default function LeadDetailsDialog({
 											) : (
 												<p className="leading-relaxed whitespace-pre-wrap break-words">
 													{msg.content}
-													<span className="inline-block w-14" /> {/* Spacer for timestamp */}
+													<span className="inline-block w-14" />{" "}
+													{/* Spacer for timestamp */}
 												</p>
 											)}
 											<div className="absolute bottom-1 right-2 flex items-center gap-1">
@@ -494,8 +513,12 @@ export default function LeadDetailsDialog({
 								<div className="flex-1 flex items-center justify-between bg-zinc-900/50 rounded-xl px-4 min-h-[40px] border border-red-500/20 w-full">
 									<div className="flex items-center gap-3">
 										<div className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
-										<span className="text-zinc-300 font-mono text-sm">{formatTime(recordingTime)}</span>
-										<span className="text-xs text-zinc-500 ml-2 hidden sm:inline">Gravando áudio...</span>
+										<span className="text-zinc-300 font-mono text-sm">
+											{formatTime(recordingTime)}
+										</span>
+										<span className="text-xs text-zinc-500 ml-2 hidden sm:inline">
+											Gravando áudio...
+										</span>
 									</div>
 									<div className="flex items-center gap-2">
 										<Button
