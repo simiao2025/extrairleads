@@ -315,42 +315,48 @@ export default function LeadDetailsDialog({
 					children ? (
 						(children as React.ReactElement)
 					) : (
-						<button className="w-full text-left p-4 rounded-xl bg-white/[0.02] backdrop-blur-xl border border-white/[0.05] hover:border-emerald-500/30 hover:bg-white/[0.04] hover:-translate-y-1 transition-all duration-300 cursor-pointer group shadow-lg shadow-black/20 hover:shadow-[0_8px_30px_rgba(16,185,129,0.15)] relative overflow-hidden">
-							<div className="absolute top-0 right-0 w-16 h-16 bg-emerald-500/10 rounded-bl-full blur-xl group-hover:bg-emerald-500/20 transition-colors"></div>
-							<div className="flex justify-between items-start relative z-10">
-								<div className="flex items-center gap-3 w-4/5">
-									{lead.imageUrl && (
+						<button type="button" className="w-full text-left p-4 rounded-2xl bg-[#09090b] border border-white/[0.08] hover:border-emerald-500/40 hover:bg-[#101014] hover:-translate-y-1 transition-all duration-500 cursor-pointer group shadow-[0_4px_20px_rgba(0,0,0,0.3)] hover:shadow-[0_8px_40px_rgba(16,185,129,0.2)] relative overflow-hidden">
+							<div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-emerald-500/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
+							<div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl group-hover:bg-emerald-500/20 transition-all duration-700 translate-x-1/2 -translate-y-1/2"></div>
+							
+							<div className="flex justify-between items-start relative z-10 gap-3">
+								<div className="flex gap-3 flex-1 min-w-0">
+									{lead.imageUrl ? (
 										// eslint-disable-next-line @next/next/no-img-element
 										<img
 											src={lead.imageUrl}
 											alt={lead.name}
-											className="w-8 h-8 rounded-full object-cover border border-emerald-500/20"
+											className="w-10 h-10 rounded-full object-cover border border-white/10 group-hover:border-emerald-500/30 transition-colors shrink-0"
 										/>
+									) : (
+										<div className="w-10 h-10 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
+											<span className="text-emerald-500 font-bold text-sm">{lead.name.charAt(0)}</span>
+										</div>
 									)}
-									<p className="font-bold text-sm truncate text-white/90 group-hover:text-emerald-400 transition-colors flex items-center gap-2">
-										{lead.name}
-									</p>
+									<div className="flex-1 min-w-0 flex flex-col justify-center">
+										<p className="font-bold text-sm line-clamp-2 text-white/90 group-hover:text-emerald-400 transition-colors leading-tight">
+											{lead.name}
+										</p>
+										<p className="text-[11px] text-white/40 mt-0.5 truncate">
+											{lead.city ? `${lead.city}, ${lead.state}` : 'Localização desconhecida'}
+										</p>
+									</div>
 								</div>
 								{lead.aiScore && (
-									<span className="text-[10px] font-black text-emerald-950 bg-emerald-400/90 px-1.5 py-0.5 rounded-md shadow-[0_0_12px_rgba(52,211,153,0.4)]">
+									<span className="text-[10px] font-black text-emerald-950 bg-gradient-to-br from-emerald-400 to-emerald-500 px-2 py-1 rounded-md shadow-[0_0_15px_rgba(52,211,153,0.3)] shrink-0">
 										{lead.aiScore}
 									</span>
 								)}
 							</div>
-							<p className="text-xs text-white/50 mt-1 truncate relative z-10">
-								{lead.city}, {lead.state}
-							</p>
-							<div className="mt-4 flex items-center justify-between relative z-10">
-								<span className="text-[10px] font-medium bg-white/5 border border-white/10 px-2 py-0.5 rounded-full text-white/60">
+							
+							<div className="mt-4 flex items-end justify-between relative z-10 gap-2">
+								<span className="text-[10px] font-medium bg-white/[0.03] border border-white/[0.08] px-2.5 py-1.5 rounded-lg text-white/70 line-clamp-2 leading-tight flex-1">
 									{lead.niche || "Sem Nicho"}
 								</span>
 								{lead.phone && (
-									<div className="flex items-center gap-2">
-										<span className="text-[10px] font-bold text-emerald-500/80 uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
-											Prospectar
-										</span>
-										<div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center group-hover:bg-emerald-500/30 group-hover:scale-110 transition-all shadow-lg shadow-emerald-500/10 border border-emerald-500/20">
-											<MessageSquare className="w-4 h-4 text-emerald-400" />
+									<div className="flex items-center gap-2 shrink-0">
+										<div className="w-8 h-8 rounded-full bg-white/[0.02] border border-white/[0.05] flex items-center justify-center group-hover:bg-emerald-500/20 group-hover:border-emerald-500/30 transition-all duration-300">
+											<MessageSquare className="w-3.5 h-3.5 text-white/40 group-hover:text-emerald-400" />
 										</div>
 									</div>
 								)}

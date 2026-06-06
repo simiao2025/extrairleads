@@ -56,7 +56,7 @@ export function KanbanCard({ lead, isDragOverlay = false }: KanbanCardProps) {
 
 	if (isDragOverlay) {
 		return (
-			<div className="w-full text-left p-4 rounded-xl bg-zinc-900/80 backdrop-blur-xl border border-emerald-500/50 shadow-2xl shadow-emerald-500/10">
+			<div className="w-full text-left p-4 rounded-2xl bg-[#09090b]/95 backdrop-blur-xl border border-emerald-500/50 shadow-[0_10px_40px_rgba(16,185,129,0.3)] rotate-2 scale-105 transition-all">
 				<CardContent lead={lead} />
 			</div>
 		);
@@ -89,34 +89,49 @@ export function KanbanCard({ lead, isDragOverlay = false }: KanbanCardProps) {
 
 function CardContent({ lead }: { lead: Lead }) {
 	return (
-		<>
-			<div className="flex justify-between items-start">
-				<div className="flex items-center gap-2 w-4/5">
-					{lead.imageUrl && (
+		<div className="relative">
+			<div className="flex justify-between items-start relative z-10 gap-3">
+				<div className="flex gap-3 flex-1 min-w-0">
+					{lead.imageUrl ? (
 						// eslint-disable-next-line @next/next/no-img-element
 						<img
 							src={lead.imageUrl}
 							alt={lead.name}
-							className="w-6 h-6 rounded-full object-cover border border-emerald-500/20"
+							className="w-10 h-10 rounded-full object-cover border border-white/10 shrink-0"
 						/>
+					) : (
+						<div className="w-10 h-10 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
+							<span className="text-emerald-500 font-bold text-sm">{lead.name.charAt(0)}</span>
+						</div>
 					)}
-					<p className="font-bold text-sm truncate w-full">{lead.name}</p>
+					<div className="flex-1 min-w-0 flex flex-col justify-center">
+						<p className="font-bold text-sm line-clamp-2 text-white/90 leading-tight">
+							{lead.name}
+						</p>
+						<p className="text-[11px] text-white/40 mt-0.5 truncate">
+							{lead.city ? `${lead.city}, ${lead.state}` : 'Localização desconhecida'}
+						</p>
+					</div>
 				</div>
 				{lead.aiScore && (
-					<span className="text-[10px] font-bold text-emerald-950 bg-emerald-400 px-1.5 py-0.5 rounded shadow-[0_0_10px_rgba(52,211,153,0.3)]">
+					<span className="text-[10px] font-black text-emerald-950 bg-gradient-to-br from-emerald-400 to-emerald-500 px-2 py-1 rounded-md shadow-[0_0_15px_rgba(52,211,153,0.3)] shrink-0">
 						{lead.aiScore}
 					</span>
 				)}
 			</div>
-			<p className="text-xs text-zinc-500 mt-1 truncate">
-				{lead.city}, {lead.state}
-			</p>
-			<div className="mt-4 flex items-center justify-between">
-				<span className="text-[10px] bg-zinc-800 px-2 py-0.5 rounded text-zinc-400">
-					{lead.niche}
+			
+			<div className="mt-4 flex items-end justify-between relative z-10 gap-2">
+				<span className="text-[10px] font-medium bg-white/[0.03] border border-white/[0.08] px-2.5 py-1.5 rounded-lg text-white/70 line-clamp-2 leading-tight flex-1">
+					{lead.niche || "Sem Nicho"}
 				</span>
-				<MessageSquare className="w-3.5 h-3.5 text-zinc-600 group-hover:text-emerald-500 transition-colors" />
+				{lead.phone && (
+					<div className="flex items-center gap-2 shrink-0">
+						<div className="w-8 h-8 rounded-full bg-white/[0.02] border border-white/[0.05] flex items-center justify-center">
+							<MessageSquare className="w-3.5 h-3.5 text-white/40" />
+						</div>
+					</div>
+				)}
 			</div>
-		</>
+		</div>
 	);
 }
