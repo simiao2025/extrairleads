@@ -20,12 +20,32 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 async function findOrCreateLead(phone: string, ownerUserId: number | null) {
 	const rawPhone = phone.replace(/\D/g, "");
 
+	// Extrai a parte local do número (sem o 55 do Brasil) para garantir compatibilidade
+	let searchSuffix = rawPhone;
+	if (rawPhone.startsWith("55") && rawPhone.length >= 12) {
+		searchSuffix = rawPhone.substring(2);
+	}
+	
+	// Pega o DDD e os últimos 8 dígitos para ignorar a presença ou ausência do nono dígito
+	let likePattern = `%${searchSuffix}`;
+	if (searchSuffix.length >= 10) {
+		const ddd = searchSuffix.substring(0, 2);
+		const last8 = searchSuffix.substring(searchSuffix.length - 8);
+		likePattern = `%${ddd}%${last8}`;
+	}
+
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	const conditions: any[] = [
+		drizzleSql`regexp_replace(${leads.phone}, '\\D', '', 'g') LIKE ${likePattern}`
+	];
+	if (ownerUserId) {
+		conditions.push(eq(leads.userId, ownerUserId));
+	}
+
 	let [lead] = await db
 		.select()
 		.from(leads)
-		.where(
-			drizzleSql`regexp_replace(${leads.phone}, '\\D', '', 'g') = ${rawPhone}`,
-		);
+		.where(and(...conditions));
 
 	if (!lead) {
 		const [newLead] = await db
