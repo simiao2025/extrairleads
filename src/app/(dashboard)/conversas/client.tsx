@@ -720,23 +720,23 @@ export function ConversasClient({
 								history.length > 0 &&
 								history[history.length - 1].role === "user" &&
 								activeConversation.lead.status !== "human_intervention" && (
-									<div className="flex justify-start">
-										<div className="bg-[#202c33] border border-zinc-800/50 p-3 px-4 rounded-2xl rounded-tl-none text-zinc-300 text-xs flex items-center gap-1.5 shadow-lg shadow-black/10">
-											<Bot className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
-											<span className="text-[11px] text-zinc-400 font-medium">
+									<div className="flex justify-end">
+										<div className="bg-[#005c4b] border border-[#005c4b]/50 p-3 px-4 rounded-2xl rounded-tr-none text-zinc-300 text-xs flex items-center gap-1.5 shadow-lg shadow-emerald-950/20">
+											<Bot className="w-3.5 h-3.5 text-emerald-300 animate-pulse" />
+											<span className="text-[11px] text-zinc-300 font-medium">
 												IA SDR digitando...
 											</span>
 											<span className="flex gap-1 ml-1.5">
 												<span
-													className="w-1.5 h-1.5 bg-zinc-500 rounded-full animate-bounce"
+													className="w-1.5 h-1.5 bg-white/70 rounded-full animate-bounce"
 													style={{ animationDelay: "0ms" }}
 												></span>
 												<span
-													className="w-1.5 h-1.5 bg-zinc-500 rounded-full animate-bounce"
+													className="w-1.5 h-1.5 bg-white/70 rounded-full animate-bounce"
 													style={{ animationDelay: "150ms" }}
 												></span>
 												<span
-													className="w-1.5 h-1.5 bg-zinc-500 rounded-full animate-bounce"
+													className="w-1.5 h-1.5 bg-white/70 rounded-full animate-bounce"
 													style={{ animationDelay: "300ms" }}
 												></span>
 											</span>

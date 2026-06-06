@@ -617,14 +617,16 @@ export async function sendWhatsAppAudioAction(
 
 		const phoneStr = lead.phone.replace(/\D/g, "");
 
-		const response = await fetch(`${evolutionUrl}/send/audio`, {
+		const response = await fetch(`${evolutionUrl}/send/media`, {
 			method: "POST",
 			headers: { "Content-Type": "application/json", apikey: instanceToken },
 			body: JSON.stringify({
 				instance: instanceName,
 				number: phoneStr,
-				audio: audioBase64,
-				encoding: true,
+				type: "audio",
+				url: audioBase64,
+				filename: "audio.mp3",
+				ptt: true,
 				delay: 1200,
 			}),
 		});

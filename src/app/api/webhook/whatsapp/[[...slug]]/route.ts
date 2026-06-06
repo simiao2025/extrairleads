@@ -161,15 +161,16 @@ async function sendWhatsAppReply({
 				await saveCachedAudio(aiResponseText, base64Audio);
 			}
 
-			const response = await fetch(`${evolutionUrl}/send/audio`, {
+			const response = await fetch(`${evolutionUrl}/send/media`, {
 				method: "POST",
 				headers: { "Content-Type": "application/json", apikey: instanceToken },
 				body: JSON.stringify({
 					instance: instanceName,
 					number: phone,
-					audio: base64Audio,
+					type: "audio",
+					url: base64Audio,
+					filename: "audio.mp3",
 					ptt: true,
-					encoding: true,
 					delay: 1500,
 				}),
 			});
