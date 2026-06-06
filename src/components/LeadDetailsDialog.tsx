@@ -79,9 +79,9 @@ export default function LeadDetailsDialog({
 		data: swrHistory,
 		mutate: mutateHistory,
 		isLoading,
-	} = useSWR(
+	} = useSWR<ChatMessage[]>(
 		isOpen ? `chat-${lead.id}` : null,
-		() => getLeadChatAction(lead.id),
+		() => getLeadChatAction(lead.id) as Promise<ChatMessage[]>,
 		{ refreshInterval: 3000 },
 	);
 
