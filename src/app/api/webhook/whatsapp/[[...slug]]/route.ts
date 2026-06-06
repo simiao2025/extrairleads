@@ -25,7 +25,7 @@ async function findOrCreateLead(phone: string, ownerUserId: number | null) {
 	if (rawPhone.startsWith("55") && rawPhone.length >= 12) {
 		searchSuffix = rawPhone.substring(2);
 	}
-	
+
 	// Pega o DDD e os últimos 8 dígitos para ignorar a presença ou ausência do nono dígito
 	let likePattern = `%${searchSuffix}`;
 	if (searchSuffix.length >= 10) {
@@ -36,7 +36,7 @@ async function findOrCreateLead(phone: string, ownerUserId: number | null) {
 
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	const conditions: any[] = [
-		drizzleSql`regexp_replace(${leads.phone}, '\\D', '', 'g') LIKE ${likePattern}`
+		drizzleSql`regexp_replace(${leads.phone}, '\\D', '', 'g') LIKE ${likePattern}`,
 	];
 	if (ownerUserId) {
 		conditions.push(eq(leads.userId, ownerUserId));
@@ -82,48 +82,72 @@ async function extractMessageContent(
 
 	if (audioMessage || messageType === "audio") {
 		try {
-			const downloadUrl = `${evolutionUrl}/media/download/${instanceName}`;
-			const mediaRes = await fetch(downloadUrl, {
-				method: "POST",
-				headers: { "Content-Type": "application/json", apikey: instanceToken },
-				body: JSON.stringify({ message: rawData }),
-			});
+			let base64Audio =
+				rawData?.base64 ||
+				rawData?.message?.base64 ||
+				messagePayload?.base64 ||
+				null;
 
-			if (mediaRes.ok) {
-				const mediaData = await mediaRes.json();
-				const base64Audio = mediaData.base64 || mediaData?.data?.base64 || null;
+			if (!base64Audio) {
+				const downloadUrl = `${evolutionUrl}/media/download/${instanceName}`;
+				const mediaRes = await fetch(downloadUrl, {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+						apikey: instanceToken,
+					},
+					body: JSON.stringify({ message: rawData }),
+				});
 
-				if (base64Audio) {
-					const buffer = Buffer.from(base64Audio, "base64");
-					// Correção de segurança: tmpdir e UUID
-					const tempFile = path.join(
-						os.tmpdir(),
-						`audio-${crypto.randomUUID()}.mp3`,
-					);
-					fs.writeFileSync(tempFile, buffer);
+				if (mediaRes.ok) {
+					const mediaData = await mediaRes.json();
+					base64Audio = mediaData.base64 || mediaData?.data?.base64 || null;
+				}
+			}
 
+			if (base64Audio) {
+				const cleanBase64 = base64Audio.replace(/^data:[^;]+;base64,/, "");
+				const buffer = Buffer.from(cleanBase64, "base64");
+
+				// Correção de segurança: tmpdir e UUID
+				const tempFile = path.join(
+					os.tmpdir(),
+					`audio-${crypto.randomUUID()}.mp3`,
+				);
+				fs.writeFileSync(tempFile, buffer);
+
+				let textContent = "";
+				try {
 					const transcriptionResponse =
 						await openai.audio.transcriptions.create({
 							file: fs.createReadStream(tempFile),
 							model: "whisper-1",
 						});
-
-					const textContent = transcriptionResponse.text;
-
-					try {
-						fs.unlinkSync(tempFile);
-					} catch (e) {
-						console.error("Falha ao remover arquivo temporário", e);
-					}
-
-					return {
-						textContent,
-						base64Audio: `data:audio/mp3;base64,${base64Audio}`,
-					};
+					textContent = transcriptionResponse.text;
+				} catch (transcriptionErr) {
+					console.error(
+						"Falha ao transcrever áudio com Whisper:",
+						transcriptionErr,
+					);
+					textContent = "[Áudio]"; // Fallback se a transcrição falhar
 				}
+
+				try {
+					fs.unlinkSync(tempFile);
+				} catch (e) {
+					console.error("Falha ao remover arquivo temporário", e);
+				}
+
+				return {
+					textContent,
+					base64Audio: `data:audio/mp3;base64,${cleanBase64}`,
+				};
 			}
 		} catch (err) {
-			console.error("[extractMessageContent] Erro:", err);
+			console.error(
+				"[extractMessageContent] Erro geral ao processar áudio:",
+				err,
+			);
 		}
 	}
 
@@ -176,7 +200,9 @@ async function sendWhatsAppReply({
 			});
 			if (!response.ok) {
 				const errorText = await response.text();
-				throw new Error(`Falha ao enviar áudio da IA (${response.status}): ${errorText}`);
+				throw new Error(
+					`Falha ao enviar áudio da IA (${response.status}): ${errorText}`,
+				);
 			}
 			// Retorna o base64 para ser salvo no DB
 			return { audioBase64Saved: `data:audio/mp3;base64,${base64Audio}` };
@@ -208,7 +234,9 @@ async function sendWhatsAppReply({
 
 		if (!response.ok) {
 			const errorText = await response.text();
-			throw new Error(`Falha ao enviar mensagem de texto da IA (${response.status}): ${errorText}`);
+			throw new Error(
+				`Falha ao enviar mensagem de texto da IA (${response.status}): ${errorText}`,
+			);
 		}
 
 		if (i < blocks.length - 1) {
@@ -314,13 +342,13 @@ export async function POST(
 				.select()
 				.from(chatHistory)
 				.where(
-				and(
-					eq(chatHistory.leadId, lead.id),
-					eq(chatHistory.role, "assistant"),
-					eq(chatHistory.content, textContent),
-					gte(chatHistory.createdAt, fifteenSecondsAgo),
-				),
-			);
+					and(
+						eq(chatHistory.leadId, lead.id),
+						eq(chatHistory.role, "assistant"),
+						eq(chatHistory.content, textContent),
+						gte(chatHistory.createdAt, fifteenSecondsAgo),
+					),
+				);
 
 			if (!existingMsg) {
 				await db.insert(chatHistory).values({
@@ -357,12 +385,16 @@ export async function POST(
 
 		// Verifica se a IA está silenciada (Intervenção Humana ativa) para este lead
 		if (lead.status === "human_intervention") {
-			console.log(`[Webhook] IA SDR silenciada para o lead ${lead.name} (${lead.phone}). Ignorando resposta automática.`);
+			console.log(
+				`[Webhook] IA SDR silenciada para o lead ${lead.name} (${lead.phone}). Ignorando resposta automática.`,
+			);
 			return NextResponse.json({ ok: true, message: "IA SDR Silenciada" });
 		}
 
 		if (!process.env.GROQ_API_KEY) {
-			console.warn("[Webhook] GROQ_API_KEY não configurada na Vercel (.env). A IA SDR não responderá.");
+			console.warn(
+				"[Webhook] GROQ_API_KEY não configurada na Vercel (.env). A IA SDR não responderá.",
+			);
 			return NextResponse.json({ ok: true, error: "GROQ_API_KEY ausente" });
 		}
 
@@ -399,7 +431,14 @@ export async function POST(
 
 		return NextResponse.json({ ok: true });
 	} catch (error: any) {
-		console.error("Webhook error details:", error?.message || error, error?.stack);
-		return NextResponse.json({ ok: false, error: error?.message || "Internal Server Error" }, { status: 500 });
+		console.error(
+			"Webhook error details:",
+			error?.message || error,
+			error?.stack,
+		);
+		return NextResponse.json(
+			{ ok: false, error: error?.message || "Internal Server Error" },
+			{ status: 500 },
+		);
 	}
 }
