@@ -69,9 +69,6 @@ const updateLeadSchema = z.object({
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function handleToolsExecution(toolCalls: any[], lead: any) {
-	let forceAudio = false;
-	let overrideText = "";
-
 	for (const toolCall of toolCalls) {
 		const toolName = toolCall.function.name;
 
@@ -109,16 +106,12 @@ async function handleToolsExecution(toolCalls: any[], lead: any) {
 					.update(leads)
 					.set({ status: "human_intervention" })
 					.where(eq(leads.id, lead.id));
-			} else if (toolName === "send_voice_note") {
-				forceAudio = true;
-				overrideText = toolArgs.text_to_speak;
 			}
+			// send_voice_note removido — sem envio de áudio
 		} catch (err) {
 			console.error(`Erro ao executar ferramenta ${toolName}:`, err);
 		}
 	}
-
-	return { forceAudio, overrideText };
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -133,7 +126,6 @@ export async function processAIResponse(
 	let aiResponseText = ownerUserId
 		? await getSemanticCache(ownerUserId, textContent)
 		: null;
-	let forceAudio = false;
 
 	if (!aiResponseText) {
 		const [config] = ownerUserId
@@ -145,18 +137,25 @@ export async function processAIResponse(
 
 		const systemPrompt = `${config?.agent2Prompt || "Você é um SDR focado em abordagens."}
 
-DADOS E ANÁLISE PRÉVIA DO LEAD:
+DADOS DO LEAD (APENAS PARA SEU CONTEXTO INTERNO — NUNCA envie estes dados como mensagem para o lead):
 - Empresa/Contato: ${lead.name}
 - Segmento/Nicho: ${lead.niche || "Não informado"}
 - Cidade: ${lead.city || "Não informada"}
 - Site: ${lead.website || "Não informado"}
 - Dossiê Mapeado: ${lead.aiAnalysis || "Nenhuma análise prévia disponível."}
 
+REGRAS CRÍTICAS DE COMPORTAMENTO:
+1. NUNCA envie a análise interna do lead como mensagem. Os dados acima são apenas para você entender o contexto e personalizar suas respostas.
+2. Após a primeira mensagem de abordagem, AGUARDE a resposta do lead antes de enviar qualquer nova mensagem. Não fique disparando múltiplas mensagens sem resposta.
+3. Seja conversacional e humanizado. Use textos CURTOS (máximo 2-3 linhas por mensagem). Nada de parágrafos longos.
+4. Não use linguagem robótica, formal demais ou com "Prezado(a)". Fale como um profissional real falaria via WhatsApp.
+5. Adapte o tom à resposta do lead: se ele é direto, seja direto. Se ele é amigável, seja amigável.
+6. NUNCA envie áudios. Responda SEMPRE com texto.
+
 DIRETRIZES DE AUTONOMIA:
 - Chame 'update_lead_info' para atualizar dados da empresa.
 - Chame 'create_appointment' para fechar agendamentos.
-- Chame 'escalate_to_human' para transbordo.
-- Chame 'send_voice_note' estrategicamente para enviar áudios curtos.
+- Chame 'escalate_to_human' para transbordo quando necessário.
 
 BASE DE CONHECIMENTO (RAG):
 ${ragContext || "Nenhuma informação cadastrada."}
@@ -218,18 +217,6 @@ ${formattedHistory}
 					},
 				},
 			},
-			{
-				type: "function" as const,
-				function: {
-					name: "send_voice_note",
-					description: "Envia áudio natural curto.",
-					parameters: {
-						type: "object",
-						properties: { text_to_speak: { type: "string" } },
-						required: ["text_to_speak"],
-					},
-				},
-			},
 		];
 
 		const completion = await groq.chat.completions.create({
@@ -248,13 +235,9 @@ ${formattedHistory}
 		aiResponseText = choice.message.content || "";
 
 		if (toolCalls && toolCalls.length > 0) {
-			const execution = await handleToolsExecution(toolCalls, lead);
-			forceAudio = execution.forceAudio;
-			const overrideText = execution.overrideText;
+			await handleToolsExecution(toolCalls, lead);
 
-			if (overrideText) {
-				aiResponseText = overrideText;
-			} else {
+			if (!aiResponseText?.trim()) {
 				const secondCompletion = await groq.chat.completions.create({
 					messages: [
 						{ role: "system", content: systemPrompt },
@@ -282,5 +265,5 @@ ${formattedHistory}
 		}
 	}
 
-	return { aiResponseText, forceAudio };
+	return { aiResponseText };
 }

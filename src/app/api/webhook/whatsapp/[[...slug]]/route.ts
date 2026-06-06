@@ -219,7 +219,8 @@ async function sendWhatsAppReply({
 
 	for (let i = 0; i < blocks.length; i++) {
 		const block = blocks[i];
-		const typingDelay = Math.min(3000, Math.max(1000, block.length * 35));
+		// Delay mais humanizado: mínimo 2s, máximo 5s, baseado no tamanho do texto
+		const typingDelay = Math.min(5000, Math.max(2000, block.length * 50));
 
 		const response = await fetch(`${evolutionUrl}/send/text`, {
 			method: "POST",
@@ -240,7 +241,8 @@ async function sendWhatsAppReply({
 		}
 
 		if (i < blocks.length - 1) {
-			await sleep(typingDelay + 300);
+			// Pausa entre blocos para parecer que está digitando
+			await sleep(typingDelay + 1000);
 		}
 	}
 	return { audioBase64Saved: null };
@@ -399,7 +401,7 @@ export async function POST(
 		}
 
 		// DELEGA PARA O AGENT AI EXTERNALIZADO (Code Purity)
-		const { aiResponseText, forceAudio } = await processAIResponse(
+		const { aiResponseText } = await processAIResponse(
 			lead,
 			textContent,
 			ownerUserId,
@@ -409,11 +411,9 @@ export async function POST(
 			return NextResponse.json({ ok: true });
 		}
 
-		const shouldReplyAudio =
-			(messageType === "audio" || forceAudio) && !!process.env.OPENAI_API_KEY;
-
+		// Sempre envia apenas texto (sem áudio)
 		const { audioBase64Saved } = await sendWhatsAppReply({
-			shouldReplyAudio,
+			shouldReplyAudio: false,
 			aiResponseText,
 			instanceName,
 			phone,
@@ -426,7 +426,7 @@ export async function POST(
 			role: "assistant",
 			content: aiResponseText,
 			audioBase64: audioBase64Saved,
-			type: shouldReplyAudio ? "audio" : "text",
+			type: "text",
 		});
 
 		return NextResponse.json({ ok: true });

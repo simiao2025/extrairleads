@@ -2,16 +2,28 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { ScoutChat } from "./ScoutChat";
 import { X } from "lucide-react";
+
+// Posições predefinidas por onde o Scout pode "passear"
+const SCOUT_POSITIONS = [
+	{ bottom: 24, right: 24 },   // canto inferior direito (default)
+	{ bottom: 24, right: 120 },  // um pouco à esquerda
+	{ bottom: 100, right: 24 },  // um pouco acima
+	{ bottom: 180, right: 40 },  // mais acima
+	{ bottom: 24, right: 200 },  // mais à esquerda
+	{ bottom: 120, right: 100 }, // diagonal
+];
 
 export function ScoutAvatar() {
 	const [isOpen, setIsOpen] = useState(false);
 	const [hasUnread, setHasUnread] = useState(false);
 	const [speechText, setSpeechText] = useState<string | null>(null);
+	const [posIndex, setPosIndex] = useState(0);
 	const pathname = usePathname();
+	const moveTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
 	const toggle = useCallback(() => {
 		setIsOpen((prev) => !prev);
@@ -21,6 +33,7 @@ export function ScoutAvatar() {
 		}
 	}, [isOpen]);
 
+	// Dicas contextuais baseadas na página
 	useEffect(() => {
 		const timer = setTimeout(() => {
 			if (!isOpen) {
@@ -35,11 +48,10 @@ export function ScoutAvatar() {
 				}
 
 				setSpeechText(tip);
-				setHasUnread(true); // Faz o avatar piscar
+				setHasUnread(true);
 			}
 		}, 8000);
 
-		// Esconde sozinho após 20 segundos se o usuário não interagir
 		const hideTimer = setTimeout(() => {
 			setSpeechText(null);
 		}, 20000);
@@ -48,11 +60,57 @@ export function ScoutAvatar() {
 			clearTimeout(timer);
 			clearTimeout(hideTimer);
 		};
+	}, [isOpen, pathname]);
+
+	// Movimento dinâmico do Scout pela tela
+	useEffect(() => {
+		if (isOpen) {
+			// Quando o chat está aberto, volta para o canto inferior direito e para de mover
+			setPosIndex(0);
+			if (moveTimerRef.current) {
+				clearInterval(moveTimerRef.current);
+				moveTimerRef.current = null;
+			}
+			return;
+		}
+
+		// Move a cada 12-18 segundos quando o chat está fechado
+		moveTimerRef.current = setInterval(() => {
+			setPosIndex((prev) => {
+				let next = prev;
+				// Garante que não repete a mesma posição
+				while (next === prev) {
+					next = Math.floor(Math.random() * SCOUT_POSITIONS.length);
+				}
+				return next;
+			});
+		}, 14000);
+
+		return () => {
+			if (moveTimerRef.current) {
+				clearInterval(moveTimerRef.current);
+				moveTimerRef.current = null;
+			}
+		};
 	}, [isOpen]);
+
+	const currentPos = SCOUT_POSITIONS[posIndex];
 
 	return (
 		<>
-			<div className="fixed bottom-6 right-6 z-50 md:bottom-8 md:right-8 flex flex-col items-end gap-3 pointer-events-none">
+			<motion.div
+				className="fixed z-50 flex flex-col items-end gap-3 pointer-events-none"
+				animate={{
+					bottom: currentPos.bottom,
+					right: currentPos.right,
+				}}
+				transition={{
+					type: "spring",
+					stiffness: 50,
+					damping: 20,
+					mass: 1.2,
+				}}
+			>
 				{/* ─── Speech Bubble ─── */}
 				<AnimatePresence>
 					{speechText && !isOpen && (
@@ -121,7 +179,7 @@ export function ScoutAvatar() {
 						/>
 					)}
 				</motion.button>
-			</div>
+			</motion.div>
 
 			{/* ─── Chat Panel ─── */}
 			<AnimatePresence>
