@@ -334,10 +334,10 @@ export default function LeadDetailsDialog({
 										</div>
 									)}
 									<div className="flex-1 min-w-0 flex flex-col justify-center">
-										<p className="font-bold text-sm line-clamp-2 text-white/90 group-hover:text-emerald-400 transition-colors leading-tight">
+										<p className="font-bold text-sm text-white/90 group-hover:text-emerald-400 transition-colors leading-tight break-words">
 											{lead.name}
 										</p>
-										<p className="text-[11px] text-white/40 mt-0.5 truncate">
+										<p className="text-[11px] text-white/40 mt-0.5 break-words">
 											{lead.city ? `${lead.city}, ${lead.state}` : 'Localização desconhecida'}
 										</p>
 									</div>
