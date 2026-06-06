@@ -128,6 +128,15 @@ export default async function Home({ searchParams }: PageProps) {
 			<div className="fixed bottom-0 right-1/4 w-[400px] h-[400px] bg-blue-600/[0.03] rounded-full blur-[120px] pointer-events-none z-0" />
 
 			<div className="mx-auto max-w-[1400px] space-y-10 px-4 py-10 md:px-8 relative z-10">
+				{/* ── Greeting Section (Full Width) ── */}
+				<div className="w-full relative z-20 mb-4">
+					<DashboardGreeting 
+						name={session?.user?.name || "Usuário"} 
+						leadsToContact={leadsByStatus.qualified + leadsByStatus.raw} 
+						leadsToFollowUp={leadsByStatus.contacted} 
+					/>
+				</div>
+
 				{/* ── Hero Section ── */}
 				<section className="relative flex flex-col gap-8 md:flex-row md:items-end md:justify-between animate-in fade-in slide-in-from-bottom-8 duration-1000">
 					{/* Efeito Matrix Background Full Width */}
@@ -153,13 +162,7 @@ export default async function Home({ searchParams }: PageProps) {
 						/>
 					</div>
 
-					<div className="relative space-y-5 max-w-4xl z-10 w-full">
-						<DashboardGreeting 
-							name={session?.user?.name || "Usuário"} 
-							leadsToContact={leadsByStatus.qualified + leadsByStatus.raw} 
-							leadsToFollowUp={leadsByStatus.contacted} 
-						/>
-
+					<div className="relative space-y-5 w-full xl:w-[60%] z-20">
 						<div className="mt-8">
 							<span className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-[11px] font-bold tracking-widest text-emerald-400 uppercase backdrop-blur-md mb-4">
 								<span className="pulse-dot" />
