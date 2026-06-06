@@ -39,7 +39,7 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { notify } from "@/lib/notify";
+import { notify, playMessageSound } from "@/lib/notify";
 
 import type { ChatMessage } from "@/types/chat";
 
@@ -112,6 +112,8 @@ export default function LeadDetailsDialog({
 	const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
 	const scrollRef = useRef<HTMLDivElement>(null);
+	// Rastreia contagem anterior para detectar mensagens novas
+	const prevHistoryLengthRef = useRef<number>(-1);
 
 	const scrollToBottom = () => {
 		if (scrollRef.current) {
@@ -119,7 +121,18 @@ export default function LeadDetailsDialog({
 		}
 	};
 
+	// Rola para o fim e toca som ao chegar nova mensagem do lead
 	useEffect(() => {
+		if (!history || history.length === 0) return;
+
+		const prev = prevHistoryLengthRef.current;
+		if (prev >= 0 && history.length > prev) {
+			const lastMsg = history[history.length - 1];
+			if (lastMsg.role === "user") {
+				playMessageSound();
+			}
+		}
+		prevHistoryLengthRef.current = history.length;
 		scrollToBottom();
 	}, [history]);
 

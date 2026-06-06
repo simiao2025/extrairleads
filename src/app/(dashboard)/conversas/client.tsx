@@ -34,6 +34,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
+import { playMessageSound } from "@/lib/notify";
 
 interface Conversation {
 	lead: {
@@ -147,6 +148,8 @@ export function ConversasClient({
 	const audioChunksRef = useRef<Blob[]>([]);
 	const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
 	const scrollRef = useRef<HTMLDivElement>(null);
+	// Rastreia quantas mensagens havia antes do último poll para detectar novas
+	const prevHistoryLengthRef = useRef<number>(-1);
 	const activeConversation = conversations.find(
 		(c) => c.lead.id === activeLeadId,
 	);
@@ -165,11 +168,20 @@ export function ConversasClient({
 		}
 	}, []);
 
-	// Rola para o fim ao atualizar histórico
+	// Rola para o fim e toca som ao chegar nova mensagem do lead
 	useEffect(() => {
-		if (history) {
-			scrollToBottom();
+		if (!history || history.length === 0) return;
+
+		const prev = prevHistoryLengthRef.current;
+		// Só toca se já foi inicializado (prev >= 0) e chegaram msgs novas
+		if (prev >= 0 && history.length > prev) {
+			const lastMsg = history[history.length - 1];
+			if (lastMsg.role === "user") {
+				playMessageSound();
+			}
 		}
+		prevHistoryLengthRef.current = history.length;
+		scrollToBottom();
 	}, [history, scrollToBottom]);
 
 	const handleSend = async () => {

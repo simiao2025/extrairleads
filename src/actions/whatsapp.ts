@@ -117,7 +117,7 @@ export async function checkWhatsAppConnectionAction() {
 					webhook: {
 						url: webhookUrl,
 						enabled: true,
-						events: ["MESSAGES_UPSERT"],
+						events: ["MESSAGE", "READ_RECEIPT", "CONNECTION", "QRCODE"],
 					},
 				}),
 			});
@@ -154,7 +154,7 @@ export async function checkWhatsAppConnectionAction() {
 					},
 					body: JSON.stringify({
 						immediate: false,
-						subscribe: ["MESSAGE", "SEND_MESSAGE"],
+						subscribe: ["MESSAGE", "READ_RECEIPT", "CONNECTION", "QRCODE"],
 						webhookUrl: actualWebhookUrl,
 						webhookBase64: true,
 						base64: true,
@@ -206,7 +206,7 @@ export async function checkWhatsAppConnectionAction() {
 				},
 				body: JSON.stringify({
 					immediate: false,
-					subscribe: ["MESSAGE", "SEND_MESSAGE"],
+					subscribe: ["MESSAGE", "READ_RECEIPT", "CONNECTION", "QRCODE"],
 					webhookUrl: webhookUrl,
 					webhookBase64: true,
 					base64: true,
@@ -302,7 +302,7 @@ export async function getWhatsAppQrCodeAction() {
 				},
 				body: JSON.stringify({
 					immediate: false,
-					subscribe: ["MESSAGE", "SEND_MESSAGE"],
+					subscribe: ["MESSAGE", "READ_RECEIPT", "CONNECTION", "QRCODE"],
 					webhookUrl: actualWebhookUrl,
 					webhookBase64: true,
 					base64: true,
