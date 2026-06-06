@@ -234,7 +234,60 @@ export function KanbanBoard({ initialLeads }: KanbanBoardProps) {
 			onDragStart={handleDragStart}
 			onDragEnd={handleDragEnd}
 		>
-			<div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
+			{/* Mobile tab quick-navigation */}
+			<div className="flex md:hidden gap-1.5 overflow-x-auto pb-3 mb-2 scrollbar-none">
+				{STAGES.map((stage) => {
+					const count = leadsByStage[stage.key]?.length || 0;
+					return (
+						<button
+							key={stage.key}
+							type="button"
+							onClick={() => {
+								const el = document.getElementById(`col-mobile-${stage.key}`);
+								el?.scrollIntoView({
+									behavior: "smooth",
+									block: "nearest",
+									inline: "center",
+								});
+							}}
+							className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white active:scale-95 transition-all"
+						>
+							<span>{stage.label}</span>
+							<span className="bg-zinc-800 text-[9px] px-1.5 py-0.5 rounded-full text-zinc-500 font-mono">
+								{count}
+							</span>
+						</button>
+					);
+				})}
+			</div>
+
+			{/* Responsive Board view */}
+			{/* 1. Mobile Horizontal Swipe View */}
+			<div className="flex md:hidden overflow-x-auto snap-x snap-mandatory gap-4 pb-4 px-1 scrollbar-thin scrollbar-thumb-zinc-800">
+				{STAGES.map((stage, colIndex) => (
+					<div
+						key={stage.key}
+						id={`col-mobile-${stage.key}`}
+						className="w-[85vw] shrink-0 snap-center"
+					>
+						<SortableContext
+							id={stage.key}
+							items={leadsByStage[stage.key].map((l) => l.id)}
+							strategy={verticalListSortingStrategy}
+						>
+							<KanbanColumn
+								stage={stage}
+								leads={leadsByStage[stage.key]}
+								animationDelay={700 + colIndex * 150}
+								isDragging={dragging}
+							/>
+						</SortableContext>
+					</div>
+				))}
+			</div>
+
+			{/* 2. Desktop Grid View */}
+			<div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
 				{STAGES.map((stage, colIndex) => (
 					<SortableContext
 						key={stage.key}

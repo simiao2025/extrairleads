@@ -4,22 +4,23 @@ import {
 	ArrowLeft,
 	Bot,
 	Calendar,
+	CheckCheck,
 	Globe,
 	HandMetal,
 	Loader2,
 	MapPin,
 	MessageSquare,
+	Mic,
 	Search,
 	Send,
 	Sparkles,
+	Square,
+	Trash2,
 	User,
 	Volume2,
 	VolumeX,
+	X,
 	Zap,
-	Mic,
-	Square,
-	Trash2,
-	CheckCheck,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import useSWR from "swr";
@@ -223,7 +224,7 @@ export function ConversasClient({
 									createdAt: new Date(),
 									role: "assistant",
 								},
-						  }
+							}
 						: c,
 				);
 			});
@@ -245,8 +246,10 @@ export function ConversasClient({
 			};
 
 			mediaRecorder.onstop = async () => {
-				const audioBlob = new Blob(audioChunksRef.current, { type: "audio/ogg" });
-				
+				const audioBlob = new Blob(audioChunksRef.current, {
+					type: "audio/ogg",
+				});
+
 				// Ler como base64
 				const reader = new FileReader();
 				reader.readAsDataURL(audioBlob);
@@ -267,7 +270,10 @@ export function ConversasClient({
 						type: "audio",
 						createdAt: new Date(),
 					};
-					mutateHistory((prev) => [...((prev as ChatMessage[]) || []), optimisticMsg], false);
+					mutateHistory(
+						(prev) => [...((prev as ChatMessage[]) || []), optimisticMsg],
+						false,
+					);
 
 					const res = await sendWhatsAppAudioAction(activeLeadId, base64String);
 					if (!res.success) {
@@ -280,7 +286,7 @@ export function ConversasClient({
 				};
 
 				// Limpar as faixas de áudio para liberar o microfone
-				stream.getTracks().forEach(track => track.stop());
+				stream.getTracks().forEach((track) => track.stop());
 			};
 
 			mediaRecorder.start();
@@ -308,7 +314,9 @@ export function ConversasClient({
 		if (mediaRecorderRef.current && isRecording) {
 			// Cancela o envio: reatribui onstop para não fazer nada
 			mediaRecorderRef.current.onstop = () => {
-				mediaRecorderRef.current?.stream.getTracks().forEach(track => track.stop());
+				mediaRecorderRef.current?.stream
+					.getTracks()
+					.forEach((track) => track.stop());
 			};
 			mediaRecorderRef.current.stop();
 			setIsRecording(false);
@@ -318,7 +326,9 @@ export function ConversasClient({
 	};
 
 	const formatTime = (seconds: number) => {
-		const m = Math.floor(seconds / 60).toString().padStart(2, "0");
+		const m = Math.floor(seconds / 60)
+			.toString()
+			.padStart(2, "0");
 		const s = (seconds % 60).toString().padStart(2, "0");
 		return `${m}:${s}`;
 	};
@@ -369,7 +379,7 @@ export function ConversasClient({
 	};
 
 	return (
-		<div className="flex h-[calc(100vh-60px)] md:h-screen w-full bg-[#0b141a] text-[#e9edef] overflow-hidden">
+		<div className="flex h-[calc(100vh-156px)] md:h-screen w-full bg-[#0b141a] text-[#e9edef] overflow-hidden">
 			{/* ------------------------------------------------------------- */}
 			{/* 1. PAINEL ESQUERDO: LISTAGEM DE CONVERSAS                     */}
 			{/* ------------------------------------------------------------- */}
@@ -590,7 +600,7 @@ export function ConversasClient({
 								<Button
 									variant="ghost"
 									size="icon"
-									className="hidden lg:flex text-zinc-400 hover:text-white"
+									className="text-zinc-400 hover:text-white"
 									onClick={() => setShowRightPanel(!showRightPanel)}
 									title="Dados do Lead"
 								>
@@ -660,28 +670,38 @@ export function ConversasClient({
 															Áudio {isAssistant ? "Enviado" : "Recebido"}
 														</span>
 														{msg.audioBase64 ? (
-															<audio 
-																controls 
-																src={msg.audioBase64.startsWith("data:") ? msg.audioBase64 : `data:audio/ogg;base64,${msg.audioBase64}`}
+															<audio
+																controls
+																src={
+																	msg.audioBase64.startsWith("data:")
+																		? msg.audioBase64
+																		: `data:audio/ogg;base64,${msg.audioBase64}`
+																}
 																className="h-10 w-full max-w-[250px] outline-none"
 															/>
 														) : (
-															<p className="text-[11px] text-zinc-400 italic">Áudio expirado ou indisponível</p>
+															<p className="text-[11px] text-zinc-400 italic">
+																Áudio expirado ou indisponível
+															</p>
 														)}
 														{/* Mostrar a transcrição apenas se houver conteúdo textual real */}
-														{msg.content && msg.content !== "[Áudio Enviado]" && (
-															<div className="mt-1 pt-1.5 border-t border-white/5">
-																<span className="text-[9px] text-zinc-500 uppercase font-semibold mb-1 block">Transcrição:</span>
-																<p className="text-xs text-zinc-300 italic leading-relaxed whitespace-pre-wrap break-words">
-																	"{msg.content}"
-																</p>
-															</div>
-														)}
+														{msg.content &&
+															msg.content !== "[Áudio Enviado]" && (
+																<div className="mt-1 pt-1.5 border-t border-white/5">
+																	<span className="text-[9px] text-zinc-500 uppercase font-semibold mb-1 block">
+																		Transcrição:
+																	</span>
+																	<p className="text-xs text-zinc-300 italic leading-relaxed whitespace-pre-wrap break-words">
+																		"{msg.content}"
+																	</p>
+																</div>
+															)}
 													</div>
 												) : (
 													<p className="leading-relaxed whitespace-pre-wrap break-words">
 														{msg.content}
-														<span className="inline-block w-14" /> {/* Spacer for timestamp */}
+														<span className="inline-block w-14" />{" "}
+														{/* Spacer for timestamp */}
 													</p>
 												)}
 												<div className="absolute bottom-1 right-2 flex items-center gap-1">
@@ -731,9 +751,12 @@ export function ConversasClient({
 							{!generating &&
 								history.length > 0 &&
 								history[history.length - 1].role === "user" &&
-								activeConversation.lead.status !== "human_intervention" && (() => {
+								activeConversation.lead.status !== "human_intervention" &&
+								(() => {
 									const lastMsg = history[history.length - 1];
-									const lastMsgTime = lastMsg.createdAt ? new Date(lastMsg.createdAt).getTime() : 0;
+									const lastMsgTime = lastMsg.createdAt
+										? new Date(lastMsg.createdAt).getTime()
+										: 0;
 									const secondsAgo = (Date.now() - lastMsgTime) / 1000;
 									const isTimedOut = secondsAgo > 90;
 
@@ -779,8 +802,12 @@ export function ConversasClient({
 								<div className="flex-1 flex items-center justify-between bg-zinc-900/50 rounded-xl px-4 min-h-[40px] border border-red-500/20">
 									<div className="flex items-center gap-3">
 										<div className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
-										<span className="text-zinc-300 font-mono text-sm">{formatTime(recordingTime)}</span>
-										<span className="text-xs text-zinc-500 ml-2 hidden sm:inline">Gravando áudio...</span>
+										<span className="text-zinc-300 font-mono text-sm">
+											{formatTime(recordingTime)}
+										</span>
+										<span className="text-xs text-zinc-500 ml-2 hidden sm:inline">
+											Gravando áudio...
+										</span>
 									</div>
 									<div className="flex items-center gap-2">
 										<Button
@@ -891,7 +918,22 @@ export function ConversasClient({
 			{/* 3. PAINEL DIREITO: RESUMO E DADOS DO LEAD                     */}
 			{/* ------------------------------------------------------------- */}
 			{showRightPanel && activeConversation && (
-				<div className="hidden lg:flex w-[320px] xl:w-[360px] shrink-0 flex-col bg-[#111b21] z-10 p-5 overflow-y-auto border-l border-zinc-800/40 divide-y divide-zinc-800/40 scrollbar-thin scrollbar-thumb-zinc-800 gap-6">
+				<div className="fixed inset-y-0 right-0 z-50 w-full sm:w-[360px] flex lg:relative lg:inset-auto lg:z-10 lg:w-[320px] xl:w-[360px] flex-col bg-[#111b21] p-5 overflow-y-auto border-l border-zinc-800/40 divide-y divide-zinc-800/40 scrollbar-thin scrollbar-thumb-zinc-800 gap-6 animate-in slide-in-from-right duration-300">
+					{/* Mobile Close Button for Details Panel */}
+					<div className="flex lg:hidden items-center justify-between pb-2 shrink-0">
+						<span className="text-white font-bold text-sm">
+							Detalhes do Lead
+						</span>
+						<Button
+							variant="ghost"
+							size="icon"
+							onClick={() => setShowRightPanel(false)}
+							className="text-zinc-400 hover:text-white"
+						>
+							<X className="w-5 h-5" />
+						</Button>
+					</div>
+
 					{/* Sessão da IA e Score */}
 					<div className="space-y-4 pb-6">
 						<h3 className="text-emerald-400 text-xs font-black uppercase tracking-widest flex items-center gap-2">

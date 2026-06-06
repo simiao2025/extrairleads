@@ -43,7 +43,7 @@ export default function RootLayout({
 					<SmoothScrollProvider>
 						{children}
 						<VersionMonitor />
-						<Toaster richColors closeButton />
+						<Toaster richColors closeButton position="top-center" />
 					</SmoothScrollProvider>
 				</ThemeProvider>
 			</body>

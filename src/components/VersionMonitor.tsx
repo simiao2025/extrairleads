@@ -14,7 +14,7 @@ export default function VersionMonitor() {
 		// 1. Pega a versão inicial quando o app carrega pela primeira vez
 		const fetchInitialVersion = async () => {
 			try {
-				const res = await fetch("/version.json?t=" + Date.now(), {
+				const res = await fetch(`/version.json?t=${Date.now()}`, {
 					cache: "no-store",
 				});
 				if (res.ok) {
@@ -35,7 +35,7 @@ export default function VersionMonitor() {
 		// 2. Fica checando em background a cada intervalo
 		const interval = setInterval(async () => {
 			try {
-				const res = await fetch("/version.json?t=" + Date.now(), {
+				const res = await fetch(`/version.json?t=${Date.now()}`, {
 					cache: "no-store",
 				});
 				if (res.ok) {

@@ -80,6 +80,7 @@ export default function LeadDetailsDialog({
 	// Status local do lead para refletir o toggle sem precisar recarregar a página
 	const [leadStatus, setLeadStatus] = useState<LeadStatus | null>(lead.status);
 	const [togglingStatus, setTogglingStatus] = useState(false);
+	const [activeTab, setActiveTab] = useState<"chat" | "details">("chat");
 
 	const isIntervention = leadStatus === "human_intervention";
 
@@ -138,7 +139,9 @@ export default function LeadDetailsDialog({
 
 	const handleToggleIntervention = async () => {
 		setTogglingStatus(true);
-		const nextStatus: LeadStatus = isIntervention ? "contacted" : "human_intervention";
+		const nextStatus: LeadStatus = isIntervention
+			? "contacted"
+			: "human_intervention";
 		const res = await moveLeadAction(lead.id, nextStatus);
 		if (res.success) {
 			setLeadStatus(nextStatus);
@@ -315,9 +318,12 @@ export default function LeadDetailsDialog({
 					children ? (
 						(children as React.ReactElement)
 					) : (
-						<button type="button" className="w-full text-left p-4 pt-6 rounded-2xl bg-[#09090b] border border-white/[0.08] hover:border-emerald-500/40 hover:bg-[#101014] hover:-translate-y-1 transition-all duration-500 cursor-pointer group shadow-[0_4px_20px_rgba(0,0,0,0.3)] hover:shadow-[0_8px_40px_rgba(16,185,129,0.2)] relative overflow-hidden flex flex-col items-center">
+						<button
+							type="button"
+							className="w-full text-left p-4 pt-6 rounded-2xl bg-[#09090b] border border-white/[0.08] hover:border-emerald-500/40 hover:bg-[#101014] hover:-translate-y-1 transition-all duration-500 cursor-pointer group shadow-[0_4px_20px_rgba(0,0,0,0.3)] hover:shadow-[0_8px_40px_rgba(16,185,129,0.2)] relative overflow-hidden flex flex-col items-center"
+						>
 							<div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-500/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
-							
+
 							{lead.aiScore && (
 								<div className="absolute top-3 right-3 z-20">
 									<span className="text-[10px] font-black text-emerald-950 bg-gradient-to-br from-emerald-400 to-emerald-500 px-2 py-1 rounded-md shadow-[0_0_15px_rgba(52,211,153,0.3)]">
@@ -336,20 +342,24 @@ export default function LeadDetailsDialog({
 									/>
 								) : (
 									<div className="w-14 h-14 rounded-full bg-emerald-500/10 border-2 border-emerald-500/20 flex items-center justify-center shadow-lg mb-3">
-										<span className="text-emerald-500 font-bold text-lg">{lead.name.charAt(0)}</span>
+										<span className="text-emerald-500 font-bold text-lg">
+											{lead.name.charAt(0)}
+										</span>
 									</div>
 								)}
-								
+
 								<div className="w-full text-center px-1">
 									<p className="font-bold text-xs text-white/90 group-hover:text-emerald-400 transition-colors leading-snug line-clamp-2 mb-1">
 										{lead.name}
 									</p>
 									<p className="text-[10px] text-white/40 line-clamp-1">
-										{lead.city ? `${lead.city}, ${lead.state}` : 'Localização desconhecida'}
+										{lead.city
+											? `${lead.city}, ${lead.state}`
+											: "Localização desconhecida"}
 									</p>
 								</div>
 							</div>
-							
+
 							<div className="mt-5 w-full flex items-center justify-between relative z-10 border-t border-white/[0.05] pt-3">
 								<span className="text-[9px] font-medium bg-white/[0.03] border border-white/[0.08] px-2 py-1 rounded-md text-white/70 line-clamp-1 truncate max-w-[70%] text-center">
 									{lead.niche || "Sem Nicho"}
@@ -399,18 +409,52 @@ export default function LeadDetailsDialog({
 									? "bg-amber-500/20 text-amber-400 border-amber-500/30 hover:bg-amber-500/30 shadow-[0_0_15px_rgba(245,158,11,0.15)]"
 									: "bg-[#2a3942] text-zinc-300 border-zinc-700/60 hover:bg-zinc-800 hover:text-white"
 							}`}
-							title={isIntervention ? "Reativar IA SDR" : "Silenciar IA SDR e assumir controle"}
+							title={
+								isIntervention
+									? "Reativar IA SDR"
+									: "Silenciar IA SDR e assumir controle"
+							}
 						>
 							{togglingStatus ? (
 								<Loader2 className="w-3.5 h-3.5 animate-spin" />
 							) : isIntervention ? (
-								<><VolumeX className="w-3.5 h-3.5" /> IA Silenciada</>
+								<>
+									<VolumeX className="w-3.5 h-3.5" /> IA Silenciada
+								</>
 							) : (
-								<><Bot className="w-3.5 h-3.5" /> Controle por IA</>
+								<>
+									<Bot className="w-3.5 h-3.5" /> Controle por IA
+								</>
 							)}
 						</Button>
 					</DialogTitle>
 				</DialogHeader>
+
+				{/* Mobile Tabs */}
+				<div className="flex lg:hidden bg-[#111b21] border-b border-zinc-800/50 shrink-0">
+					<button
+						type="button"
+						onClick={() => setActiveTab("chat")}
+						className={`flex-1 py-3 text-xs font-bold text-center border-b-2 transition-all ${
+							activeTab === "chat"
+								? "text-emerald-400 border-emerald-400 bg-white/[0.02]"
+								: "text-zinc-500 border-transparent hover:text-zinc-300"
+						}`}
+					>
+						Conversa
+					</button>
+					<button
+						type="button"
+						onClick={() => setActiveTab("details")}
+						className={`flex-1 py-3 text-xs font-bold text-center border-b-2 transition-all ${
+							activeTab === "details"
+								? "text-emerald-400 border-emerald-400 bg-white/[0.02]"
+								: "text-zinc-500 border-transparent hover:text-zinc-300"
+						}`}
+					>
+						Detalhes do Lead ({lead.aiScore ?? "?"})
+					</button>
+				</div>
 
 				{/* Banner de Intervenção Humana Ativo */}
 				{isIntervention && (
@@ -433,8 +477,10 @@ export default function LeadDetailsDialog({
 					{/* Background pattern similar to WhatsApp */}
 					<div className="absolute inset-0 opacity-[0.05] bg-[url('https://static.whatsapp.net/rsrc.php/v3/yl/r/r-3A-64J.png')] bg-repeat z-0 pointer-events-none"></div>
 
-					{/* Left Panel: Info (Desktop Only) */}
-					<div className="hidden lg:flex w-1/3 flex-col bg-[#111b21] border-r border-zinc-800/50 z-10 p-5 overflow-y-auto">
+					{/* Left Panel: Info (Desktop / Tabbed Mobile) */}
+					<div
+						className={`w-full lg:w-1/3 flex-col bg-[#111b21] border-r border-zinc-800/50 z-10 p-5 overflow-y-auto ${activeTab === "details" ? "flex" : "hidden lg:flex"}`}
+					>
 						<h3 className="text-[#00a884] text-xs font-bold mb-4 uppercase tracking-widest flex items-center gap-2">
 							<Bot className="w-4 h-4" /> Inteligência Artificial
 						</h3>
@@ -493,7 +539,9 @@ export default function LeadDetailsDialog({
 					</div>
 
 					{/* Right Panel: Chat */}
-					<div className="flex-1 flex flex-col z-10 relative bg-transparent">
+					<div
+						className={`flex-1 flex flex-col z-10 relative bg-transparent ${activeTab === "chat" ? "flex" : "hidden lg:flex"}`}
+					>
 						<div
 							ref={scrollRef}
 							className="flex-1 overflow-y-auto p-4 space-y-4"

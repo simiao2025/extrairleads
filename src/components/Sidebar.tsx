@@ -103,13 +103,21 @@ export default function Sidebar({ user }: SidebarProps) {
 		return "U";
 	};
 
+	const bottomLinks = [
+		links[0], // Dashboard
+		links[1], // Leads
+		links[2], // Campanhas
+		links[4], // Conversas
+		links[5], // Agentes IA
+	];
+
 	return (
 		<>
 			{/* ======================= */}
 			{/* MOBILE HEADER (TOP)     */}
 			{/* ======================= */}
 			<div className="md:hidden">
-				<header className="fixed inset-x-0 top-0 z-40 border-b border-zinc-900 bg-zinc-950/95 px-4 py-3 backdrop-blur-md">
+				<header className="fixed inset-x-0 top-0 z-50 border-b border-zinc-900 bg-zinc-950/95 px-4 py-3 backdrop-blur-md">
 					<div className="flex items-center justify-between gap-3">
 						<div className="min-w-0 flex items-center gap-2">
 							<div className="w-8 h-8 flex items-center justify-center">
@@ -156,7 +164,7 @@ export default function Sidebar({ user }: SidebarProps) {
 				{/* ======================= */}
 				<nav className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-900 bg-zinc-950/95 px-2 pb-[calc(env(safe-area-inset-bottom)+0.6rem)] pt-2 backdrop-blur-md">
 					<div className="grid gap-1 grid-cols-5">
-						{links.map((link) => {
+						{bottomLinks.map((link) => {
 							const isActive = pathname === link.href;
 							return (
 								<Link
@@ -184,7 +192,7 @@ export default function Sidebar({ user }: SidebarProps) {
 			{/* MOBILE FULLSCREEN MENU  */}
 			{/* ======================= */}
 			{isMobileMenuOpen && (
-				<div className="fixed inset-0 z-[60] bg-zinc-950 flex flex-col md:hidden pt-20 pb-[calc(env(safe-area-inset-bottom)+5rem)] px-6 overflow-y-auto">
+				<div className="fixed inset-0 z-48 bg-zinc-950 flex flex-col md:hidden pt-20 pb-[calc(env(safe-area-inset-bottom)+5rem)] px-6 overflow-y-auto">
 					<div className="flex items-center gap-3 mb-8 bg-zinc-900/50 border border-zinc-800 rounded-2xl p-4">
 						<div className="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 font-bold text-lg flex items-center justify-center uppercase">
 							{getInitials(user?.name, user?.email)}
@@ -197,8 +205,28 @@ export default function Sidebar({ user }: SidebarProps) {
 						</div>
 					</div>
 
-					<div className="space-y-4 flex-1">
-						{/* Links mobile extras caso passem de 5 no Bottom Nav podem ir aqui, mas como todos são links principais, o Bottom Nav já cuida da navegação. Opcionalmente podemos replicar aqui. */}
+					<div className="space-y-2.5 flex-1">
+						{links.map((link) => {
+							const isActive = pathname === link.href;
+							return (
+								<Link
+									key={link.name}
+									href={link.href}
+									onClick={() => setIsMobileMenuOpen(false)}
+									className={`flex items-center gap-3.5 rounded-xl px-4 py-3 text-sm font-semibold transition-all border ${
+										isActive
+											? "text-emerald-400 bg-emerald-500/10 border-emerald-500/20"
+											: "text-zinc-400 hover:text-white bg-zinc-900/20 border-transparent hover:bg-zinc-900/40"
+									}`}
+								>
+									<link.icon
+										className="w-5 h-5 text-zinc-500"
+										strokeWidth={isActive ? 2.5 : 2}
+									/>
+									<span>{link.name}</span>
+								</Link>
+							);
+						})}
 					</div>
 
 					<button
