@@ -16,7 +16,7 @@ import {
 	Volume2,
 	VolumeX,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import useSWR from "swr";
 import {
 	generateAiSuggestionAction,
@@ -116,11 +116,11 @@ export default function LeadDetailsDialog({
 	// Rastreia contagem anterior para detectar mensagens novas
 	const prevHistoryLengthRef = useRef<number>(-1);
 
-	const scrollToBottom = () => {
+	const scrollToBottom = useCallback(() => {
 		if (scrollRef.current) {
 			scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
 		}
-	};
+	}, []);
 
 	// Rola para o fim e toca som ao chegar nova mensagem do lead
 	useEffect(() => {
@@ -135,7 +135,7 @@ export default function LeadDetailsDialog({
 		}
 		prevHistoryLengthRef.current = history.length;
 		scrollToBottom();
-	}, [history]);
+	}, [history, scrollToBottom]);
 
 	const handleToggleIntervention = async () => {
 		setTogglingStatus(true);
@@ -152,7 +152,7 @@ export default function LeadDetailsDialog({
 				{ type: isIntervention ? "success" : "warning" },
 			);
 		} else {
-			notify("Erro ao alternar modo: " + res.error, { type: "error" });
+			notify(`Erro ao alternar modo: ${res.error}`, { type: "error" });
 		}
 		setTogglingStatus(false);
 	};
@@ -180,7 +180,7 @@ export default function LeadDetailsDialog({
 		const res = await sendManualWhatsAppMessageAction(lead.id, textToSend);
 		if (!res.success) {
 			mutateHistory(); // Revert
-			notify("Erro ao enviar: " + res.error, { type: "error" });
+			notify(`Erro ao enviar: ${res.error}`, { type: "error" });
 		} else {
 			mutateHistory();
 		}
@@ -240,7 +240,9 @@ export default function LeadDetailsDialog({
 				};
 
 				// Limpar as faixas de áudio para liberar o microfone
-				stream.getTracks().forEach((track) => track.stop());
+				stream.getTracks().forEach((track) => {
+					track.stop();
+				});
 			};
 
 			mediaRecorder.start();
@@ -270,9 +272,9 @@ export default function LeadDetailsDialog({
 		if (mediaRecorderRef.current && isRecording) {
 			// Cancela o envio: reatribui onstop para não fazer nada
 			mediaRecorderRef.current.onstop = () => {
-				mediaRecorderRef.current?.stream
-					.getTracks()
-					.forEach((track) => track.stop());
+				mediaRecorderRef.current?.stream.getTracks().forEach((track) => {
+					track.stop();
+				});
 			};
 			mediaRecorderRef.current.stop();
 			setIsRecording(false);
@@ -295,7 +297,7 @@ export default function LeadDetailsDialog({
 		if (res.success && res.suggestion) {
 			setInput(res.suggestion);
 		} else {
-			notify("Erro ao gerar sugestão: " + res.error, { type: "error" });
+			notify(`Erro ao gerar sugestão: ${res.error}`, { type: "error" });
 		}
 		setGenerating(false);
 	};
@@ -335,6 +337,7 @@ export default function LeadDetailsDialog({
 							<div className="relative z-10 flex flex-col items-center w-full">
 								{lead.imageUrl ? (
 									// eslint-disable-next-line @next/next/no-img-element
+									/* biome-ignore lint/performance/noImgElement: External WhatsApp profile URLs */
 									<img
 										src={lead.imageUrl}
 										alt={lead.name}
@@ -382,6 +385,7 @@ export default function LeadDetailsDialog({
 						<div className="w-12 h-12 bg-zinc-700 rounded-full flex items-center justify-center text-sm text-white font-bold shrink-0 overflow-hidden shadow-lg border border-zinc-600/50">
 							{lead.imageUrl ? (
 								// eslint-disable-next-line @next/next/no-img-element
+								/* biome-ignore lint/performance/noImgElement: External WhatsApp profile URLs */
 								<img
 									src={lead.imageUrl}
 									alt={lead.name}
@@ -589,6 +593,7 @@ export default function LeadDetailsDialog({
 														{msg.role === "assistant" ? "Enviado" : "Recebido"}
 													</span>
 													{msg.audioBase64 ? (
+														// biome-ignore lint/a11y/useMediaCaption: WhatsApp audio messages don't have captions
 														<audio
 															controls
 															src={
@@ -692,9 +697,9 @@ export default function LeadDetailsDialog({
 												Templates de Prospecção
 											</div>
 											<div className="p-2 max-h-[300px] overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-700">
-												{templates.map((tmpl, idx) => (
+												{templates.map((tmpl) => (
 													<DropdownMenuItem
-														key={idx}
+														key={tmpl}
 														onClick={() => setInput(tmpl)}
 														className="text-xs p-3 hover:bg-[#00a884]/10 hover:text-[#00a884] cursor-pointer rounded-lg border-b border-zinc-800/50 last:border-0 focus:bg-[#00a884]/10 focus:text-[#00a884]"
 													>

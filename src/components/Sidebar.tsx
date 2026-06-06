@@ -121,6 +121,7 @@ export default function Sidebar({ user }: SidebarProps) {
 					<div className="flex items-center justify-between gap-3">
 						<div className="min-w-0 flex items-center gap-2">
 							<div className="w-8 h-8 flex items-center justify-center">
+								{/* biome-ignore lint/performance/noImgElement: Static logo asset */}
 								<img
 									src="/scraping.png"
 									alt="ExtrairLeads"
@@ -145,6 +146,7 @@ export default function Sidebar({ user }: SidebarProps) {
 								/>
 							)}
 							<button
+								type="button"
 								onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
 								className="rounded-lg border border-zinc-800 bg-zinc-900 p-2 text-zinc-400 hover:text-white"
 								aria-label="Abrir menu"
@@ -230,6 +232,7 @@ export default function Sidebar({ user }: SidebarProps) {
 					</div>
 
 					<button
+						type="button"
 						onClick={handleSignOut}
 						className="mt-8 flex items-center justify-center gap-2 w-full bg-red-500/10 text-red-500 font-bold py-3.5 rounded-xl border border-red-500/20"
 					>
@@ -270,6 +273,7 @@ export default function Sidebar({ user }: SidebarProps) {
 					</Link>
 
 					<button
+						type="button"
 						onClick={() => setIsCollapsed(!isCollapsed)}
 						className={`absolute z-10 p-1 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white transition-all ${isCollapsed ? "right-[-12px] top-6" : "right-[-12px] top-6"}`}
 					>
@@ -404,6 +408,7 @@ export default function Sidebar({ user }: SidebarProps) {
 							</div>
 						)}
 						<button
+							type="button"
 							onClick={handleSignOut}
 							className={`rounded-lg hover:bg-red-500/10 hover:text-red-400 text-zinc-500 transition-colors ${isCollapsed ? "p-2" : "p-1.5"}`}
 							title="Sair"
