@@ -105,10 +105,10 @@ function CardContent({ lead }: { lead: Lead }) {
 						</div>
 					)}
 					<div className="flex-1 min-w-0 flex flex-col justify-center">
-						<p className="font-bold text-sm text-white/90 leading-tight break-words">
+						<p className="font-bold text-sm text-white/90 leading-tight line-clamp-3">
 							{lead.name}
 						</p>
-						<p className="text-[11px] text-white/40 mt-0.5 break-words">
+						<p className="text-[11px] text-white/40 mt-1 line-clamp-2">
 							{lead.city ? `${lead.city}, ${lead.state}` : 'Localização desconhecida'}
 						</p>
 					</div>
