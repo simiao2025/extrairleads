@@ -67,6 +67,17 @@ export async function saveOnboardingInfoAction(data: {
 			};
 		}
 
+		if (!globalKey) {
+			console.error(
+				"ERRO CRÍTICO: Chave da Evolution API ausente no servidor (.env)",
+			);
+			return {
+				success: false,
+				error:
+					"Serviço de WhatsApp temporariamente indisponível (Chave do WhatsApp não configurada).",
+			};
+		}
+
 		try {
 			const response = await fetch(`${evolutionUrl}/instance/create`, {
 				method: "POST",
