@@ -7,10 +7,11 @@ import { chatHistory, leads, users } from "@/db/schema";
 import { auth } from "@/lib/auth";
 
 function getGlobalKey() {
-	const key = process.env.EVOLUTION_GLOBAL_API_KEY;
+	const key =
+		process.env.EVOLUTION_GLOBAL_API_KEY || process.env.EVOLUTION_API_KEY;
 	if (!key) {
 		throw new Error(
-			"EVOLUTION_GLOBAL_API_KEY não está configurada no ambiente (Risco de Segurança).",
+			"EVOLUTION_API_KEY não está configurada no ambiente.",
 		);
 	}
 	return key;

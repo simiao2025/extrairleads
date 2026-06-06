@@ -53,7 +53,8 @@ export async function saveOnboardingInfoAction(data: {
 		const instanceToken = crypto.randomUUID();
 
 		const evolutionUrl = process.env.EVOLUTION_API_URL;
-		const globalKey = process.env.EVOLUTION_GLOBAL_API_KEY || "abcslirm2026";
+		const globalKey =
+			process.env.EVOLUTION_GLOBAL_API_KEY || process.env.EVOLUTION_API_KEY;
 
 		if (!evolutionUrl) {
 			console.error(
