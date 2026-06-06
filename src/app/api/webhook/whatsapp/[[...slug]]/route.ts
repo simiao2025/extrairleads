@@ -144,7 +144,7 @@ async function sendWhatsAppReply({
 	phone: string;
 	instanceToken: string;
 	evolutionUrl: string;
-}) {
+}): Promise<{ audioBase64Saved: string | null }> {
 	if (shouldReplyAudio) {
 		try {
 			let base64Audio = await getCachedAudio(aiResponseText);
@@ -178,7 +178,8 @@ async function sendWhatsAppReply({
 				const errorText = await response.text();
 				throw new Error(`Falha ao enviar áudio da IA (${response.status}): ${errorText}`);
 			}
-			return;
+			// Retorna o base64 para ser salvo no DB
+			return { audioBase64Saved: `data:audio/mp3;base64,${base64Audio}` };
 		} catch (err) {
 			console.error("[sendWhatsAppReply] Erro no TTS ou envio de áudio:", err);
 			throw err;
@@ -214,6 +215,7 @@ async function sendWhatsAppReply({
 			await sleep(typingDelay + 300);
 		}
 	}
+	return { audioBase64Saved: null };
 }
 
 export async function POST(
@@ -378,7 +380,7 @@ export async function POST(
 		const shouldReplyAudio =
 			(messageType === "audio" || forceAudio) && !!process.env.OPENAI_API_KEY;
 
-		await sendWhatsAppReply({
+		const { audioBase64Saved } = await sendWhatsAppReply({
 			shouldReplyAudio,
 			aiResponseText,
 			instanceName,
@@ -391,6 +393,7 @@ export async function POST(
 			leadId: lead.id,
 			role: "assistant",
 			content: aiResponseText,
+			audioBase64: audioBase64Saved,
 			type: shouldReplyAudio ? "audio" : "text",
 		});
 

@@ -719,30 +719,46 @@ export function ConversasClient({
 							{!generating &&
 								history.length > 0 &&
 								history[history.length - 1].role === "user" &&
-								activeConversation.lead.status !== "human_intervention" && (
-									<div className="flex justify-end">
-										<div className="bg-[#005c4b] border border-[#005c4b]/50 p-3 px-4 rounded-2xl rounded-tr-none text-zinc-300 text-xs flex items-center gap-1.5 shadow-lg shadow-emerald-950/20">
-											<Bot className="w-3.5 h-3.5 text-emerald-300 animate-pulse" />
-											<span className="text-[11px] text-zinc-300 font-medium">
-												IA SDR digitando...
-											</span>
-											<span className="flex gap-1 ml-1.5">
-												<span
-													className="w-1.5 h-1.5 bg-white/70 rounded-full animate-bounce"
-													style={{ animationDelay: "0ms" }}
-												></span>
-												<span
-													className="w-1.5 h-1.5 bg-white/70 rounded-full animate-bounce"
-													style={{ animationDelay: "150ms" }}
-												></span>
-												<span
-													className="w-1.5 h-1.5 bg-white/70 rounded-full animate-bounce"
-													style={{ animationDelay: "300ms" }}
-												></span>
-											</span>
+								activeConversation.lead.status !== "human_intervention" && (() => {
+									const lastMsg = history[history.length - 1];
+									const lastMsgTime = lastMsg.createdAt ? new Date(lastMsg.createdAt).getTime() : 0;
+									const secondsAgo = (Date.now() - lastMsgTime) / 1000;
+									const isTimedOut = secondsAgo > 90;
+
+									return isTimedOut ? (
+										<div className="flex justify-end">
+											<div className="bg-zinc-800/60 border border-zinc-700/40 p-2.5 px-3.5 rounded-2xl rounded-tr-none text-zinc-500 text-xs flex items-center gap-1.5 shadow-sm">
+												<Bot className="w-3.5 h-3.5 text-zinc-500" />
+												<span className="text-[11px] font-medium">
+													IA SDR não conseguiu responder.
+												</span>
+											</div>
 										</div>
-									</div>
-								)}
+									) : (
+										<div className="flex justify-end">
+											<div className="bg-[#005c4b] border border-[#005c4b]/50 p-3 px-4 rounded-2xl rounded-tr-none text-zinc-300 text-xs flex items-center gap-1.5 shadow-lg shadow-emerald-950/20">
+												<Bot className="w-3.5 h-3.5 text-emerald-300 animate-pulse" />
+												<span className="text-[11px] text-zinc-300 font-medium">
+													IA SDR digitando...
+												</span>
+												<span className="flex gap-1 ml-1.5">
+													<span
+														className="w-1.5 h-1.5 bg-white/70 rounded-full animate-bounce"
+														style={{ animationDelay: "0ms" }}
+													></span>
+													<span
+														className="w-1.5 h-1.5 bg-white/70 rounded-full animate-bounce"
+														style={{ animationDelay: "150ms" }}
+													></span>
+													<span
+														className="w-1.5 h-1.5 bg-white/70 rounded-full animate-bounce"
+														style={{ animationDelay: "300ms" }}
+													></span>
+												</span>
+											</div>
+										</div>
+									);
+								})()}
 						</div>
 
 						{/* Input e Controles de Envio */}

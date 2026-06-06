@@ -3,6 +3,7 @@
 import {
 	Bot,
 	CheckCheck,
+	HandMetal,
 	Loader2,
 	MessageSquare,
 	MessageSquareText,
@@ -13,12 +14,14 @@ import {
 	Trash2,
 	User,
 	Volume2,
+	VolumeX,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import useSWR from "swr";
 import {
 	generateAiSuggestionAction,
 	getLeadChatAction,
+	moveLeadAction,
 	sendManualWhatsAppMessageAction,
 	sendWhatsAppAudioAction,
 } from "@/app/actions";
@@ -74,6 +77,11 @@ export default function LeadDetailsDialog({
 	children?: React.ReactNode;
 }) {
 	const [isOpen, setIsOpen] = useState(false);
+	// Status local do lead para refletir o toggle sem precisar recarregar a página
+	const [leadStatus, setLeadStatus] = useState<LeadStatus | null>(lead.status);
+	const [togglingStatus, setTogglingStatus] = useState(false);
+
+	const isIntervention = leadStatus === "human_intervention";
 
 	const {
 		data: swrHistory,
@@ -87,6 +95,11 @@ export default function LeadDetailsDialog({
 
 	const history = (swrHistory || []) as ChatMessage[];
 	const loading = isLoading && history.length === 0;
+
+	// Sync local status when prop changes (e.g. parent refreshes)
+	useEffect(() => {
+		setLeadStatus(lead.status);
+	}, [lead.status]);
 
 	const [input, setInput] = useState("");
 	const [sending, setSending] = useState(false);
@@ -109,6 +122,24 @@ export default function LeadDetailsDialog({
 	useEffect(() => {
 		scrollToBottom();
 	}, [history]);
+
+	const handleToggleIntervention = async () => {
+		setTogglingStatus(true);
+		const nextStatus: LeadStatus = isIntervention ? "contacted" : "human_intervention";
+		const res = await moveLeadAction(lead.id, nextStatus);
+		if (res.success) {
+			setLeadStatus(nextStatus);
+			notify(
+				isIntervention
+					? "IA SDR reativada! Ela voltará a responder automaticamente."
+					: "IA SDR silenciada! Você assumiu o controle desta conversa.",
+				{ type: isIntervention ? "success" : "warning" },
+			);
+		} else {
+			notify("Erro ao alternar modo: " + res.error, { type: "error" });
+		}
+		setTogglingStatus(false);
+	};
 
 	const handleSend = async () => {
 		if (!input.trim()) return;
@@ -332,7 +363,7 @@ export default function LeadDetailsDialog({
 								<User className="w-6 h-6 text-zinc-400" />
 							)}
 						</div>
-						<div className="flex flex-col items-start overflow-hidden w-full space-y-0.5">
+						<div className="flex flex-col items-start overflow-hidden flex-1 space-y-0.5">
 							<p className="font-medium text-base truncate w-full text-left leading-none">
 								{lead.name}
 							</p>
@@ -340,8 +371,45 @@ export default function LeadDetailsDialog({
 								{lead.phone || "Sem telefone cadastrado"}
 							</p>
 						</div>
+						{/* Botão Controle por IA */}
+						<Button
+							type="button"
+							onClick={handleToggleIntervention}
+							disabled={togglingStatus}
+							className={`text-xs font-bold px-3 py-1.5 rounded-full border transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
+								isIntervention
+									? "bg-amber-500/20 text-amber-400 border-amber-500/30 hover:bg-amber-500/30 shadow-[0_0_15px_rgba(245,158,11,0.15)]"
+									: "bg-[#2a3942] text-zinc-300 border-zinc-700/60 hover:bg-zinc-800 hover:text-white"
+							}`}
+							title={isIntervention ? "Reativar IA SDR" : "Silenciar IA SDR e assumir controle"}
+						>
+							{togglingStatus ? (
+								<Loader2 className="w-3.5 h-3.5 animate-spin" />
+							) : isIntervention ? (
+								<><VolumeX className="w-3.5 h-3.5" /> IA Silenciada</>
+							) : (
+								<><Bot className="w-3.5 h-3.5" /> Controle por IA</>
+							)}
+						</Button>
 					</DialogTitle>
 				</DialogHeader>
+
+				{/* Banner de Intervenção Humana Ativo */}
+				{isIntervention && (
+					<div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-2 flex items-center justify-between text-xs text-amber-300 shrink-0 backdrop-blur-md">
+						<span className="flex items-center gap-1.5 font-medium">
+							<HandMetal className="w-3.5 h-3.5 text-amber-400 animate-bounce" />
+							IA SDR silenciada — você está no controle desta conversa.
+						</span>
+						<button
+							type="button"
+							onClick={handleToggleIntervention}
+							className="underline hover:text-white text-[10px] font-bold uppercase tracking-wider"
+						>
+							Reativar IA
+						</button>
+					</div>
+				)}
 
 				<div className="flex flex-1 overflow-hidden relative">
 					{/* Background pattern similar to WhatsApp */}
