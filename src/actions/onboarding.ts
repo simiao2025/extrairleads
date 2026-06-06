@@ -69,12 +69,12 @@ export async function saveOnboardingInfoAction(data: {
 
 		if (!globalKey) {
 			console.error(
-				"ERRO CRÍTICO: Chave da Evolution API ausente no servidor (.env)",
+				"ERRO CRÍTICO: EVOLUTION_GLOBAL_API_KEY ausente no servidor (.env)",
 			);
 			return {
 				success: false,
 				error:
-					"Serviço de WhatsApp temporariamente indisponível (Chave do WhatsApp não configurada).",
+					"Serviço de WhatsApp temporariamente indisponível (EVOLUTION_GLOBAL_API_KEY não configurada).",
 			};
 		}
 
