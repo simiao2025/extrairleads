@@ -1,6 +1,8 @@
 import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
+import { ScoutAvatar } from "@/components/scout/ScoutAvatar";
+
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { auth } from "@/lib/auth";
@@ -44,6 +46,8 @@ export default async function DashboardLayout({
 			<main className="flex-1 overflow-x-hidden pt-[60px] pb-24 md:pt-0 md:pb-0 min-h-screen">
 				{children}
 			</main>
+			<ScoutAvatar />
 		</div>
 	);
 }
+

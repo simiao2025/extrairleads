@@ -25,6 +25,7 @@ import {
 	sendManualWhatsAppMessageAction,
 	sendWhatsAppAudioAction,
 } from "@/app/actions";
+import { LeadScoutInsight } from "./scout/LeadScoutInsight";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -540,6 +541,7 @@ export default function LeadDetailsDialog({
 								</div>
 							)}
 						</div>
+						<LeadScoutInsight lead={lead} />
 					</div>
 
 					{/* Right Panel: Chat */}

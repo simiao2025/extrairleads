@@ -317,3 +317,18 @@ export const semanticCache = pgTable(
 	},
 	(table) => [index("semantic_cache_user_idx").on(table.userId)],
 );
+
+export const scoutMemory = pgTable(
+	"scout_memory",
+	{
+		id: serial("id").primaryKey(),
+		userId: integer("user_id").references(() => users.id, {
+			onDelete: "cascade",
+		}),
+		type: text("type").notNull(), // 'campaign_summary', 'user_preference', 'followup_reminder', etc.
+		content: text("content").notNull(),
+		metadata: jsonb("metadata"),
+		createdAt: timestamp("created_at").defaultNow(),
+	},
+	(table) => [index("scout_memory_user_idx").on(table.userId)],
+);
