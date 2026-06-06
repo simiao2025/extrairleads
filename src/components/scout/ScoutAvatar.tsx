@@ -21,6 +21,8 @@ export function ScoutAvatar() {
 	const [isOpen, setIsOpen] = useState(false);
 	const [hasUnread, setHasUnread] = useState(false);
 	const [speechText, setSpeechText] = useState<string | null>(null);
+	const [isUpdateAvailable, setIsUpdateAvailable] = useState(false);
+	const [currentVersion, setCurrentVersion] = useState<string | null>(null);
 	const [posIndex, setPosIndex] = useState(0);
 	const pathname = usePathname();
 	const moveTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -33,8 +35,49 @@ export function ScoutAvatar() {
 		}
 	}, [isOpen]);
 
+	// Busca a versão inicial e começa a monitorar
+	useEffect(() => {
+		const fetchInitialVersion = async () => {
+			try {
+				const res = await fetch(`/version.json?t=${Date.now()}`, { cache: "no-store" });
+				if (res.ok) {
+					const data = await res.json();
+					setCurrentVersion(data.version);
+				}
+			} catch (error) {
+				console.error("Erro ao buscar versão inicial", error);
+			}
+		};
+		fetchInitialVersion();
+	}, []);
+
+	useEffect(() => {
+		if (!currentVersion) return;
+
+		const interval = setInterval(async () => {
+			try {
+				const res = await fetch(`/version.json?t=${Date.now()}`, { cache: "no-store" });
+				if (res.ok) {
+					const data = await res.json();
+					if (data.version && data.version !== currentVersion) {
+						setIsUpdateAvailable(true);
+						setSpeechText("Dica do Scout: Tem uma atualização fresquinha no sistema! Clique aqui para recarregar a página e receber as novidades. 🚀");
+						setHasUnread(true);
+						clearInterval(interval);
+					}
+				}
+			} catch (error) {
+				console.error("Erro ao checar atualização", error);
+			}
+		}, 1 * 60 * 1000); // 1 minuto
+
+		return () => clearInterval(interval);
+	}, [currentVersion]);
+
 	// Dicas contextuais baseadas na página
 	useEffect(() => {
+		if (isUpdateAvailable) return; // Se tem update, não muda a dica
+
 		const timer = setTimeout(() => {
 			if (!isOpen) {
 				let tip = "Dica do Scout: Precisa de ajuda com o sistema? Estou aqui!";
@@ -53,14 +96,16 @@ export function ScoutAvatar() {
 		}, 8000);
 
 		const hideTimer = setTimeout(() => {
-			setSpeechText(null);
+			if (!isUpdateAvailable) {
+				setSpeechText(null);
+			}
 		}, 20000);
 
 		return () => {
 			clearTimeout(timer);
 			clearTimeout(hideTimer);
 		};
-	}, [isOpen, pathname]);
+	}, [isOpen, pathname, isUpdateAvailable]);
 
 	// Movimento dinâmico do Scout pela tela
 	useEffect(() => {
@@ -118,22 +163,30 @@ export function ScoutAvatar() {
 							initial={{ opacity: 0, scale: 0.8, y: 10, originX: 1, originY: 1 }}
 							animate={{ opacity: 1, scale: 1, y: 0 }}
 							exit={{ opacity: 0, scale: 0.8, y: 10 }}
-							className="relative rounded-2xl rounded-br-sm border border-emerald-500/30 bg-zinc-950/90 p-3 shadow-[0_0_20px_rgba(16,185,129,0.15)] backdrop-blur-xl max-w-[280px] cursor-pointer pointer-events-auto group"
-							onClick={toggle}
+							className={`relative rounded-2xl rounded-br-sm border ${isUpdateAvailable ? "border-amber-500/50 bg-amber-950/90 shadow-[0_0_20px_rgba(245,158,11,0.2)]" : "border-emerald-500/30 bg-zinc-950/90 shadow-[0_0_20px_rgba(16,185,129,0.15)]"} p-3 backdrop-blur-xl max-w-[280px] cursor-pointer pointer-events-auto group`}
+							onClick={() => {
+								if (isUpdateAvailable) {
+									window.location.reload();
+								} else {
+									toggle();
+								}
+							}}
 						>
-							<p className="text-xs font-medium text-emerald-100 leading-snug">
+							<p className={`text-xs font-medium leading-snug ${isUpdateAvailable ? "text-amber-100" : "text-emerald-100"}`}>
 								{speechText}
 							</p>
-							<button
-								type="button"
-								onClick={(e) => {
-									e.stopPropagation();
-									setSpeechText(null);
-								}}
-								className="absolute -top-2 -left-2 bg-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-700 rounded-full p-1 border border-zinc-700 shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
-							>
-								<X className="w-3 h-3" />
-							</button>
+							{!isUpdateAvailable && (
+								<button
+									type="button"
+									onClick={(e) => {
+										e.stopPropagation();
+										setSpeechText(null);
+									}}
+									className="absolute -top-2 -left-2 bg-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-700 rounded-full p-1 border border-zinc-700 shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
+								>
+									<X className="w-3 h-3" />
+								</button>
+							)}
 						</motion.div>
 					)}
 				</AnimatePresence>
