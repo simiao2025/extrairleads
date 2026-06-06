@@ -140,7 +140,7 @@ async function extractMessageContent(
 
 				return {
 					textContent,
-					base64Audio: `data:audio/mp3;base64,${cleanBase64}`,
+					base64Audio: `data:audio/ogg;base64,${cleanBase64}`,
 				};
 			}
 		} catch (err) {
