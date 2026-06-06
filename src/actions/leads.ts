@@ -3,7 +3,7 @@
 import { and, desc, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
-import { chatHistory, leads } from "@/db/schema";
+import { appointments, chatHistory, leads, outreachLogs } from "@/db/schema";
 import { auth } from "@/lib/auth";
 
 const VALID_STAGES = [
@@ -76,7 +76,13 @@ export async function deleteLeadAction(leadId: number) {
 			.where(and(eq(leads.id, leadId), eq(leads.userId, userId)));
 		if (!lead) return { success: false, error: "Lead não encontrado." };
 
-		await db.delete(leads).where(eq(leads.id, leadId));
+		await db.transaction(async (tx) => {
+			await tx.delete(chatHistory).where(eq(chatHistory.leadId, leadId));
+			await tx.delete(appointments).where(eq(appointments.leadId, leadId));
+			await tx.delete(outreachLogs).where(eq(outreachLogs.leadId, leadId));
+			await tx.delete(leads).where(eq(leads.id, leadId));
+		});
+
 		revalidatePath("/");
 		return { success: true };
 	} catch (error: unknown) {
