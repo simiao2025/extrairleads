@@ -89,46 +89,46 @@ export function KanbanCard({ lead, isDragOverlay = false }: KanbanCardProps) {
 
 function CardContent({ lead }: { lead: Lead }) {
 	return (
-		<div className="relative">
-			<div className="flex justify-between items-start relative z-10 gap-3">
-				<div className="flex gap-3 flex-1 min-w-0">
-					{lead.imageUrl ? (
-						// eslint-disable-next-line @next/next/no-img-element
-						<img
-							src={lead.imageUrl}
-							alt={lead.name}
-							className="w-10 h-10 rounded-full object-cover border border-white/10 shrink-0"
-						/>
-					) : (
-						<div className="w-10 h-10 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
-							<span className="text-emerald-500 font-bold text-sm">{lead.name.charAt(0)}</span>
-						</div>
-					)}
-					<div className="flex-1 min-w-0 flex flex-col justify-center">
-						<p className="font-bold text-sm text-white/90 leading-tight line-clamp-3">
-							{lead.name}
-						</p>
-						<p className="text-[11px] text-white/40 mt-1 line-clamp-2">
-							{lead.city ? `${lead.city}, ${lead.state}` : 'Localização desconhecida'}
-						</p>
-					</div>
-				</div>
-				{lead.aiScore && (
-					<span className="text-[10px] font-black text-emerald-950 bg-gradient-to-br from-emerald-400 to-emerald-500 px-2 py-1 rounded-md shadow-[0_0_15px_rgba(52,211,153,0.3)] shrink-0">
+		<div className="relative flex flex-col items-center">
+			{lead.aiScore && (
+				<div className="absolute -top-1 -right-1 z-20">
+					<span className="text-[10px] font-black text-emerald-950 bg-gradient-to-br from-emerald-400 to-emerald-500 px-2 py-1 rounded-md shadow-[0_0_15px_rgba(52,211,153,0.3)]">
 						{lead.aiScore}
 					</span>
+				</div>
+			)}
+
+			<div className="relative z-10 flex flex-col items-center w-full">
+				{lead.imageUrl ? (
+					// eslint-disable-next-line @next/next/no-img-element
+					<img
+						src={lead.imageUrl}
+						alt={lead.name}
+						className="w-14 h-14 rounded-full object-cover border-2 border-white/10 shadow-lg mb-3"
+					/>
+				) : (
+					<div className="w-14 h-14 rounded-full bg-emerald-500/10 border-2 border-emerald-500/20 flex items-center justify-center shadow-lg mb-3">
+						<span className="text-emerald-500 font-bold text-lg">{lead.name.charAt(0)}</span>
+					</div>
 				)}
+				
+				<div className="w-full text-center px-1">
+					<p className="font-bold text-xs text-white/90 leading-snug line-clamp-2 mb-1">
+						{lead.name}
+					</p>
+					<p className="text-[10px] text-white/40 line-clamp-1">
+						{lead.city ? `${lead.city}, ${lead.state}` : 'Localização desconhecida'}
+					</p>
+				</div>
 			</div>
 			
-			<div className="mt-4 flex items-end justify-between relative z-10 gap-2">
-				<span className="text-[10px] font-medium bg-white/[0.03] border border-white/[0.08] px-2.5 py-1.5 rounded-lg text-white/70 line-clamp-2 leading-tight flex-1">
+			<div className="mt-5 w-full flex items-center justify-between relative z-10 border-t border-white/[0.05] pt-3">
+				<span className="text-[9px] font-medium bg-white/[0.03] border border-white/[0.08] px-2 py-1 rounded-md text-white/70 line-clamp-1 truncate max-w-[70%] text-center">
 					{lead.niche || "Sem Nicho"}
 				</span>
 				{lead.phone && (
-					<div className="flex items-center gap-2 shrink-0">
-						<div className="w-8 h-8 rounded-full bg-white/[0.02] border border-white/[0.05] flex items-center justify-center">
-							<MessageSquare className="w-3.5 h-3.5 text-white/40" />
-						</div>
+					<div className="flex items-center justify-center w-7 h-7 rounded-full bg-white/[0.02] border border-white/[0.05]">
+						<MessageSquare className="w-3.5 h-3.5 text-white/40" />
 					</div>
 				)}
 			</div>
