@@ -76,12 +76,11 @@ export async function deleteLeadAction(leadId: number) {
 			.where(and(eq(leads.id, leadId), eq(leads.userId, userId)));
 		if (!lead) return { success: false, error: "Lead não encontrado." };
 
-		await db.transaction(async (tx) => {
-			await tx.delete(chatHistory).where(eq(chatHistory.leadId, leadId));
-			await tx.delete(appointments).where(eq(appointments.leadId, leadId));
-			await tx.delete(outreachLogs).where(eq(outreachLogs.leadId, leadId));
-			await tx.delete(leads).where(eq(leads.id, leadId));
-		});
+		// Driver neon-http não suporta transações, então deletamos sequencialmente
+		await db.delete(chatHistory).where(eq(chatHistory.leadId, leadId));
+		await db.delete(appointments).where(eq(appointments.leadId, leadId));
+		await db.delete(outreachLogs).where(eq(outreachLogs.leadId, leadId));
+		await db.delete(leads).where(eq(leads.id, leadId));
 
 		revalidatePath("/");
 		return { success: true };
