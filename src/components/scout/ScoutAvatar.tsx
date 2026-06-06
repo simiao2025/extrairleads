@@ -3,6 +3,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { useState, useCallback, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { ScoutChat } from "./ScoutChat";
 import { X } from "lucide-react";
 
@@ -10,6 +11,7 @@ export function ScoutAvatar() {
 	const [isOpen, setIsOpen] = useState(false);
 	const [hasUnread, setHasUnread] = useState(false);
 	const [speechText, setSpeechText] = useState<string | null>(null);
+	const pathname = usePathname();
 
 	const toggle = useCallback(() => {
 		setIsOpen((prev) => !prev);
@@ -20,12 +22,19 @@ export function ScoutAvatar() {
 	}, [isOpen]);
 
 	useEffect(() => {
-		// Simula o Scout chamando a atenção após 5 segundos
 		const timer = setTimeout(() => {
 			if (!isOpen) {
-				setSpeechText(
-					"Dica do Scout: Leads com muitas avaliações no Google tendem a fechar negócio mais rápido! Quer ajuda para filtrá-los?",
-				);
+				let tip = "Dica do Scout: Precisa de ajuda com o sistema? Estou aqui!";
+				
+				if (pathname?.includes("/leads")) {
+					tip = "Dica do Scout: Analisando seus leads... Que tal criar uma mensagem de abertura personalizada para os leads qualificados?";
+				} else if (pathname?.includes("/campaigns") || pathname?.includes("/dashboard")) {
+					tip = "Dica do Scout: Uma campanha com nicho e cidade bem definidos aumenta a taxa de resposta em 40%!";
+				} else if (pathname?.includes("/knowledge") || pathname?.includes("/settings")) {
+					tip = "Dica do Scout: Quanto mais informações o agente tiver, melhor ele vai converter. Adicione PDFs e histórico!";
+				}
+
+				setSpeechText(tip);
 				setHasUnread(true); // Faz o avatar piscar
 			}
 		}, 8000);

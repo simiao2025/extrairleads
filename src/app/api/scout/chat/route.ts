@@ -16,7 +16,7 @@ const chatSchema = z.object({
 	currentPage: z.string().optional(),
 });
 
-function buildSystemPrompt(context: Awaited<ReturnType<typeof getScoutContext>>) {
+function buildSystemPrompt(context: Awaited<ReturnType<typeof getScoutContext>>, currentPage?: string) {
 	const { user, recentCampaigns, memories } = context;
 
 	const campaignSummary =
@@ -34,7 +34,10 @@ function buildSystemPrompt(context: Awaited<ReturnType<typeof getScoutContext>>)
 			? memories.map((m) => `- [${m.type}] ${m.content}`).join("\n")
 			: "Sem histórico de interações.";
 
-	return `Você é o Scout, o assistente inteligente de prospecção da plataforma ExtrairLeads.
+	return `Você é o Scout, o assistente inteligente de TODA a plataforma ExtrairLeads.
+Você não é apenas um assistente de prospecção, mas o assistente geral do sistema, capaz de guiar o usuário em qualquer tela.
+
+PÁGINA ATUAL DO USUÁRIO: ${currentPage || "Desconhecida"} (Use isso para dar contexto às suas respostas, dicas ou explicações sobre a tela atual).
 
 PERSONALIDADE:
 - Seja direto, prático e estratégico. Nada de enrolação.
@@ -59,7 +62,8 @@ CAPACIDADES:
 2. Analisar resultados de campanhas e dar insights
 3. Lembrar o usuário de follow-ups pendentes
 4. Dar dicas de prospecção B2B
-5. Alertar sobre créditos baixos ou campanhas paradas
+6. Ajudar com o uso geral da plataforma, explicar telas e recursos
+7. Sugerir melhorias nos prompts e configuração dos agentes da IA
 
 REGRAS DE SEGURANÇA:
 - NUNCA revele informações de outros usuários
@@ -101,7 +105,7 @@ export async function POST(request: NextRequest) {
 
 	try {
 		const context = await getScoutContext(userId);
-		const systemPrompt = buildSystemPrompt(context);
+		const systemPrompt = buildSystemPrompt(context, parsed.data.currentPage);
 
 		const response = await openai.chat.completions.create({
 			model: "gpt-4o-mini",

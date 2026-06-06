@@ -19,6 +19,7 @@ import { auth } from "@/lib/auth";
 const ITEMS_PER_PAGE = 40;
 
 import { StatCard } from "@/components/StatCard";
+import { DashboardGreeting } from "@/components/DashboardGreeting";
 
 interface PageProps {
 	searchParams: Promise<{
@@ -152,24 +153,26 @@ export default async function Home({ searchParams }: PageProps) {
 						/>
 					</div>
 
-					<div className="relative space-y-5 max-w-2xl z-10">
-						<span className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-[11px] font-bold tracking-widest text-emerald-400 uppercase backdrop-blur-md">
-							<span className="pulse-dot" />
-							IA Neural Ativa
-						</span>
+					<div className="relative space-y-5 max-w-4xl z-10 w-full">
+						<DashboardGreeting 
+							name={session?.user?.name || "Usuário"} 
+							leadsToContact={leadsByStatus.qualified + leadsByStatus.raw} 
+							leadsToFollowUp={leadsByStatus.contacted} 
+						/>
 
-						<h1 className="font-heading text-5xl font-black leading-[1.08] tracking-tight md:text-6xl text-foreground">
-							Extrair, Qualificar &amp;{" "}
-							<span className="text-[#25D366]">Vender.</span>
-						</h1>
+						<div className="mt-8">
+							<span className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-[11px] font-bold tracking-widest text-emerald-400 uppercase backdrop-blur-md mb-4">
+								<span className="pulse-dot" />
+								IA Neural Ativa
+							</span>
 
-						<GlobalCampaignFilter campaigns={userCampaigns} />
+							<h1 className="font-heading text-4xl font-black leading-[1.08] tracking-tight md:text-5xl text-foreground mb-4">
+								Extrair, Qualificar &amp;{" "}
+								<span className="text-[#25D366]">Vender.</span>
+							</h1>
 
-						<p className="text-base text-muted-foreground leading-relaxed max-w-xl">
-							O primeiro motor autônomo de prospecção do Brasil. Localizamos o
-							lead ideal, validamos o perfil e iniciamos o engajamento de forma
-							invisível e em milissegundos.
-						</p>
+							<GlobalCampaignFilter campaigns={userCampaigns} />
+						</div>
 					</div>
 
 					<div className="relative flex flex-col sm:flex-row shrink-0 items-stretch sm:items-center gap-3 w-full md:w-auto z-10">

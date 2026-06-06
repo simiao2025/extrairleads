@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Send, Trash2, X } from "lucide-react";
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 
 interface ChatMessage {
 	role: "user" | "assistant";
@@ -20,9 +21,10 @@ export function ScoutChat({ onClose, onNewMessage }: ScoutChatProps) {
 		{
 			role: "assistant",
 			content:
-				"Olá! Sou o Scout, seu assistente de prospecção. 🎯\n\nPosso te ajudar com dicas de busca, análise de campanhas e lembretes de follow-up. Como posso ajudar?",
+				"Olá! Sou o Scout, seu assistente do sistema. 🎯\n\nPosso te ajudar com dicas de busca, análise de campanhas, lembretes de follow-up ou suporte técnico. Como posso ajudar?",
 		},
 	]);
+	const pathname = usePathname();
 	const [input, setInput] = useState("");
 	const [isStreaming, setIsStreaming] = useState(false);
 	const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -67,7 +69,7 @@ export function ScoutChat({ onClose, onNewMessage }: ScoutChatProps) {
 			const response = await fetch("/api/scout/chat", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ messages: apiMessages }),
+				body: JSON.stringify({ messages: apiMessages, currentPage: pathname }),
 				signal: abortRef.current.signal,
 			});
 
@@ -171,7 +173,7 @@ export function ScoutChat({ onClose, onNewMessage }: ScoutChatProps) {
 					Scout
 				</h3>
 				<p className="text-[10px] text-emerald-500/80 font-medium">
-					{isStreaming ? "Pensando..." : "Assistente de Prospecção"}
+					{isStreaming ? "Pensando..." : "Assistente do Sistema"}
 				</p>
 				
 				<div className="absolute top-2 right-2 flex items-center gap-1">

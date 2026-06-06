@@ -30,7 +30,7 @@ export async function getScoutContext(userId: number) {
 		.from(campaigns)
 		.leftJoin(leads, eq(leads.campaignId, campaigns.id))
 		.where(eq(campaigns.userId, userId))
-		.groupBy(campaigns.id)
+		.groupBy(campaigns.id, campaigns.name, campaigns.niche, campaigns.city, campaigns.status, campaigns.createdAt)
 		.orderBy(desc(campaigns.createdAt))
 		.limit(3);
 
