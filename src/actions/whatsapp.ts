@@ -79,9 +79,11 @@ export async function checkWhatsAppConnectionAction() {
 		if (!response.ok) {
 			const errorText = await response.text();
 			console.error(`[checkWhatsApp] Erro ${response.status} ao obter instâncias:`, errorText);
+			const keyLength = globalKey ? globalKey.length : 0;
+			const keyStart = globalKey ? globalKey.substring(0, 3) : "N/A";
 			return {
 				success: false,
-				error: `Erro ao ler status no servidor (Código ${response.status}: ${errorText || "Sem resposta"}).`,
+				error: `Erro ao ler status no servidor (Código ${response.status}: ${errorText || "Sem resposta"}). URL: ${evolutionUrl} | KeyLen: ${keyLength} | Prefix: ${keyStart}`,
 			};
 		}
 
