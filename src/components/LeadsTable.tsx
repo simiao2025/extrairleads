@@ -12,6 +12,16 @@ import {
 import { useState } from "react";
 import { deleteLeadAction, updateLeadAction } from "@/app/actions";
 import type { Lead } from "@/components/KanbanBoard";
+
+type LeadStatus =
+	| "raw"
+	| "qualified"
+	| "in_queue"
+	| "contacted"
+	| "interested"
+	| "human_intervention"
+	| "discarded";
+
 import LeadDetailsDialog from "@/components/LeadDetailsDialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -61,7 +71,7 @@ function EditDialog({ lead, open, onOpenChange, onSuccess }: EditDialogProps) {
 		niche: lead.niche || "",
 		city: lead.city || "",
 		state: lead.state || "",
-		status: lead.status || "raw",
+		status: (lead.status || "raw") as LeadStatus,
 	});
 
 	const handleSubmit = async (e: React.FormEvent) => {
@@ -122,7 +132,9 @@ function EditDialog({ lead, open, onOpenChange, onSuccess }: EditDialogProps) {
 						</label>
 						<select
 							value={form.status}
-							onChange={(e) => setForm({ ...form, status: e.target.value })}
+							onChange={(e) =>
+								setForm({ ...form, status: e.target.value as LeadStatus })
+							}
 							className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
 						>
 							{Object.entries(STATUS_LABELS).map(([key, label]) => (

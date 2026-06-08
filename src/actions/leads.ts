@@ -115,7 +115,18 @@ export async function updateLeadAction(
 
 		await db
 			.update(leads)
-			.set({ ...data, updatedAt: new Date() })
+			.set({
+				...data,
+				updatedAt: new Date(),
+				status: data.status as
+					| "raw"
+					| "qualified"
+					| "in_queue"
+					| "contacted"
+					| "interested"
+					| "human_intervention"
+					| "discarded",
+			})
 			.where(eq(leads.id, leadId));
 		revalidatePath("/");
 		return { success: true };
