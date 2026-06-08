@@ -130,8 +130,10 @@ export default async function ConfigPage() {
 																Agente 2: Redator de Abordagem (SDR)
 															</CardTitle>
 															<CardDescription className="text-xs">
-																Instruções de escrita para converter o lead via
-																WhatsApp.
+																Defina a persona do seu SDR, seu produto e o
+																contorno de objeções do seu nicho. As regras de
+																WhatsApp (mensagens curtas e segurança) são
+																injetadas automaticamente.
 															</CardDescription>
 														</div>
 													</div>
@@ -169,7 +171,10 @@ export default async function ConfigPage() {
 												<CardContent className="space-y-5">
 													<div className="flex items-center justify-between gap-4 p-4 rounded-xl bg-white/[0.02] border border-white/[0.04]">
 														<div>
-															<label className="text-sm font-bold text-zinc-300">
+															<label
+																htmlFor="weeklyLimit"
+																className="text-sm font-bold text-zinc-300"
+															>
 																Limite de Disparos Semanais
 															</label>
 															<p className="text-[11px] text-zinc-500 mt-0.5">
@@ -179,6 +184,7 @@ export default async function ConfigPage() {
 														<Input
 															type="number"
 															name="weeklyLimit"
+															id="weeklyLimit"
 															defaultValue={config.weeklyLimit || 50}
 															className="w-24 h-11 bg-black/40 border-white/[0.08] focus:border-emerald-500/50 text-center font-black text-emerald-400"
 														/>
@@ -186,7 +192,10 @@ export default async function ConfigPage() {
 
 													<div className="flex items-center justify-between gap-4 p-4 rounded-xl bg-white/[0.02] border border-white/[0.04]">
 														<div>
-															<label className="text-sm font-bold text-zinc-300 block">
+															<label
+																htmlFor="autoOutreach"
+																className="text-sm font-bold text-zinc-300 block"
+															>
 																Ativação Autônoma
 															</label>
 															<p className="text-[11px] text-zinc-500 mt-0.5">
@@ -194,9 +203,13 @@ export default async function ConfigPage() {
 																qualificação positiva.
 															</p>
 														</div>
-														<label className="relative inline-flex items-center cursor-pointer">
+														<label
+															className="relative inline-flex items-center cursor-pointer"
+															htmlFor="autoOutreach"
+														>
 															<input
 																type="checkbox"
+																id="autoOutreach"
 																name="autoOutreach"
 																defaultChecked={config.autoOutreach === "true"}
 																className="sr-only peer"

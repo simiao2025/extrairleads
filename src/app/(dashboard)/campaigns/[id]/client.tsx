@@ -161,8 +161,14 @@ export function CampaignDetailsClient({
 		try {
 			const res = await followUpLeadsAction(campaign.id);
 			if (res.success) {
+				const parts = [];
+				if (res.count) parts.push(`${res.count} enviados`);
+				if (res.skipped) parts.push(`${res.skipped} ignorados`);
+				if (res.failed) parts.push(`${res.failed} falharam`);
 				success(
-					`Follow-up disparado! ${res.count || 0} leads sem resposta foram reengajados.`,
+					parts.length > 0
+						? `Follow-up: ${parts.join(", ")}.`
+						: "Nenhum follow-up necessário no momento.",
 				);
 				await refreshData();
 			} else {

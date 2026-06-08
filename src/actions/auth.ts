@@ -396,7 +396,7 @@ export async function changePasswordAction(
 			.select()
 			.from(users)
 			.where(eq(users.email, session.user.email));
-		if (!user || !user.password) {
+		if (!user?.password) {
 			return { success: false, error: "Usuário não encontrado." };
 		}
 

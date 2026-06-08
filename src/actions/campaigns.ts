@@ -133,7 +133,6 @@ export async function getCampaignDetailsAction(campaignId: number) {
 			leads: campaignLeads,
 		};
 	} catch (error) {
-		// biome-ignore lint/suspicious/noConsole: error logging is required for server actions diagnostics
 		console.error("Erro ao carregar detalhes da campanha:", error);
 		return null;
 	}

@@ -78,7 +78,10 @@ export async function checkWhatsAppConnectionAction() {
 
 		if (!response.ok) {
 			const errorText = await response.text();
-			console.error(`[checkWhatsApp] Erro ${response.status} ao obter instâncias:`, errorText);
+			console.error(
+				`[checkWhatsApp] Erro ${response.status} ao obter instâncias:`,
+				errorText,
+			);
 			return {
 				success: false,
 				error: `Erro ao ler status no servidor (Código ${response.status}: ${errorText || "Sem resposta"}).`,
@@ -213,7 +216,10 @@ export async function checkWhatsAppConnectionAction() {
 				}),
 			});
 		} catch (e) {
-			console.error("[checkWhatsApp] Erro ao configurar webhook via connect:", e);
+			console.error(
+				"[checkWhatsApp] Erro ao configurar webhook via connect:",
+				e,
+			);
 		}
 
 		const connected = foundInstance.connected === true;
@@ -282,8 +288,10 @@ export async function getWhatsAppQrCodeAction() {
 			}
 
 			// Re-lê o usuário do banco para pegar o novo token
-			user = (await getCurrentUser())!;
-			if (!user) return { success: false, error: "Usuário não autenticado." };
+			const currentUser = await getCurrentUser();
+			if (!currentUser)
+				return { success: false, error: "Usuário não autenticado." };
+			user = currentUser;
 			token = user.whatsappInstanceToken;
 		}
 
@@ -329,10 +337,14 @@ export async function getWhatsAppQrCodeAction() {
 			if (response.status === 400 && errorText.includes("already logged")) {
 				return {
 					success: false,
-					error: "WhatsApp já está conectado. Recarregue a página para ver o status atualizado.",
+					error:
+						"WhatsApp já está conectado. Recarregue a página para ver o status atualizado.",
 				};
 			}
-			return { success: false, error: "Não foi possível gerar QR. Tente novamente." };
+			return {
+				success: false,
+				error: "Não foi possível gerar QR. Tente novamente.",
+			};
 		}
 
 		const resJson = await response.json();
@@ -348,7 +360,10 @@ export async function getWhatsAppQrCodeAction() {
 	} catch (error) {
 		const err = error as Error;
 		console.error("[getWhatsAppQrCodeAction]", err);
-		return { success: false, error: err.message || "Erro interno ao gerar QR." };
+		return {
+			success: false,
+			error: err.message || "Erro interno ao gerar QR.",
+		};
 	}
 }
 

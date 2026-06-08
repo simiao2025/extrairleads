@@ -1,6 +1,6 @@
 "use server";
 
-import { eq, desc } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { scoutMemory } from "@/db/schema";
