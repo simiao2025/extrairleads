@@ -4,13 +4,14 @@ import { z } from "zod";
 import { db } from "@/db";
 import { appointments, campaignConfigs, chatHistory, leads } from "@/db/schema";
 import { getSemanticCache, saveSemanticCache } from "@/lib/cache";
+import { buildConversationPrompt } from "@/lib/prompts";
 
 const groq = new OpenAI({
 	apiKey: process.env.GROQ_API_KEY || "dummy-key-to-prevent-crash",
 	baseURL: "https://api.groq.com/openai/v1",
 });
 
-async function getSemanticContext(
+export async function getSemanticContext(
 	ownerUserId: number | null,
 	textContent: string,
 ): Promise<string> {
@@ -135,34 +136,19 @@ export async function processAIResponse(
 					.where(eq(campaignConfigs.userId, ownerUserId))
 			: [];
 
-		const systemPrompt = `${config?.agent2Prompt || "Você é um SDR focado em abordagens."}
-
-DADOS DO LEAD (APENAS PARA SEU CONTEXTO INTERNO — NUNCA envie estes dados como mensagem para o lead):
-- Empresa/Contato: ${lead.name}
-- Segmento/Nicho: ${lead.niche || "Não informado"}
-- Cidade: ${lead.city || "Não informada"}
-- Site: ${lead.website || "Não informado"}
-- Dossiê Mapeado: ${lead.aiAnalysis || "Nenhuma análise prévia disponível."}
-
-REGRAS CRÍTICAS DE COMPORTAMENTO:
-1. NUNCA envie a análise interna do lead como mensagem. Os dados acima são apenas para você entender o contexto e personalizar suas respostas.
-2. Após a primeira mensagem de abordagem, AGUARDE a resposta do lead antes de enviar qualquer nova mensagem. Não fique disparando múltiplas mensagens sem resposta.
-3. Seja conversacional e humanizado. Use textos CURTOS (máximo 2-3 linhas por mensagem). Nada de parágrafos longos.
-4. Não use linguagem robótica, formal demais ou com "Prezado(a)". Fale como um profissional real falaria via WhatsApp.
-5. Adapte o tom à resposta do lead: se ele é direto, seja direto. Se ele é amigável, seja amigável.
-6. NUNCA envie áudios. Responda SEMPRE com texto.
-
-DIRETRIZES DE AUTONOMIA:
-- Chame 'update_lead_info' para atualizar dados da empresa.
-- Chame 'create_appointment' para fechar agendamentos.
-- Chame 'escalate_to_human' para transbordo quando necessário.
-
-BASE DE CONHECIMENTO (RAG):
-${ragContext || "Nenhuma informação cadastrada."}
-
-HISTÓRICO DA CONVERSA:
-${formattedHistory}
-`;
+		const systemPrompt = buildConversationPrompt({
+			agent2Prompt: config?.agent2Prompt ?? undefined,
+			lead: {
+				name: lead.name,
+				niche: lead.niche,
+				city: lead.city,
+				state: lead.state,
+				website: lead.website,
+				aiAnalysis: lead.aiAnalysis,
+			},
+			ragContext,
+			formattedHistory,
+		});
 
 		const tools = [
 			{

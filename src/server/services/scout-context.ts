@@ -1,6 +1,6 @@
 import { desc, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { campaigns, scoutMemory, users, leads } from "@/db/schema";
+import { campaigns, leads, scoutMemory, users } from "@/db/schema";
 
 export async function getScoutContext(userId: number) {
 	const [user] = await db
@@ -13,7 +13,7 @@ export async function getScoutContext(userId: number) {
 		.where(eq(users.id, userId));
 
 	if (!user) {
-		throw new Error("User not found");
+		throw new Error("Usuário não encontrado");
 	}
 
 	// Busca as campanhas recentes e agrega a contagem de leads de cada uma
@@ -30,7 +30,14 @@ export async function getScoutContext(userId: number) {
 		.from(campaigns)
 		.leftJoin(leads, eq(leads.campaignId, campaigns.id))
 		.where(eq(campaigns.userId, userId))
-		.groupBy(campaigns.id, campaigns.name, campaigns.niche, campaigns.city, campaigns.status, campaigns.createdAt)
+		.groupBy(
+			campaigns.id,
+			campaigns.name,
+			campaigns.niche,
+			campaigns.city,
+			campaigns.status,
+			campaigns.createdAt,
+		)
 		.orderBy(desc(campaigns.createdAt))
 		.limit(3);
 
@@ -39,7 +46,11 @@ export async function getScoutContext(userId: number) {
 		.from(scoutMemory)
 		.where(eq(scoutMemory.userId, userId))
 		.orderBy(desc(scoutMemory.createdAt))
-		.limit(10);
+		.limit(10)
+		.catch((err) => {
+			console.error("Erro ao buscar scout_memory:", err);
+			return [];
+		});
 
 	return {
 		user,

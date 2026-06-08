@@ -9,6 +9,7 @@ import {
 	leads,
 	users,
 } from "@/db/schema";
+import { buildMetaConversationPrompt } from "@/lib/prompts";
 
 const groq = new OpenAI({
 	apiKey: process.env.GROQ_API_KEY,
@@ -114,19 +115,17 @@ export async function POST(req: Request) {
 									.where(eq(campaignConfigs.userId, owner.id))
 							: [];
 
-						const systemPrompt = `${config?.agent2Prompt || "Você é um SDR focado em abordagens."}
-
-DADOS PRÉVIOS DO LEAD:
-- Empresa: ${lead.name}
-- Nicho: ${lead.niche || "Não informado"}
-- Cidade: ${lead.city || "Não informada"}
-
-DIRETRIZES DE AUTONOMIA:
-- Você possui autonomia para TRANSBORDAR PARA HUMANO chamando a ferramenta 'escalate_to_human'.
-- Você possui autonomia para FECHAR AGENDAMENTOS chamando a ferramenta 'create_appointment'.
-
-HISTÓRICO DA CONVERSA:
-${formattedHistory}`;
+						const systemPrompt = buildMetaConversationPrompt({
+							agent2Prompt: config?.agent2Prompt ?? undefined,
+							lead: {
+								name: lead.name,
+								niche: lead.niche,
+								city: lead.city,
+								website: lead.website,
+								aiAnalysis: lead.aiAnalysis,
+							},
+							formattedHistory,
+						});
 
 						const tools = [
 							{
@@ -281,7 +280,7 @@ ${formattedHistory}`;
 		}
 
 		return NextResponse.json({ ok: true });
-	} catch (error) {
+	} catch {
 		return NextResponse.json({ ok: false }, { status: 500 });
 	}
 }

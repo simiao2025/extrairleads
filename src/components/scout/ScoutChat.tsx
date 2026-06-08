@@ -3,12 +3,13 @@
 import { motion } from "framer-motion";
 import { Send, Trash2, X } from "lucide-react";
 import Image from "next/image";
-import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface ChatMessage {
 	role: "user" | "assistant";
 	content: string;
+	id: string;
 }
 
 interface ScoutChatProps {
@@ -19,6 +20,7 @@ interface ScoutChatProps {
 export function ScoutChat({ onClose, onNewMessage }: ScoutChatProps) {
 	const [messages, setMessages] = useState<ChatMessage[]>([
 		{
+			id: "initial",
 			role: "assistant",
 			content:
 				"Olá! Sou o Scout, seu assistente do sistema. 🎯\n\nPosso te ajudar com dicas de busca, análise de campanhas, lembretes de follow-up ou suporte técnico. Como posso ajudar?",
@@ -37,8 +39,7 @@ export function ScoutChat({ onClose, onNewMessage }: ScoutChatProps) {
 
 	useEffect(() => {
 		scrollToBottom();
-		// biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
-	}, [messages, scrollToBottom]);
+	}, [scrollToBottom]);
 
 	useEffect(() => {
 		inputRef.current?.focus();
@@ -48,14 +49,22 @@ export function ScoutChat({ onClose, onNewMessage }: ScoutChatProps) {
 		const trimmed = input.trim();
 		if (!trimmed || isStreaming) return;
 
-		const userMessage: ChatMessage = { role: "user", content: trimmed };
+		const userMessage: ChatMessage = {
+			id: crypto.randomUUID(),
+			role: "user",
+			content: trimmed,
+		};
 		const updatedMessages = [...messages, userMessage];
 
 		setMessages(updatedMessages);
 		setInput("");
 		setIsStreaming(true);
 
-		const assistantMessage: ChatMessage = { role: "assistant", content: "" };
+		const assistantMessage: ChatMessage = {
+			id: crypto.randomUUID(),
+			role: "assistant",
+			content: "",
+		};
 		setMessages((prev) => [...prev, assistantMessage]);
 
 		try {
@@ -101,7 +110,9 @@ export function ScoutChat({ onClose, onNewMessage }: ScoutChatProps) {
 							accumulated += parsed.text;
 							setMessages((prev) => {
 								const copy = [...prev];
+								const lastMsg = copy[copy.length - 1];
 								copy[copy.length - 1] = {
+									id: lastMsg.id,
 									role: "assistant",
 									content: accumulated,
 								};
@@ -118,11 +129,17 @@ export function ScoutChat({ onClose, onNewMessage }: ScoutChatProps) {
 		} catch (error) {
 			if (error instanceof DOMException && error.name === "AbortError") return;
 
+			const errorMessage =
+				error instanceof Error ? error.message : "Erro desconhecido";
+			console.error("Scout chat error:", errorMessage);
+
 			setMessages((prev) => {
 				const copy = [...prev];
+				const lastMsg = copy[copy.length - 1];
 				copy[copy.length - 1] = {
+					id: lastMsg.id,
 					role: "assistant",
-					content: "Desculpe, tive um problema ao processar. Tente novamente.",
+					content: `Desculpe, tive um problema ao processar: ${errorMessage}`,
 				};
 				return copy;
 			});
@@ -130,7 +147,7 @@ export function ScoutChat({ onClose, onNewMessage }: ScoutChatProps) {
 			setIsStreaming(false);
 			abortRef.current = null;
 		}
-	}, [input, isStreaming, messages, onNewMessage]);
+	}, [input, isStreaming, messages, onNewMessage, pathname]);
 
 	const handleKeyDown = useCallback(
 		(e: React.KeyboardEvent) => {
@@ -148,6 +165,7 @@ export function ScoutChat({ onClose, onNewMessage }: ScoutChatProps) {
 		}
 		setMessages([
 			{
+				id: crypto.randomUUID(),
 				role: "assistant",
 				content: "Chat limpo! Como posso ajudar agora? 🎯",
 			},
@@ -167,15 +185,18 @@ export function ScoutChat({ onClose, onNewMessage }: ScoutChatProps) {
 			{/* ─── Header ─── */}
 			<div className="relative flex flex-col items-center justify-center border-b border-zinc-800/60 px-4 pt-6 pb-4 bg-zinc-900/50">
 				<div className="relative flex h-14 w-14 items-center justify-center rounded-full bg-zinc-950 shadow-[0_0_15px_rgba(16,185,129,0.4)] mb-2 overflow-hidden border border-emerald-500/20">
-					<Image src="/scout-avatar.png" alt="Scout Avatar" fill className="object-cover" />
+					<Image
+						src="/scout-avatar.png"
+						alt="Scout Avatar"
+						fill
+						className="object-cover"
+					/>
 				</div>
-				<h3 className="text-sm font-bold text-white tracking-tight">
-					Scout
-				</h3>
+				<h3 className="text-sm font-bold text-white tracking-tight">Scout</h3>
 				<p className="text-[10px] text-emerald-500/80 font-medium">
 					{isStreaming ? "Pensando..." : "Assistente do Sistema"}
 				</p>
-				
+
 				<div className="absolute top-2 right-2 flex items-center gap-1">
 					<button
 						type="button"
@@ -198,10 +219,9 @@ export function ScoutChat({ onClose, onNewMessage }: ScoutChatProps) {
 
 			{/* ─── Messages ─── */}
 			<div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 min-h-[200px] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-zinc-700">
-				{messages.map((msg, i) => (
-					// biome-ignore lint/suspicious/noArrayIndexKey: messages don't have stable IDs
+				{messages.map((msg) => (
 					<div
-						key={`msg-${i}-${msg.role}`}
+						key={msg.id}
 						className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
 					>
 						<div
@@ -211,15 +231,19 @@ export function ScoutChat({ onClose, onNewMessage }: ScoutChatProps) {
 									: "bg-zinc-800/60 text-zinc-200 border border-zinc-700/30 rounded-bl-md"
 							}`}
 						>
-							{msg.content.split("\n").map((line, li) => (
-								// biome-ignore lint/suspicious/noArrayIndexKey: lines don't have stable IDs
-								<span key={`line-${li}`}>
-									{line}
-									{li < msg.content.split("\n").length - 1 && <br />}
-								</span>
-							))}
+							{msg.content.split("\n").reduce((acc, line, idx, arr) => {
+								acc.push(
+									<span key={line.substring(0, 20) || `line-${idx}`}>
+										{line}
+									</span>,
+								);
+								if (idx < arr.length - 1) {
+									acc.push(<br key="line-break" />);
+								}
+								return acc;
+							}, [] as React.ReactNode[])}
 							{isStreaming &&
-								i === messages.length - 1 &&
+								messages.indexOf(msg) === messages.length - 1 &&
 								msg.role === "assistant" && (
 									<span className="inline-block w-1.5 h-4 bg-emerald-400 ml-0.5 animate-pulse rounded-sm" />
 								)}

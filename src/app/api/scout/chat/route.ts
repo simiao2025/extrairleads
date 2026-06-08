@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server";
+import type { NextRequest } from "next/server";
 import OpenAI from "openai";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
@@ -16,7 +16,10 @@ const chatSchema = z.object({
 	currentPage: z.string().optional(),
 });
 
-function buildSystemPrompt(context: Awaited<ReturnType<typeof getScoutContext>>, currentPage?: string) {
+function buildSystemPrompt(
+	context: Awaited<ReturnType<typeof getScoutContext>>,
+	currentPage?: string,
+) {
 	const { user, recentCampaigns, memories } = context;
 
 	const campaignSummary =
@@ -83,6 +86,12 @@ export async function POST(request: NextRequest) {
 	}
 
 	const userId = parseInt(session.user.id, 10);
+	if (Number.isNaN(userId) || userId <= 0) {
+		return new Response(JSON.stringify({ error: "Usuário inválido" }), {
+			status: 401,
+			headers: { "Content-Type": "application/json" },
+		});
+	}
 
 	let body: unknown;
 	try {
@@ -97,7 +106,10 @@ export async function POST(request: NextRequest) {
 	const parsed = chatSchema.safeParse(body);
 	if (!parsed.success) {
 		return new Response(
-			JSON.stringify({ error: "Dados inválidos", details: parsed.error.flatten() }),
+			JSON.stringify({
+				error: "Dados inválidos",
+				details: parsed.error.flatten(),
+			}),
 			{ status: 400, headers: { "Content-Type": "application/json" } },
 		);
 	}
@@ -110,10 +122,7 @@ export async function POST(request: NextRequest) {
 
 		const response = await openai.chat.completions.create({
 			model: "gpt-4o-mini",
-			messages: [
-				{ role: "system", content: systemPrompt },
-				...messages,
-			],
+			messages: [{ role: "system", content: systemPrompt }, ...messages],
 			max_tokens: 600,
 			temperature: 0.7,
 			stream: true,
@@ -126,7 +135,9 @@ export async function POST(request: NextRequest) {
 					for await (const chunk of response) {
 						const text = chunk.choices[0]?.delta?.content;
 						if (text) {
-							controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text })}\n\n`));
+							controller.enqueue(
+								encoder.encode(`data: ${JSON.stringify({ text })}\n\n`),
+							);
 						}
 					}
 					controller.enqueue(encoder.encode("data: [DONE]\n\n"));
@@ -145,10 +156,14 @@ export async function POST(request: NextRequest) {
 			},
 		});
 	} catch (error) {
-		console.error("Scout chat error:", error);
-		return new Response(
-			JSON.stringify({ error: "Erro interno ao processar sua mensagem." }),
-			{ status: 500, headers: { "Content-Type": "application/json" } },
-		);
+		const errorMessage =
+			error instanceof Error
+				? error.message
+				: "Erro interno ao processar sua mensagem.";
+		console.error("Scout chat error:", errorMessage);
+		return new Response(JSON.stringify({ error: errorMessage }), {
+			status: 500,
+			headers: { "Content-Type": "application/json" },
+		});
 	}
 }
